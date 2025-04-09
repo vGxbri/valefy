@@ -9,6 +9,8 @@ interface ImageCarouselProps {
   direction?: 'left' | 'right';
 }
 
+// Definimos las keyframes como estilos globales en un archivo CSS separado
+// y los importamos en el componente
 export function ImageCarousel({
   images,
   speed = 30, // segundos que tarda en completar un ciclo
@@ -29,6 +31,20 @@ export function ImageCarousel({
     // Aplicamos la animación con CSS
     scrollContainer.style.animationDuration = `${duration}s`;
     
+    // Definimos las keyframes dinámicamente
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = `
+      @keyframes scrollLeft {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+      }
+      @keyframes scrollRight {
+        0% { transform: translateX(-50%); }
+        100% { transform: translateX(0); }
+      }
+    `;
+    document.head.appendChild(styleSheet);
+    
     // Reiniciamos la posición cuando termina la animación
     const handleAnimationEnd = () => {
       scrollContainer.style.animation = 'none';
@@ -41,23 +57,12 @@ export function ImageCarousel({
     
     return () => {
       scrollContainer.removeEventListener('animationend', handleAnimationEnd);
+      document.head.removeChild(styleSheet);
     };
   }, [speed, direction]);
   
   return (
     <div className="w-full overflow-hidden relative">
-      {/* Estilo para la animación - con soporte para ambas direcciones */}
-      <style jsx global>{`
-        @keyframes scrollLeft {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        @keyframes scrollRight {
-          0% { transform: translateX(-50%); }
-          100% { transform: translateX(0); }
-        }
-      `}</style>
-      
       <div className="absolute left-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
         style={{
           background: 'linear-gradient(to right, #0A141D 0%, transparent 100%)'
