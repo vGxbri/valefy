@@ -8,13 +8,13 @@ export function Navbar() {
       <div className="container mx-auto max-w-7xl flex items-center justify-between px-6 h-16">
         {/* Logo section */}
         <div className="flex items-center">
-          <Link href="/" className="flex items-center gap-1">
+          <Link className="flex items-center gap-1" href="/">
             <Image
-              src="/logo-white.png"
               alt="Valefy Logo"
-              width={120}
-              height={40}
               className="object-contain"
+              height={40}
+              src="/logo-white.png"
+              width={120}
             />
           </Link>
         </div>
@@ -22,13 +22,13 @@ export function Navbar() {
         {/* Right section with button */}
         <div className="flex items-center gap-4">
           <Link
-            href="/app"
             className={buttonStyles({
               color: "primary",
               radius: "full",
               variant: "shadow",
               size: "lg",
             })}
+            href="/app"
           >
             Comenzar
           </Link>

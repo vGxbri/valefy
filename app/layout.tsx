@@ -3,8 +3,8 @@ import { Metadata, Viewport } from "next";
 import clsx from "clsx";
 
 import { Providers } from "./providers";
-import { Navbar } from "@/components/Navbar"; // Add this import
 
+// Add this import
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
 
@@ -46,12 +46,8 @@ export default function RootLayout({
               {/** 
               <Navbar />
               */}
-              <main className="relative z-10">
-                {children}
-              </main>
-              <footer className="relative z-10">
-                
-              </footer>
+              <main className="relative z-10">{children}</main>
+              <footer className="relative z-10" />
             </div>
           </div>
         </Providers>
