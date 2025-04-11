@@ -1,281 +1,54 @@
-import Aurora from "./ui/Aurora";
+'use client';
 
+import { useState, useEffect } from "react";
+import Aurora from "../components/landing/premade/Aurora";
 import { ImageCarousel } from "@/components/landing/ImageCarousel";
 import { Timeline } from "@/components/landing/Timeline";
-import { getWeaponSkins } from "@/lib/valorantApi";
-import { getRandomSkins } from "@/lib/valorantApi";
+import { getWeaponSkins, getRandomSkins } from "@/lib/valorantApi";
+import { AuthModal } from "@/components/AuthModal";
+import { timelineData } from "@/components/landing/ProcessData";
+import Navbar from '@/components/landing/Navbar'
+import Footer from '@/components/Footer'
+import {Accordion, AccordionItem} from "@heroui/react";
 
-// Pasos del proceso
-// Reemplaza la sección de processSteps con esto:
+export default function LandingPage() {
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [carouselImages1, setCarouselImages1] = useState<string[]>([]);
+  const [carouselImages2, setCarouselImages2] = useState<string[]>([]);
 
-// Pasos del proceso con contenido enriquecido
-const processSteps = [
-  {
-    title: "Regístrate / Inicia Sesión",
-    description:
-      "Rápido y fácil, sin complicaciones. Usa tu cuenta de Riot Games o crea una nueva cuenta en Valefy.",
-    icon: "🔐",
-    color: "from-primary to-secondary",
-    delay: "0ms",
-    image: "/images/register.jpg", // Añade imágenes representativas
-    features: [
-      "Registro con un solo clic usando tu cuenta de Riot",
-      "Verificación de correo electrónico instantánea",
-      "Proceso de registro seguro y encriptado",
-      "Recuperación de contraseña sencilla",
-    ],
-  },
-  {
-    title: "Explora y Abre Cajas",
-    description:
-      "¡Siente la emoción de descubrir tu skin con nuestra animación de apertura! Cada caja tiene una experiencia única de desbloqueo.",
-    icon: "✨",
-    color: "from-primary to-secondary",
-    delay: "300ms",
-    image: "/images/open-box.jpg",
-    features: [
-      "Amplia variedad de cajas temáticas",
-      "Animaciones espectaculares de apertura",
-      "Efectos de sonido inmersivos",
-      "Celebraciones especiales para skins raras",
-      "Compartir resultados en redes sociales",
-    ],
-  },
-  {
-    title: "Retira tu Skin o Usa tu Saldo",
-    description:
-      "Añade la skin a tu inventario de Valorant a través de nuestro sistema de intercambio seguro o usa el valor para seguir abriendo cajas.",
-    icon: "🎮",
-    color: "from-primary to-secondary",
-    delay: "450ms",
-    image: "/images/claim-skin.jpg",
-    features: [
-      "Transferencia segura a tu cuenta de Valorant",
-      "Sistema de intercambio verificado por Riot",
-      "Historial detallado de transacciones",
-      "Opciones flexibles de uso de saldo",
-    ],
-  },
-];
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    async function loadData() {
+      try {
+        // Obtenemos todas las skins y filtramos las que no tienen icono o son "random favorite"
+        const allSkins = (await getWeaponSkins()).filter(
+          (skin) =>
+            skin.displayIcon &&
+            !skin.displayName.toLowerCase().includes("random favorite skin"),
+        );
 
-// Datos para el Timeline con contenido enriquecido y diferenciado
-const timelineData = processSteps.map((step, index) => ({
-  title: step.title,
-  content: (
-    <>
-      {/* Paso 1: Registro - Diseño de tarjeta con gradiente */}
-      {index === 0 && (
-        <div className="bg-gradient-to-br from-background/90 to-background/70 backdrop-blur-sm p-8 rounded-2xl border-l-4 border-primary shadow-lg transition-all duration-500 hover:shadow-primary/20">
-          <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-4">
-              <div className="text-5xl bg-primary/10 p-4 rounded-full">
-                {step.icon}
-              </div>
-              <div>
-                <h4 className="text-2xl font-bold text-white mb-2">
-                  {step.title}
-                </h4>
-                <p className="text-white/70 leading-relaxed">
-                  {step.description}
-                </p>
-              </div>
-            </div>
+        // Obtenemos skins aleatorias para el grid
+        const randomGridSkins = getRandomSkins(allSkins, 6);
 
-            <div className="relative w-full h-64 md:h-80 rounded-xl overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-b from-primary/30 to-background/90 mix-blend-overlay z-10" />
-              <div className="absolute inset-0 flex items-center justify-center bg-background/40 text-white text-opacity-80 text-lg z-20">
-                Imagen ilustrativa del proceso
-              </div>
-            </div>
+        // Obtenemos skins aleatorias para los carruseles (diferentes a las del grid)
+        const randomCarouselSkins1 = getRandomSkins(allSkins, 8);
+        const randomCarouselSkins2 = getRandomSkins(allSkins, 8);
 
-            <div className="grid grid-cols-1 gap-3">
-              {step.features.map((feature, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-primary/5 transition-colors duration-300"
-                >
-                  <div className="text-primary">✓</div>
-                  <p className="text-white/80">{feature}</p>
-                </div>
-              ))}
-            </div>
+        // Extraemos solo las URLs de los iconos para el carrusel
+        setCarouselImages1(randomCarouselSkins1.map((skin) => skin.displayIcon));
+        setCarouselImages2(randomCarouselSkins2.map((skin) => skin.displayIcon));
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+      }
+    }
 
-            <button className="w-full bg-primary/20 hover:bg-primary/30 text-white px-6 py-3 rounded-xl transition-all duration-300 border border-primary/30 hover:border-primary/50 mt-4">
-              Crear cuenta
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Paso 2: Abrir caja - Diseño de tarjeta con animación */}
-      {index === 1 && (
-        <div className="relative bg-background/80 backdrop-blur-sm overflow-hidden rounded-2xl border border-white/10 shadow-lg transition-all duration-500 group">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-alternative to-primary bg-[length:200%_100%] animate-gradient" />
-
-          <div className="p-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <div className="text-5xl bg-primary/10 p-4 rounded-xl animate-pulse">
-                  {step.icon}
-                </div>
-                <h4 className="text-2xl font-bold text-white">{step.title}</h4>
-              </div>
-              <div className="px-3 py-1 rounded-full bg-primary/20 text-primary text-sm">
-                Experiencia inmersiva
-              </div>
-            </div>
-
-            <p className="text-white/70 leading-relaxed mb-6">
-              {step.description}
-            </p>
-
-            <div className="relative w-full h-64 rounded-xl overflow-hidden mb-6 group-hover:scale-[1.02] transition-transform duration-500">
-              <div className="absolute inset-0 bg-gradient-to-b from-primary/30 to-background/90 mix-blend-overlay z-10" />
-              <div className="absolute inset-0 flex items-center justify-center bg-background/40 text-white text-opacity-80 text-lg z-20">
-                Animación de apertura
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              {step.features.map((feature, idx) => (
-                <div
-                  key={idx}
-                  className="relative overflow-hidden p-4 rounded-lg bg-white/5 hover:bg-primary/5 transition-colors duration-300"
-                >
-                  <div className="absolute top-0 right-0 w-12 h-12 -translate-y-6 translate-x-6 bg-primary/20 rounded-full" />
-                  <div className="relative z-10">
-                    <div className="text-primary mb-2 text-lg">
-                      Característica {idx + 1}
-                    </div>
-                    <p className="text-white/80">{feature}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-between items-center pt-4 border-t border-white/5">
-              <button className="bg-gradient-to-r from-primary to-secondary text-white px-6 py-3 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-primary/20">
-                Probar ahora
-              </button>
-              <div className="flex space-x-1">
-                {processSteps.map((_, i) => (
-                  <div
-                    key={i}
-                    className={`h-1 w-6 rounded-full ${i <= index ? "bg-primary" : "bg-white/10"}`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Paso 3: Retirar skin - Diseño de tarjeta con pestañas */}
-      {index === 2 && (
-        <div className="bg-background/80 backdrop-blur-sm rounded-2xl border border-white/10 shadow-lg transition-all duration-500">
-          <div className="flex border-b border-white/10">
-            <div className="px-6 py-3 bg-primary text-white rounded-tl-2xl">
-              {step.title}
-            </div>
-            <div className="px-6 py-3 text-white/60 hover:text-white/80 transition-colors">
-              Historial
-            </div>
-            <div className="px-6 py-3 text-white/60 hover:text-white/80 transition-colors">
-              Ayuda
-            </div>
-          </div>
-
-          <div className="p-8">
-            <div className="flex flex-col md:flex-row gap-8">
-              <div className="md:w-1/2">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="text-4xl bg-primary/10 p-3 rounded-xl">
-                    {step.icon}
-                  </div>
-                  <p className="text-white/70 leading-relaxed">
-                    {step.description}
-                  </p>
-                </div>
-
-                <div className="space-y-3 mt-6">
-                  {step.features.map((feature, idx) => (
-                    <div key={idx} className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                        {idx + 1}
-                      </div>
-                      <div>
-                        <p className="text-white/80">{feature}</p>
-                        <div className="w-full h-1 bg-white/5 rounded-full mt-2">
-                          <div
-                            className="h-1 bg-primary rounded-full"
-                            style={{ width: `${(idx + 1) * 25}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="md:w-1/2">
-                <div className="relative w-full h-64 rounded-xl overflow-hidden mb-6 border border-white/10">
-                  <div className="absolute inset-0 bg-gradient-to-b from-primary/30 to-background/90 mix-blend-overlay z-10" />
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/40 text-white text-opacity-80 text-lg z-20">
-                    Sistema de intercambio
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <button className="flex-1 bg-primary text-white px-4 py-3 rounded-xl transition-all duration-300 hover:bg-primary/80">
-                    Retirar skin
-                  </button>
-                  <button className="flex-1 bg-white/10 text-white px-4 py-3 rounded-xl transition-all duration-300 hover:bg-white/20">
-                    Usar saldo
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-white/5 flex justify-between items-center">
-              <span className="text-xs text-primary/70">Paso final</span>
-              <div className="flex space-x-1">
-                {processSteps.map((_, i) => (
-                  <div
-                    key={i}
-                    className={`h-1 w-6 rounded-full ${i <= index ? "bg-primary" : "bg-white/10"}`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  ),
-}));
-
-export default async function LandingPage() {
-  // Obtenemos todas las skins y filtramos las que no tienen icono o son "random favorite"
-  const allSkins = (await getWeaponSkins()).filter(
-    (skin) =>
-      skin.displayIcon &&
-      !skin.displayName.toLowerCase().includes("random favorite skin"),
-  );
-
-  // Obtenemos skins aleatorias para el grid
-  const randomGridSkins = getRandomSkins(allSkins, 6);
-
-  // Obtenemos skins aleatorias para los carruseles (diferentes a las del grid)
-  const randomCarouselSkins1 = getRandomSkins(allSkins, 8);
-  const randomCarouselSkins2 = getRandomSkins(allSkins, 8);
-
-  // Extraemos solo las URLs de los iconos para el carrusel
-  const carouselImages1 = randomCarouselSkins1.map((skin) => skin.displayIcon);
-  const carouselImages2 = randomCarouselSkins2.map((skin) => skin.displayIcon);
+    loadData();
+  }, []);
 
   return (
     <section className="bg-background">
       <div className="">
+          <Navbar />
         {/* Contenedor principal con altura fija */}
         <div className="relative overflow-hidden">
           {/* Contenedor del Aurora con altura y posición explícitas */}
@@ -304,7 +77,10 @@ export default async function LandingPage() {
                 </span>
               </h1>
 
-              <button className="relative bg-primary text-white font-medium text-[17px] px-4 py-[0.35em] pl-5 h-[2.8em] rounded-[0.9em] flex items-center overflow-hidden cursor-pointer shadow-[inset_0_0_1.6em_-0.6em_#0A141D] group">
+              <button 
+                className="relative bg-primary text-white font-medium text-[17px] px-4 py-[0.35em] pl-5 h-[2.8em] rounded-[0.9em] flex items-center overflow-hidden cursor-pointer shadow-[inset_0_0_1.6em_-0.6em_#0A141D] group"
+                onClick={() => setIsAuthModalOpen(true)}
+              >
                 <span className="mr-10">Unirme ahora</span>
                 <div className="absolute right-[0.3em] bg-white h-[2.2em] w-[2.2em] rounded-[0.7em] flex items-center justify-center transition-all duration-300 group-hover:w-[calc(100%-0.6em)] shadow-[0.1em_0.1em_0.6em_0.2em_#d2d2d4] active:scale-95">
                   <svg
@@ -324,6 +100,7 @@ export default async function LandingPage() {
               </button>
             </div>
           </div>
+          
           {/* Carruseles con skins aleatorias */}
           <div className="w-full overflow-hidden mt-40 relative">
             {/* Separador visual superior */}
@@ -353,7 +130,136 @@ export default async function LandingPage() {
 
           <Timeline data={timelineData} />
         </div>
+
+        {/* Sección de Preguntas Frecuentes */}
+        <div className="py-16 bg-gradient-to-b from-background/90 to-background/95">
+          <div className="container mx-auto max-w-4xl px-6">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold mb-4 text-white">
+                Preguntas <span className="text-primary">Frecuentes</span>
+              </h2>
+              <p className="text-white/70 max-w-2xl mx-auto">
+                Todo lo que necesitas saber sobre nuestro simulador de cajas
+              </p>
+            </div>
+            
+            <Accordion
+              variant="light"
+              className="gap-4"
+              motionProps={{
+                variants: {
+                  enter: {
+                    y: 0,
+                    opacity: 1,
+                    height: "auto",
+                    transition: {
+                      height: {
+                        type: "spring",
+                        stiffness: 500,
+                        damping: 30,
+                        duration: 0.4,
+                      },
+                      opacity: {
+                        duration: 0.4,
+                      },
+                    },
+                  },
+                  exit: {
+                    y: -10,
+                    opacity: 0,
+                    height: 0,
+                    transition: {
+                      height: {
+                        duration: 0.3,
+                      },
+                      opacity: {
+                        duration: 0.3,
+                      },
+                    },
+                  },
+                },
+              }}
+            >
+              <AccordionItem 
+                key="1" 
+                aria-label="¿Qué es Valefy?" 
+                title="¿Qué es Valefy?"
+                classNames={{
+                  base: "border border-white/10 bg-background/40 backdrop-blur-md rounded-xl mb-4",
+                  title: "text-white font-medium",
+                  trigger: "px-5 py-4 data-[hover=true]:bg-white/5 rounded-xl",
+                  indicator: "text-primary",
+                  content: "px-5 pb-4 text-white/80"
+                }}
+              >
+                <div className="text-white/80">
+                  <p>Valefy es un simulador de cajas de Valorant que te permite experimentar la emoción de abrir cajas y obtener skins sin gastar dinero real. Nuestra plataforma ofrece una experiencia auténtica y divertida para los fans del juego.</p>
+                </div>
+              </AccordionItem>
+              
+              <AccordionItem 
+                key="2" 
+                aria-label="¿Cómo funciona el simulador?" 
+                title="¿Cómo funciona el simulador?"
+                classNames={{
+                  base: "border border-white/10 bg-background/40 backdrop-blur-md rounded-xl mb-4",
+                  title: "text-white font-medium",
+                  trigger: "px-5 py-4 data-[hover=true]:bg-white/5 rounded-xl",
+                  indicator: "text-primary",
+                  content: "px-5 pb-4 text-white/80"
+                }}
+              >
+                <div className="text-white/80">
+                  <p>Nuestro simulador utiliza los mismos porcentajes y mecánicas que el juego original. Puedes abrir cajas, coleccionar skins y disfrutar de la experiencia sin riesgos. Además, ofrecemos estadísticas detalladas sobre tus aperturas.</p>
+                </div>
+              </AccordionItem>
+              
+              <AccordionItem 
+                key="3" 
+                aria-label="¿Es gratis usar Valefy?" 
+                title="¿Es gratis usar Valefy?"
+                classNames={{
+                  base: "border border-white/10 bg-background/40 backdrop-blur-md rounded-xl mb-4",
+                  title: "text-white font-medium",
+                  trigger: "px-5 py-4 data-[hover=true]:bg-white/5 rounded-xl",
+                  indicator: "text-primary",
+                  content: "px-5 pb-4 text-white/80"
+                }}
+              >
+                <div className="text-white/80">
+                  <p>¡Sí! Valefy es completamente gratuito. Ofrecemos una experiencia premium sin costo alguno. En el futuro, podríamos añadir características opcionales de pago, pero la funcionalidad principal siempre será gratuita.</p>
+                </div>
+              </AccordionItem>
+              
+              <AccordionItem 
+                key="4" 
+                aria-label="¿Las skins obtenidas se pueden usar en Valorant?" 
+                title="¿Las skins obtenidas se pueden usar en Valorant?"
+                classNames={{
+                  base: "border border-white/10 bg-background/40 backdrop-blur-md rounded-xl mb-4",
+                  title: "text-white font-medium",
+                  trigger: "px-5 py-4 data-[hover=true]:bg-white/5 rounded-xl",
+                  indicator: "text-primary",
+                  content: "px-5 pb-4 text-white/80"
+                }}
+              >
+                <div className="text-white/80">
+                  <p>No, las skins obtenidas en Valefy son solo para el simulador. No están conectadas con tu cuenta real de Valorant ni pueden transferirse al juego. Valefy es una experiencia independiente no afiliada con Riot Games.</p>
+                </div>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </div>
+        
+        {/* Añadimos el Footer */}
+        <Footer />
       </div>
+      
+      {/* Modal de autenticación */}
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+      />
     </section>
   );
 }
