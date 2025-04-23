@@ -25,7 +25,12 @@
     "@radix-ui/react-hover-card": "^1.1.10",
     "@react-aria/ssr": "3.9.7",
     "@react-aria/visually-hidden": "3.8.20",
+    "@supabase/supabase-js": "^2.49.4",
     "@tabler/icons-react": "^3.31.0",
+    "@types/bcrypt": "^5.0.2",
+    "@types/bcryptjs": "^3.0.0",
+    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.2",
     "clsx": "2.1.1",
     "framer-motion": "11.13.1",
     "intl-messageformat": "^10.5.0",
@@ -63,5 +68,12 @@
     "tailwind-variants": "0.3.0",
     "tailwindcss": "3.4.16",
     "typescript": "5.6.3"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "@heroui/shared-utils",
+      "bcrypt",
+      "sharp"
+    ]
   }
 }
