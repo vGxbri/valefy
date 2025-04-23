@@ -5,11 +5,12 @@ import Aurora from "../components/landing/premade/Aurora";
 import { ImageCarousel } from "@/components/landing/ImageCarousel";
 import { Timeline } from "@/components/landing/Timeline";
 import { getWeaponSkins, getRandomSkins } from "@/lib/valorantApi";
-import { AuthModal } from "@/components/AuthModal";
 import { timelineData } from "@/components/landing/ProcessData";
 import Navbar from '@/components/landing/Navbar'
+// Fix: Update the import path for Footer
 import Footer from '@/components/Footer'
 import {Accordion, AccordionItem} from "@heroui/react";
+import AuthModal from '../components/AuthModal';
 
 export default function LandingPage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -50,7 +51,7 @@ export default function LandingPage() {
       <div className="">
           <Navbar />
         {/* Contenedor principal con altura fija */}
-        <div className="relative overflow-hidden">
+        <div className="relative overflow-hidden" id="inicio">
           {/* Contenedor del Aurora con altura y posición explícitas */}
           <div className="absolute inset-0 w-full" style={{ height: "100vh" }}>
             <Aurora
@@ -102,7 +103,7 @@ export default function LandingPage() {
           </div>
           
           {/* Carruseles con skins aleatorias */}
-          <div className="w-full overflow-hidden mt-40 relative">
+          <div className="w-full overflow-hidden mt-44 relative">
             {/* Separador visual superior */}
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
 
@@ -125,14 +126,17 @@ export default function LandingPage() {
         </div>
 
         {/* Sección de Timeline */}
-        <div className="py-16 bg-gradient-to-b from-background to-background/90">
+        <div className="py-16 bg-gradient-to-b from-background to-background/90" id="funcionamiento">
           <div className="container mx-auto max-w-7xl px-6 mb-10" />
 
           <Timeline data={timelineData} />
         </div>
 
         {/* Sección de Preguntas Frecuentes */}
-        <div className="py-16 bg-gradient-to-b from-background/90 to-background/95">
+        <div className="py-16 bg-gradient-to-b from-background/90 to-background/95 relative" id="faq">
+          {/* Separador visual superior */}
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
+          
           <div className="container mx-auto max-w-4xl px-6">
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold mb-4 text-white">

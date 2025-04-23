@@ -29,7 +29,7 @@ export function getRandomSkins(skins: Skin[], count: number): Skin[] {
     "Classic", "Shorty", "Frenzy", "Ghost", "Sheriff", 
     "Stinger", "Spectre", "Bucky", "Judge", "Bulldog", 
     "Guardian", "Phantom", "Vandal", "Marshal", "Operator", 
-    "Ares", "Odin", "Outlaw"
+    "Ares", "Odin", "Outlaw", "Melee", "Sovereign Guardian"
   ];
 
   // Filtramos las skins que contienen "standard" o "Sovereign Marshal" en su nombre

@@ -46,8 +46,9 @@ export default function RootLayout({
               {/** 
               <Navbar />
               */}
-              <main className="relative z-10">{children}</main>
-              <footer className="relative z-10" />
+              <main className="dark relative z-10">
+                {children}
+              </main>
             </div>
           </div>
         </Providers>
