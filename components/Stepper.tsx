@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PasswordInput from '@/components/landing/premade/PasswordInput';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface StepperProps {
   onComplete: () => void;
@@ -18,6 +19,7 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   
   // Constantes para validación de contraseña
   const PASSWORD_REQUIREMENTS = [
@@ -251,13 +253,13 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
-          className="mb-6"
+          className="mb-4"
         >
           <h2 className="text-2xl font-bold text-white ">{steps[currentStep].title}</h2>
           {steps[currentStep].title && (
             <div className="h-[2px] my-4 bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
           )}
-          <p className="text-sm mt-8 mb-2 text-alternative/70">{steps[currentStep].description}</p>
+          <p className="text-sm mt-6 mb-2 text-alternative/70">{steps[currentStep].description}</p>
 
           {currentStep === 0 && (
             <div className="space-y-4">
@@ -338,13 +340,21 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
               <div>
                 <div className="relative">
                   <input
-                    type="password"
+                    type={isVisible ? 'text' : 'password'}
                     id="confirmPassword"
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className={`w-full px-4 py-2 bg-white/5 border ${errors.confirmPassword ? 'border-red-500' : 'border-white/10'} rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-white`}
+                    className={`w-full px-4 py-2 bg-white/5 border ${errors.confirmPassword ? 'border-red-500' : 'border-white/10'} rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-white pr-10`}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setIsVisible((prev) => !prev)}
+                    aria-label={isVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    className="absolute inset-y-0 right-0 outline-none flex items-center justify-center w-10 text-white/50 hover:text-white"
+                  >
+                    {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
                 {errors.confirmPassword && 
                   <div className="mt-2 flex items-center space-x-2 p-2 bg-primary/10 border border-primary/20 rounded-lg">
@@ -392,7 +402,7 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
         </motion.div>
       </AnimatePresence>
 
-      <div className="flex justify-between mt-8">
+      <div className="flex justify-between">
         <button 
           onClick={prevStep}
           className={`relative inline-flex h-12 w-12 items-center justify-center rounded-[0.9em] bg-transparent transition-colors hover:bg-primary ${
@@ -407,11 +417,24 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
         <button
           onClick={nextStep}
           disabled={isSubmitting}
-          className={`group relative inline-flex h-12 items-center justify-center overflow-hidden rounded-[0.9em] bg-primary px-6 font-medium text-neutral-200 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}>
-            <span>{isSubmitting ? 'Procesando...' : 'Continuar'}</span>
-            {!isSubmitting && (
-              <div className="w-0 translate-x-[100%] pl-0 opacity-0 transition-all duration-200 group-hover:w-5 group-hover:translate-x-0 group-hover:pl-1 group-hover:opacity-100"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5"><path d="M8.14645 3.14645C8.34171 2.95118 8.65829 2.95118 8.85355 3.14645L12.8536 7.14645C13.0488 7.34171 13.0488 7.65829 12.8536 7.85355L8.85355 11.8536C8.65829 12.0488 8.34171 12.0488 8.14645 11.8536C7.95118 11.6583 7.95118 11.3417 8.14645 11.1464L11.2929 8H2.5C2.22386 8 2 7.77614 2 7.5C2 7.22386 2.22386 7 2.5 7H11.2929L8.14645 3.85355C7.95118 3.65829 7.95118 3.34171 8.14645 3.14645Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path></svg></div>
+          className={`group relative inline-flex h-12 items-center justify-center overflow-hidden rounded-[0.9em] px-6 ${isSubmitting ? 'opacity-70 cursor-not-allowed bg-primary/40 border-1 border-primary' : 'bg-primary/40 border-1 border-primary'} text-white transition-all duration-300 before:absolute before:inset-0 before:rounded-[0.9em] before:p-[1.5px] before:-z-10 before:content-['']`}
+        >
+            {isSubmitting ? (
+                <div className="flex items-center">
+                  <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  <span>Procesando</span>
+                </div>
+            ) : (
+              <>
+                <span className="font-medium">Continuar</span>
+                <div className="w-0 translate-x-[100%] pl-0 opacity-0 transition-all duration-200 group-hover:w-5 group-hover:translate-x-0 group-hover:pl-1 group-hover:opacity-100">
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
+                    <path d="M8.14645 3.14645C8.34171 2.95118 8.65829 2.95118 8.85355 3.14645L12.8536 7.14645C13.0488 7.34171 13.0488 7.65829 12.8536 7.85355L8.85355 11.8536C8.65829 12.0488 8.34171 12.0488 8.14645 11.8536C7.95118 11.6583 7.95118 11.3417 8.14645 11.1464L11.2929 8H2.5C2.22386 8 2 7.77614 2 7.5C2 7.22386 2.22386 7 2.5 7H11.2929L8.14645 3.85355C7.95118 3.65829 7.95118 3.34171 8.14645 3.14645Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                  </svg>
+                </div>
+              </>
             )}
+
         </button>
       </div>
     </div>

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
 import Stepper from './Stepper';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -10,6 +10,36 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [isRegistered, setIsRegistered] = useState(false);
+  const [isLoginView, setIsLoginView] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (isOpen) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = 'auto';
+      }
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        document.body.style.overflow = 'auto';
+      }
+    };
+  }, [isOpen, isLoginView]);
+  
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isOpen]);
 
   const handleComplete = () => {
     setIsRegistered(true);
@@ -17,7 +47,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       onClose();
       // Reset state after closing
       setTimeout(() => setIsRegistered(false), 500);
-    }, 2000);
+    }, 5000);
   };
 
   const backdropVariants = {
@@ -101,7 +131,66 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 </motion.div>
               ) : (
                 <>
-                  <Stepper onComplete={handleComplete} />
+                  {isLoginView ? (
+                    <> 
+                      <h2 className="text-2xl font-bold text-white ">¡Bienvenido de nuevo!</h2>
+                      <div className="h-[2px] my-4 bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
+                      <div className="space-y-4">
+                        <div className="mt-6">
+                          <input
+                            type="email"
+                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-white"
+                            placeholder="tu@email.com"
+                          />
+                        </div>
+                        <div className="relative">
+                          <input
+                            type={isVisible ? 'text' : 'password'}
+                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-white pr-10"
+                            placeholder="Contraseña"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setIsVisible((prev) => !prev)}
+                            aria-label={isVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                            className="absolute inset-y-0 right-0 outline-none flex items-center justify-center w-10 text-white/50 hover:text-white"
+                          >
+                            {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                        <button className="w-full bg-primary text-white py-2 rounded-2xl font-medium h-12 rounded-[0.9em] bg-primary/40 border-1 border-primary px-6 font-medium text-neutral-200">
+                          Iniciar Sesión
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <Stepper onComplete={handleComplete} />
+                  )}
+                  
+                  <div className="mt-6 text-center">
+                    {!isLoginView ? (
+                      <p className="text-white/60">
+                        <div className="h-[2px] mt-6 mb-4 bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
+                        ¿Ya tienes una cuenta?{' '}
+                        <button 
+                          onClick={() => setIsLoginView(true)}
+                          className="text-primary hover:underline"
+                        >
+                          Inicia sesión
+                        </button>
+                      </p>
+                    ) : (
+                      <p className="text-white/60">
+                        ¿No tienes cuenta?{' '}
+                        <button 
+                          onClick={() => setIsLoginView(false)}
+                          className="text-primary hover:underline"
+                        >
+                          Regístrate
+                        </button>
+                      </p>
+                    )}
+                  </div>
                 </>
               )}
             </div>

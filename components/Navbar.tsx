@@ -30,7 +30,7 @@ export function Navbar() {
             })}
             href="/app"
           >
-            Comenzar
+            Continuar
           </Link>
         </div>
       </div>
