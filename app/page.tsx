@@ -14,6 +14,8 @@ import AuthModal from '../components/AuthModal';
 
 export default function LandingPage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  // Añadir estado para controlar la vista inicial del modal
+  const [authModalView, setAuthModalView] = useState<'login' | 'register'>('register');
   const [carouselImages1, setCarouselImages1] = useState<string[]>([]);
   const [carouselImages2, setCarouselImages2] = useState<string[]>([]);
 
@@ -46,10 +48,16 @@ export default function LandingPage() {
     loadData();
   }, []);
 
+  // Función para abrir el modal con una vista específica
+  const openAuthModal = (view: 'login' | 'register') => {
+    setAuthModalView(view);
+    setIsAuthModalOpen(true);
+  };
+
   return (
     <section className="bg-background">
       <div className="">
-          <Navbar />
+        <Navbar />
         {/* Contenedor principal con altura fija */}
         <div className="relative overflow-hidden" id="inicio">
           {/* Contenedor del Aurora con altura y posición explícitas */}
@@ -80,7 +88,8 @@ export default function LandingPage() {
 
               <button 
                 className="relative bg-primary text-white font-medium text-[17px] px-4 py-[0.35em] pl-5 h-[2.8em] rounded-[0.9em] flex items-center overflow-hidden cursor-pointer shadow-[inset_0_0_1.6em_-0.6em_#0A141D] group"
-                onClick={() => setIsAuthModalOpen(true)}
+                // Llamar a openAuthModal con 'register'
+                onClick={() => openAuthModal('register')}
               >
                 <span className="mr-10">Unirme ahora</span>
                 <div className="absolute right-[0.3em] bg-white h-[2.2em] w-[2.2em] rounded-[0.7em] flex items-center justify-center transition-all duration-300 group-hover:w-[calc(100%-0.6em)] shadow-[0.1em_0.1em_0.6em_0.2em_#d2d2d4] active:scale-95">
@@ -259,10 +268,11 @@ export default function LandingPage() {
         <Footer />
       </div>
       
-      {/* Modal de autenticación */}
+      {/* Modal de autenticación - Pasar initialView */}
       <AuthModal 
         isOpen={isAuthModalOpen} 
         onClose={() => setIsAuthModalOpen(false)} 
+        initialView={authModalView}
       />
     </section>
   );
