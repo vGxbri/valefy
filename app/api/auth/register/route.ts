@@ -45,13 +45,6 @@ export async function POST(request: Request) {
       .eq('nombre_usuario', username)
       .single();
 
-    if (existingUsername) {
-      return NextResponse.json(
-        { error: 'Este nombre de usuario ya está en uso' },
-        { status: 400 }
-      );
-    }
-
     // Hashear la contraseña antes de guardarla
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);

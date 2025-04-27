@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { signIn } from 'next-auth/react'; // Importar signIn
+import { FaGoogle, FaDiscord } from 'react-icons/fa'; // Importar iconos
 import { motion, AnimatePresence } from 'framer-motion';
 import PasswordInput from '@/components/landing/premade/PasswordInput';
 import { Eye, EyeOff } from 'lucide-react';
@@ -436,6 +438,36 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
             )}
         </button>
       </div>
+
+      {/* Separador y botones sociales movidos aquí, solo para el primer paso */}
+      {currentStep === 0 && (
+        <>
+          {/* Separador Opcional */}
+          <div className="relative flex items-center my-6 mt-6"> {/* Añadido mt-6 */}
+            <div className="flex-grow border-t border-white/10"></div>
+            <span className="flex-shrink mx-4 text-white/50 text-xs">O REGÍSTRATE CON</span>
+            <div className="flex-grow border-t border-white/10"></div>
+          </div>
+
+          {/* Botones de registro social */}
+          <div className="space-y-3 mb-6">
+            <button
+              type="button"
+              onClick={() => signIn('google', { callbackUrl: '/main' })}
+              className="w-full flex items-center justify-center px-4 py-2 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-colors duration-200"
+            >
+              <FaGoogle className="mr-2" /> Registrarse con Google
+            </button>
+            <button
+              type="button"
+              onClick={() => signIn('discord', { callbackUrl: '/main' })}
+              className="w-full flex items-center justify-center px-4 py-2 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-colors duration-200"
+            >
+              <FaDiscord className="mr-2" /> Registrarse con Discord
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

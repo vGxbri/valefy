@@ -7,6 +7,7 @@ import { Providers } from "./providers";
 // Add this import
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
+import { SessionProvider } from "next-auth/react";
 
 export const metadata: Metadata = {
   title: {
@@ -26,7 +27,7 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -41,16 +42,18 @@ export default function RootLayout({
         )}
       >
         <Providers>
-          <div className="relative flex flex-col h-screen">
+          <SessionProvider>
             <div className="relative flex flex-col h-screen">
-              {/** 
-              <Navbar />
-              */}
-              <main className="dark relative z-10">
-                {children}
-              </main>
+              <div className="relative flex flex-col h-screen">
+                {/** 
+                <Navbar />
+                */}
+                <main className="dark relative z-10">
+                  {children}
+                </main>
+              </div>
             </div>
-          </div>
+          </SessionProvider>
         </Providers>
       </body>
     </html>

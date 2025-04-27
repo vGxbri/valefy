@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Stepper from './Stepper';
 import { Eye, EyeOff } from 'lucide-react';
-import { loginUser } from '@/app/api/auth/login/login'; // Importar la acción del servidor
-
+import { loginUser } from '@/app/api/auth/login/route';
+import { signIn } from 'next-auth/react'; // Importar signIn
+import { FaGoogle, FaDiscord } from 'react-icons/fa'; // Importar iconos
+import { useRouter } from 'next/navigation'; // Añadir import
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,7 +20,9 @@ export default function AuthModal({ isOpen, onClose, initialView = 'login' }: Au
   const [error, setError] = useState<string | null>(null); // Estado de error
 
   // Definición de handleLoginSubmit dentro del componente
-  const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const router = useRouter();
+
+const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
@@ -32,6 +36,7 @@ export default function AuthModal({ isOpen, onClose, initialView = 'login' }: Au
       } else {
         // Login exitoso
         onClose(); // Cerrar el modal
+        router.push('/main'); // Redirigir a /app/main
         // Opcional: Redirigir o actualizar estado global de autenticación
       }
     } catch (err) {
@@ -63,9 +68,10 @@ export default function AuthModal({ isOpen, onClose, initialView = 'login' }: Au
     setIsRegistered(true);
     setTimeout(() => {
       onClose();
+      router.push('/main'); // Redirigir a /main
       // Reset state after closing
       setTimeout(() => setIsRegistered(false), 500);
-    }, 5000);
+    }, 3000); // Reducir el tiempo de espera
   };
 
   const backdropVariants = {
@@ -192,81 +198,70 @@ export default function AuthModal({ isOpen, onClose, initialView = 'login' }: Au
                           </div>
                         )}
 
-                        {/*}
+                        {/* Botón de inicio de sesión */}
                         <button 
                           type="submit" // Cambiar a type="submit"
-                          className="w-full bg-primary text-white py-2 rounded-2xl font-medium h-12 rounded-[0.9em] bg-primary/40 border-1 border-primary px-6 font-medium text-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed" // Estilos para deshabilitado
+                          className="w-full bg-primary text-white py-2 rounded-2xl font-medium h-12 rounded-[0.9em] bg-primary/40 border-1 border-primary px-6 font-medium text-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={isLoading} // Deshabilitar mientras carga
                         >
-                          {isLoading ? 'Iniciando...' : 'Iniciar Sesión'}
-                        </button>
-                        {*/}
-                        <button
-                          type="submit"
-                          disabled={isLoading}
-                          className={`w-full group relative inline-flex h-12 items-center justify-center overflow-hidden rounded-[0.9em] px-6 ${isLoading ? 'opacity-70 cursor-not-allowed bg-primary/40 border-1 border-primary' : 'bg-primary/40 border-1 border-primary'} text-white transition-all duration-300 before:absolute before:inset-0 before:rounded-[0.9em] before:p-[1.5px] before:-z-10 before:content-['']`}
-                        >
-                            {isLoading ? (
-                                <div className="flex items-center">
-                                  <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                                  <span>Procesando</span>
-                                </div>
-                            ) : (
-                              <>
-                                <span className="font-medium">Iniciar sesión</span>
-                                <div className="w-0 translate-x-[100%] pl-0 opacity-0 transition-all duration-200 group-hover:w-5 group-hover:translate-x-0 group-hover:pl-1 group-hover:opacity-100">
-                                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
-                                    <path d="M8.14645 3.14645C8.34171 2.95118 8.65829 2.95118 8.85355 3.14645L12.8536 7.14645C13.0488 7.34171 13.0488 7.65829 12.8536 7.85355L8.85355 11.8536C8.65829 12.0488 8.34171 12.0488 8.14645 11.8536C7.95118 11.6583 7.95118 11.3417 8.14645 11.1464L11.2929 8H2.5C2.22386 8 2 7.77614 2 7.5C2 7.22386 2.22386 7 2.5 7H11.2929L8.14645 3.85355C7.95118 3.65829 7.95118 3.34171 8.14645 3.14645Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                                  </svg>
-                                </div>
-                              </>
-                            )}
+                          {isLoading ? (
+                            <div className="flex items-center justify-center">
+                              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Iniciando sesión...
+                            </div>
+                          ) : (
+                            'Iniciar Sesión'
+                          )}
                         </button>
 
+                        {/* Separador y botones de OAuth */}
+                        <div className="relative my-6">
+                          <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                            <div className="w-full border-t border-white/10"></div>
+                          </div>
+                          <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-background text-white/50">O continúa con</span>
+                          </div>
+                        </div>
 
+                        <div className="grid grid-cols-2 gap-4">
+                          <button
+                            type="button"
+                            onClick={() => signIn('google', { callbackUrl: '/main' })} // Llamada a signIn con 'google' y callbackUrl
+                            className="flex items-center justify-center w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors text-white"
+                            disabled={isLoading}
+                          >
+                            <FaGoogle className="mr-2" /> Google
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => signIn('discord', { callbackUrl: '/main' })} // Llamada a signIn con 'discord' y callbackUrl
+                            className="flex items-center justify-center w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors text-white"
+                            disabled={isLoading}
+                          >
+                            <FaDiscord className="mr-2" /> Discord
+                          </button>
+                        </div>
 
+                        <p className="mt-6 text-center text-sm text-white/50">
+                          ¿No tienes cuenta?{' '}
+                          <button 
+                            type="button" 
+                            onClick={() => setIsLoginView(false)} 
+                            className="font-medium text-primary hover:underline"
+                            disabled={isLoading}
+                          >
+                            Regístrate
+                          </button>
+                        </p>
                       </div>
                     </form>
                   ) : (
-                    <Stepper onComplete={handleComplete} />
+                    <Stepper onComplete={handleComplete} onClose={onClose} />
                   )}
-                  
-                  <div className="mt-6 text-center">
-                    {!isLoginView ? (
-                      <>
-                        <div className="h-[2px] mt-6 mb-4 bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
-                        <p className="text-white/60">
-                          ¿Ya tienes una cuenta?{' '}
-                          <button 
-                            onClick={() => {
-                              setIsLoginView(true);
-                              setIsRegistered(false);
-                              setError(null); // Limpiar error al cambiar de vista
-                            }}
-                            className="text-primary hover:[text-shadow:_0px_0px_12px_rgba(252,78,91,1)] transition-[text-shadow] duration-150"
-                            disabled={isLoading}
-                          >
-                            Inicia sesión
-                          </button>
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-white/60">
-                        ¿No tienes cuenta?{' '}
-                        <button 
-                          onClick={() => {
-                            setIsLoginView(false);
-                            setIsRegistered(false);
-                            setError(null); // Limpiar error al cambiar de vista
-                          }}
-                          className="text-primary hover:[text-shadow:_0px_0px_12px_rgba(252,78,91,1)] transition-[text-shadow] duration-150"
-                          disabled={isLoading}
-                        >
-                          Regístrate
-                        </button>
-                      </p>
-                    )}
-                  </div>
                 </>
               )}
             </div>
