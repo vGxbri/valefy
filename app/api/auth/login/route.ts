@@ -50,6 +50,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error en el inicio de sesión:', error);
-    return { success: false, error: 'Error en el servidor durante el inicio de sesión' };
+    return NextResponse.json({ error: 'Error en el servidor durante el inicio de sesión' }, { status: 500 });
   }
 }
