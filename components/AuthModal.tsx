@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Stepper from './Stepper';
 import { Eye, EyeOff } from 'lucide-react';
-import { loginUser } from '@/app/api/auth/login/route';
+// Eliminar importación obsoleta
 import { signIn } from 'next-auth/react'; // Importar signIn
 import { FaGoogle, FaDiscord } from 'react-icons/fa'; // Importar iconos
 import { useRouter } from 'next/navigation'; // Añadir import
@@ -30,7 +30,8 @@ const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     const formData = new FormData(e.currentTarget);
 
     try {
-      const result = await loginUser(formData);
+      const response = await fetch('/api/auth/login', { method: 'POST', body: formData });
+      const result = await response.json();
       if (result.error) {
         setError(result.error);
       } else {
