@@ -56,11 +56,8 @@ export function AppSidebar() {
   return (
     <Sidebar className="fixed left-4 top-4 z-50 h-[calc(100vh-32px)] w-60 flex-col items-center rounded-xl border border-white/10 bg-background/90 backdrop-blur-md shadow-2xl"> {/* Increased width slightly to w-60 */}
       <div className="flex flex-col items-center w-full py-5 gap-2 border-b border-white/10 relative rounded-t-xl overflow-hidden"> {/* Adjusted py-5 */}
-        <Link href="/" legacyBehavior>
-          <a>
-            {/* Adjusted logo size slightly */}
-            <Image src="/logo-valefy.png" alt="Valefy Logo" width={100} height={40} className="object-contain" />
-          </a>
+        <Link href="/" className="block w-auto h-auto">
+          <Image src="/logo-valefy.png" alt="Valefy Logo" width={100} height={40} className="object-contain hover:opacity-80 transition-opacity" />
         </Link>
       </div>
       <SidebarContent className="flex-1 w-full px-2 pt-2"> {/* Adjusted px-4 pt-5 */}
@@ -73,16 +70,14 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
-                      <Link href={item.url} legacyBehavior>
-                        <a
-                          className={`group flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ease-in-out text-base font-medium ${isActive ? "bg-primary/90 text-white shadow-md shadow-primary/30 scale-[1.02]" : "text-white/70 hover:bg-white/10 hover:text-white"}`} /* Adjusted py-3, text-base */
-                          title={item.title}
-                          aria-current={isActive ? "page" : undefined}
-                        >
-                          <item.icon className="h-6 w-6" /> {/* Increased icon size */}
-                          <span>{item.title}</span>
-                          {/* Removed active indicator span */}
-                        </a>
+                      <Link 
+                        href={item.url}
+                        className={`group flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 ease-in-out text-base font-medium ${isActive ? "bg-primary/90 text-white shadow-md shadow-primary/30 scale-[1.02]" : "text-white/70 hover:bg-white/10 hover:text-white"}`}
+                        title={item.title}
+                        aria-current={isActive ? "page" : undefined}
+                      >
+                        <item.icon className="h-6 w-6" />
+                        <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
