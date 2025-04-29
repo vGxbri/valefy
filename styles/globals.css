@@ -21,13 +21,17 @@
   }
 
   :root {
-    --background: 0 0% 100%;
+    --background: 213 38% 8%;
     --foreground: 222.2 84% 4.9%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 356 97% 63%;
+    --secondary: 352 57% 38%;
+    --alternative: 42 17% 91%;
+    --text: #ffffff;
+    --text-alt: #efeee9;
     --primary-foreground: 210 40% 98%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
@@ -35,7 +39,7 @@
     --primary-base: #fcfcfc;
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
-  
+    --dark: 0 0% 18%;
     --ch-0: light;
     --ch-1: #6e7781;
     --ch-2: #0550ae;
@@ -82,9 +86,13 @@
   }
   
   .dark {
-    --background: 228 86% 5%;
+    --background: 213 38% 8%;
     --foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
+    --primary: 356 97% 63%;
+    --secondary: 352 57% 38%;
+    --alternative: 42 17% 91%;
+    --text: #ffffff;
+    --text-alt: #efeee9;
     --primary-foreground: 222.2 47.4% 11.2%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
@@ -94,9 +102,9 @@
     --muted-foreground: 215 20.2% 65.1%;
     --codebg: #030608;
     --primary-base: #0a0a0a;
-  
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
+    --dark: 0 0% 18%;
     --ch-0: dark;
     --ch-1: #a1a1aa;
     --ch-2: #7dd3fc;

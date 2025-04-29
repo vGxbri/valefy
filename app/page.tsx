@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from "react";
+import { useSession } from 'next-auth/react'; // Importar useSession
+import { useRouter } from 'next/navigation'; // Importar useRouter
 import Aurora from "../components/landing/premade/Aurora";
 import { ImageCarousel } from "@/components/landing/ImageCarousel";
 import { Timeline } from "@/components/landing/Timeline";
@@ -13,6 +15,8 @@ import {Accordion, AccordionItem} from "@heroui/react";
 import AuthModal from '../components/AuthModal';
 
 export default function LandingPage() {
+  const { data: session, status } = useSession(); // Obtener estado de la sesión
+  const router = useRouter(); // Obtener el router
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   // Añadir estado para controlar la vista inicial del modal
   const [authModalView, setAuthModalView] = useState<'login' | 'register'>('register');
@@ -45,8 +49,10 @@ export default function LandingPage() {
       }
     }
 
+    // Cargar datos independientemente del estado de autenticación, ya que el middleware maneja la redirección
     loadData();
-  }, []);
+
+  }, []); // Eliminar status y router de las dependencias
 
   // Función para abrir el modal con una vista específica
   const openAuthModal = (view: 'login' | 'register') => {

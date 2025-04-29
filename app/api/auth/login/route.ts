@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
+import { signIn } from '@/app/auth';
 
 // Inicializar el cliente de Supabase con las variables de entorno
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,26 +28,44 @@ export async function POST(request: NextRequest) {
     // Buscar al usuario por correo electrónico
     const { data: user, error: userError } = await supabase
       .from('usuarios')
-      .select('id, correo, password, nombre_usuario') // Seleccionar los campos necesarios
+      .select('id, correo, password, nombre_usuario')
       .eq('correo', email)
       .single();
 
     if (userError || !user) {
       console.error('Error buscando usuario o usuario no encontrado:', userError);
-      return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 }); // Mensaje genérico por seguridad
+      return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 });
     }
 
     // Verificar la contraseña
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 }); // Mensaje genérico por seguridad
+      return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 });
     }
 
-    // Inicio de sesión exitoso (aquí podrías manejar la sesión, ej. con cookies o JWT)
+    // Usar signIn de NextAuth para establecer la sesión
+    const result = await signIn('credentials', {
+      redirect: false,
+      email: user.correo,
+      id: user.id.toString(),
+      username: user.nombre_usuario,
+      callbackUrl: '/'
+    });
+
+    if (result?.error) {
+      return NextResponse.json({ error: 'Error al establecer la sesión' }, { status: 401 });
+    }
+
     console.log('Inicio de sesión exitoso para:', user.correo);
-    // Devolver datos relevantes del usuario (sin la contraseña)
-    return NextResponse.json({ user: { id: user.id, email: user.correo, username: user.nombre_usuario } }, { status: 200 });
+    return NextResponse.json({ 
+      user: { 
+        id: user.id, 
+        email: user.correo, 
+        username: user.nombre_usuario 
+      },
+      success: true
+    }, { status: 200 });
 
   } catch (error) {
     console.error('Error en el inicio de sesión:', error);
