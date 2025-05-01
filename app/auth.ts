@@ -5,10 +5,11 @@ import DiscordProvider from "next-auth/providers/discord";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { SupabaseAdapter } from "@auth/supabase-adapter";
 import { createClient } from "@supabase/supabase-js";
+import bcryptjs from "bcryptjs";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -29,26 +30,55 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'text' },
-        id: { label: 'ID', type: 'text' },
-        username: { label: 'Username', type: 'text' },
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.id || !credentials?.username) return null;
-        
-        try {
-          // Aquí podemos validar las credenciales contra Supabase si es necesario
-          const user = {
-            id: String(credentials.id),
-            email: String(credentials.email),
-            name: String(credentials.username),
-            image: null
-          };
-          return user;
-        } catch (error) {
-          console.error('Error en authorize:', error);
+        console.log('[authorize] Credenciales recibidas:', credentials);
+        if (
+          !credentials?.email ||
+          !credentials?.password ||
+          typeof credentials.password !== 'string' ||
+          !credentials.password
+        ) {
+          console.log('[authorize] Faltan credenciales válidas');
           return null;
         }
+        // Buscar usuario en la tabla 'usuarios'
+        const { data: user, error } = await supabase
+          .from('usuarios')
+          .select('id, correo, nombre_usuario, password')
+          .eq('correo', credentials.email)
+          .single();
+
+        console.log('[authorize] Resultado de búsqueda de usuario:', { user, error });
+
+        if (
+          error ||
+          !user ||
+          typeof user.password !== 'string' ||
+          !user.password
+        ) {
+          console.log('[authorize] Usuario no encontrado o password inválido en la base de datos');
+          return null;
+        }
+
+        // Comparar la contraseña
+        const isValid = await bcryptjs.compare(credentials.password, user.password);
+        console.log('[authorize] Resultado de comparación de contraseña:', isValid);
+        if (!isValid) {
+          console.log('[authorize] Contraseña incorrecta');
+          return null;
+        }
+
+        // Devuelve el usuario en el formato que NextAuth espera
+        const userObj = {
+          id: user.id,
+          email: user.correo,
+          name: user.nombre_usuario,
+          image: null
+        };
+        console.log('[authorize] Usuario autenticado correctamente:', userObj);
+        return userObj;
       }
     }),
   ],

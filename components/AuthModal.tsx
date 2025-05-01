@@ -5,7 +5,7 @@ import { Eye, EyeOff } from 'lucide-react';
 // Eliminar importación obsoleta
 import { signIn } from 'next-auth/react'; // Importar signIn
 import { FaGoogle, FaDiscord } from 'react-icons/fa'; // Importar iconos
-import { useRouter } from 'next/navigation'; // Añadir import
+import { useRouter } from 'next/navigation'; // Importar useRouter de next/navigation
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -32,14 +32,29 @@ const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     try {
       const response = await fetch('/api/auth/login', { method: 'POST', body: formData });
       const result = await response.json();
+      
       if (result.error) {
         setError(result.error);
-      } else {
-        // Login exitoso
-        onClose(); // Cerrar el modal
-        router.push('/main'); // Redirigir a /app/main
-        // Opcional: Redirigir o actualizar estado global de autenticación
+        return false;
       }
+
+      // Iniciar sesión con next-auth
+      const signInResult = await signIn('credentials', {
+        email: formData.get('email'),
+        password: formData.get('password'),
+        redirect: false
+      });
+
+      if (signInResult?.error) {
+        setError('Error al iniciar sesión: ' + signInResult.error);
+        return false;
+      }
+
+      // Cerrar el modal y redirigir
+      onClose();
+      router.replace('/main');
+      return true;
+      
     } catch (err) {
       setError('Ocurrió un error inesperado. Inténtalo de nuevo.');
       console.error('Login error:', err);
@@ -69,10 +84,10 @@ const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     setIsRegistered(true);
     setTimeout(() => {
       onClose();
-      router.push('/main'); // Redirigir a /main
+      router.push('/main');
       // Reset state after closing
       setTimeout(() => setIsRegistered(false), 500);
-    }, 3000); // Reducir el tiempo de espera
+    }, 3000);
   };
 
   const backdropVariants = {

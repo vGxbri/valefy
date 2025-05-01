@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import bcrypt from 'bcryptjs';
+import bcryptjs from 'bcryptjs';
 import { signIn } from '@/app/auth';
 
 // Inicializar el cliente de Supabase con las variables de entorno
@@ -16,59 +16,75 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function POST(request: NextRequest) {
-  const formData = await request.formData();
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
-
-  if (!email || !password) {
-    return NextResponse.json({ error: 'Correo y contraseña son obligatorios' }, { status: 400 });
-  }
-
   try {
-    // Buscar al usuario por correo electrónico
+    const formData = await request.formData();
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    console.log('Login attempt for:', email);
+
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Correo y contraseña son obligatorios' }, { status: 400 });
+    }
+
+    // Verificar si el usuario existe primero
     const { data: user, error: userError } = await supabase
       .from('usuarios')
-      .select('id, correo, password, nombre_usuario')
+      .select('id, correo, nombre_usuario, password')
       .eq('correo', email)
       .single();
 
-    if (userError || !user) {
-      console.error('Error buscando usuario o usuario no encontrado:', userError);
+    if (userError) {
+      console.error('Error al buscar usuario:', userError);
       return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 });
     }
 
-    // Verificar la contraseña
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!user) {
+      console.log('Usuario no encontrado:', email);
+      return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 });
+    }
 
+    // Verificar la contraseña manualmente primero
+    const isPasswordValid = await bcryptjs.compare(password, user.password);
     if (!isPasswordValid) {
+      console.log('Contraseña incorrecta para:', email);
       return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 });
     }
 
-    // Usar signIn de NextAuth para establecer la sesión
-    const result = await signIn('credentials', {
-      redirect: false,
-      email: user.correo,
-      id: user.id.toString(),
-      username: user.nombre_usuario,
-      callbackUrl: '/'
-    });
+    // Usar directamente el signIn de NextAuth
+    try {
+      const result = await signIn('credentials', {
+        redirect: false,
+        email: email,
+        password: password
+      });
 
-    if (result?.error) {
-      return NextResponse.json({ error: 'Error al establecer la sesión' }, { status: 401 });
+      if (result?.error) {
+        console.error('Error de autenticación NextAuth:', result.error);
+        return NextResponse.json({ error: result.error }, { status: 401 });
+      }
+
+      console.log('Inicio de sesión exitoso para:', email);
+      return NextResponse.json({ 
+        success: true,
+        user: {
+          id: user.id,
+          email: user.correo,
+          nombre: user.nombre_usuario
+        }
+      }, { status: 200 });
+    } catch (authError: any) {
+      console.error('Error en signIn de NextAuth:', authError);
+      return NextResponse.json({ 
+        error: 'Error de autenticación: ' + (authError.message || 'Desconocido'),
+        details: authError
+      }, { status: 500 });
     }
-
-    console.log('Inicio de sesión exitoso para:', user.correo);
-    return NextResponse.json({ 
-      user: { 
-        id: user.id, 
-        email: user.correo, 
-        username: user.nombre_usuario 
-      },
-      success: true
-    }, { status: 200 });
-
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error en el inicio de sesión:', error);
-    return NextResponse.json({ error: 'Error en el servidor durante el inicio de sesión' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Error en el servidor durante el inicio de sesión',
+      details: error.message 
+    }, { status: 500 });
   }
 }

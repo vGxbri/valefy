@@ -9,6 +9,8 @@ import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
 import { SessionProvider } from "next-auth/react";
 
+import Loading from "./loading";
+
 export const metadata: Metadata = {
   title: {
     default: siteConfig.name,
@@ -45,11 +47,10 @@ export default async function RootLayout({
           <SessionProvider>
             <div className="relative flex flex-col h-screen">
               <div className="relative flex flex-col h-screen">
-                {/** 
-                <Navbar />
-                */}
                 <main className="dark relative z-10">
-                  {children}
+                  <Loading>
+                    {children}
+                  </Loading>
                 </main>
               </div>
             </div>

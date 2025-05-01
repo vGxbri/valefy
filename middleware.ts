@@ -3,34 +3,41 @@ import type { NextRequest } from 'next/server';
 import { auth } from '@/app/auth';
 
 export async function middleware(req: NextRequest) {
-  const session = await auth();
-  const { pathname } = req.nextUrl;
+  try {
+    const session = await auth();
+    const { pathname } = req.nextUrl;
 
-  // Lista de rutas públicas que no requieren autenticación
-  const publicRoutes = ['/'];
-  const isPublicRoute = publicRoutes.includes(pathname);
+    // Lista de rutas públicas que no requieren autenticación
+    const publicRoutes = ['/'];
+    const isPublicRoute = publicRoutes.includes(pathname);
 
-  // Si el usuario está autenticado
-  if (session?.user) {
-    // Si intenta acceder a una ruta pública estando autenticado
-    if (isPublicRoute) {
-      return NextResponse.redirect(new URL('/main', req.url));
+    // Rutas que requieren verificación de sesión
+    const protectedRoutes = ['/main'];
+    const isProtectedRoute = protectedRoutes.includes(pathname);
+
+    // Si el usuario está autenticado
+    if (session?.user) {
+      // Si intenta acceder a una ruta pública estando autenticado
+      if (isPublicRoute) {
+        return NextResponse.redirect(new URL('/main', req.url));
+      }
+      // Usuario autenticado accediendo a rutas protegidas
+      return NextResponse.next();
     }
-    // Usuario autenticado accediendo a rutas protegidas
-    return NextResponse.next();
-  }
 
-  // Si el usuario NO está autenticado
-  if (!session?.user) {
-    // Si intenta acceder a una ruta protegida
-    if (!isPublicRoute) {
+    // Si el usuario NO está autenticado
+    if (!session?.user && isProtectedRoute) {
+      // Redirigir a la página principal solo si intenta acceder a rutas protegidas
       return NextResponse.redirect(new URL('/', req.url));
     }
-    // Usuario no autenticado accediendo a rutas públicas
-    return NextResponse.next();
-  }
 
-  return NextResponse.next();
+    // Permitir acceso a rutas públicas sin autenticación
+    return NextResponse.next();
+  } catch (error) {
+    console.error('Error en middleware:', error);
+    // En caso de error, redirigir a la página principal
+    return NextResponse.redirect(new URL('/', req.url));
+  }
 }
 
 // Configuración del matcher para especificar en qué rutas se ejecutará el middleware

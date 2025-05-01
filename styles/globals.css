@@ -149,4 +149,8 @@
     --token-function-variable: #b392f0;
     --token-black: #ffffff;
   }
+
+  .drop-shadow-custom {
+    filter: drop-shadow(0 0 18px #ffffff33);
+  }
 }

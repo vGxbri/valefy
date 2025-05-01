@@ -189,7 +189,13 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
         // En el último paso, intentamos registrar al usuario
         const success = await registerUser();
         if (success) {
-          // Solo llamamos a onComplete si el registro fue exitoso
+          // Iniciar sesión automáticamente después del registro
+          await signIn('credentials', {
+            email: formData.email,
+            username: formData.username,
+            password: formData.password,
+          });
+          // Solo llamamos a onComplete si el inicio de sesión fue exitoso
           onComplete();
         }
       }

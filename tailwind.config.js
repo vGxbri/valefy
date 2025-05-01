@@ -25,6 +25,7 @@ const config = {
   				alt: '#EFEEE9'
   			},
   			background: 'hsl(var(--background))',
+				backgroundAlt: '#182636',
   			dark: '#2D2D2D',
   			foreground: 'hsl(var(--foreground))',
   			card: {
