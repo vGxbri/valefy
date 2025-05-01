@@ -26,10 +26,26 @@ export const getWeaponSkins = async (): Promise<Skin[]> => {
 export function getRandomSkins(skins: Skin[], count: number): Skin[] {
   // Lista de nombres de armas a excluir
   const bannedWeaponNames = [
-    "Classic", "Shorty", "Frenzy", "Ghost", "Sheriff", 
-    "Stinger", "Spectre", "Bucky", "Judge", "Bulldog", 
-    "Guardian", "Phantom", "Vandal", "Marshal", "Operator", 
-    "Ares", "Odin", "Outlaw", "Melee", "Sovereign Guardian"
+    "Classic",
+    "Shorty",
+    "Frenzy",
+    "Ghost",
+    "Sheriff",
+    "Stinger",
+    "Spectre",
+    "Bucky",
+    "Judge",
+    "Bulldog",
+    "Guardian",
+    "Phantom",
+    "Vandal",
+    "Marshal",
+    "Operator",
+    "Ares",
+    "Odin",
+    "Outlaw",
+    "Melee",
+    "Sovereign Guardian",
   ];
 
   // Filtramos las skins que contienen "standard" o "Sovereign Marshal" en su nombre
@@ -38,7 +54,7 @@ export function getRandomSkins(skins: Skin[], count: number): Skin[] {
     (skin) =>
       !skin.displayName.toLowerCase().includes("standard") &&
       skin.displayName !== "Sovereign Marshal" &&
-      !bannedWeaponNames.includes(skin.displayName)
+      !bannedWeaponNames.includes(skin.displayName),
   );
 
   // Agrupamos las skins por tipo de arma (extrayendo el nombre del arma de displayName)

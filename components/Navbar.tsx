@@ -29,33 +29,36 @@ export function Navbar() {
         {/* Logo pequeño o icono de la app */}
         <Link href="/main">
           <Image
-            src="/logo-valefy-icon.png" // Asumiendo que tienes un icono cuadrado/circular
             alt="Valefy Icon"
-            width={40}
-            height={40}
             className="rounded-lg"
+            height={40}
+            src="/logo-valefy-icon.png" // Asumiendo que tienes un icono cuadrado/circular
+            width={40}
           />
         </Link>
       </div>
       <nav className="flex flex-1 flex-col items-center space-y-4 p-4">
         {navigationItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/main" && pathname.startsWith(item.href));
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/main" && pathname.startsWith(item.href));
+
           return (
             <Link
               key={item.name}
-              href={item.href}
               className={clsx(
                 "group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 ease-in-out",
                 isActive
                   ? "bg-primary text-white shadow-lg shadow-primary/30"
                   : "text-white/60 hover:bg-white/10 hover:text-white",
               )}
+              href={item.href}
               title={item.name} // Tooltip para accesibilidad y claridad
             >
               <item.icon className="h-6 w-6" />
               {/* Indicador activo (opcional, pero mejora UX) */}
               {isActive && (
-                <span className="absolute -right-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary"></span>
+                <span className="absolute -right-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary" />
               )}
             </Link>
           );

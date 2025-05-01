@@ -9,13 +9,13 @@ import bcryptjs from "bcryptjs";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: SupabaseAdapter({ 
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL!, 
-    secret: process.env.SUPABASE_SERVICE_ROLE_KEY! 
+  adapter: SupabaseAdapter({
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    secret: process.env.SUPABASE_SERVICE_ROLE_KEY!,
   }),
   providers: [
     GoogleProvider({
@@ -27,46 +27,61 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientSecret: process.env.AUTH_DISCORD_SECRET!,
     }),
     CredentialsProvider({
-      name: 'credentials',
+      name: "credentials",
       credentials: {
-        email: { label: 'Email', type: 'text' },
-        password: { label: 'Password', type: 'password' }
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        console.log('[authorize] Credenciales recibidas:', credentials);
+        console.log("[authorize] Credenciales recibidas:", credentials);
         if (
           !credentials?.email ||
           !credentials?.password ||
-          typeof credentials.password !== 'string' ||
+          typeof credentials.password !== "string" ||
           !credentials.password
         ) {
-          console.log('[authorize] Faltan credenciales válidas');
+          console.log("[authorize] Faltan credenciales válidas");
+
           return null;
         }
         // Buscar usuario en la tabla 'usuarios'
         const { data: user, error } = await supabase
-          .from('usuarios')
-          .select('id, correo, nombre_usuario, password')
-          .eq('correo', credentials.email)
+          .from("usuarios")
+          .select("id, correo, nombre_usuario, password")
+          .eq("correo", credentials.email)
           .single();
 
-        console.log('[authorize] Resultado de búsqueda de usuario:', { user, error });
+        console.log("[authorize] Resultado de búsqueda de usuario:", {
+          user,
+          error,
+        });
 
         if (
           error ||
           !user ||
-          typeof user.password !== 'string' ||
+          typeof user.password !== "string" ||
           !user.password
         ) {
-          console.log('[authorize] Usuario no encontrado o password inválido en la base de datos');
+          console.log(
+            "[authorize] Usuario no encontrado o password inválido en la base de datos",
+          );
+
           return null;
         }
 
         // Comparar la contraseña
-        const isValid = await bcryptjs.compare(credentials.password, user.password);
-        console.log('[authorize] Resultado de comparación de contraseña:', isValid);
+        const isValid = await bcryptjs.compare(
+          credentials.password,
+          user.password,
+        );
+
+        console.log(
+          "[authorize] Resultado de comparación de contraseña:",
+          isValid,
+        );
         if (!isValid) {
-          console.log('[authorize] Contraseña incorrecta');
+          console.log("[authorize] Contraseña incorrecta");
+
           return null;
         }
 
@@ -75,11 +90,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user.id,
           email: user.correo,
           name: user.nombre_usuario,
-          image: null
+          image: null,
         };
-        console.log('[authorize] Usuario autenticado correctamente:', userObj);
+
+        console.log("[authorize] Usuario autenticado correctamente:", userObj);
+
         return userObj;
-      }
+      },
     }),
   ],
   session: {
@@ -93,6 +110,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.email = user.email;
         token.name = user.name;
       }
+
       return token;
     },
     async session({ session, token }) {
@@ -101,14 +119,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.email = String(token.email);
         session.user.name = String(token.name);
       }
+
       return session;
     },
   },
   pages: {
-    signIn: '/',
-    signOut: '/',
-    error: '/error',
+    signIn: "/",
+    signOut: "/",
+    error: "/error",
   },
   secret: process.env.AUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development',
+  debug: process.env.NODE_ENV === "development",
 });

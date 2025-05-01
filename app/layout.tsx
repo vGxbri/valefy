@@ -1,15 +1,15 @@
 import "@/styles/globals.css";
 import { Metadata, Viewport } from "next";
 import clsx from "clsx";
+import { SessionProvider } from "next-auth/react";
 
 import { Providers } from "./providers";
 
 // Add this import
+import Loading from "./loading";
+
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
-import { SessionProvider } from "next-auth/react";
-
-import Loading from "./loading";
 
 export const metadata: Metadata = {
   title: {
@@ -48,9 +48,7 @@ export default async function RootLayout({
             <div className="relative flex flex-col h-screen">
               <div className="relative flex flex-col h-screen">
                 <main className="dark relative z-10">
-                  <Loading>
-                    {children}
-                  </Loading>
+                  <Loading>{children}</Loading>
                 </main>
               </div>
             </div>
