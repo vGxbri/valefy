@@ -3,49 +3,48 @@ import React from "react";
 // Pasos del proceso con contenido enriquecido
 export const processSteps = [
   {
-    title: "Regístrate / Inicia Sesión",
+    title: "Regístrate gratis",
     description:
-      "Rápido y fácil, sin complicaciones. Usa tu cuenta de Riot Games o crea una nueva cuenta en Valefy.",
-    icon: "🔐",
+      "Crea tu cuenta en Valefy en segundos y accede a todas las funciones del simulador. ¡No necesitas datos reales ni vincular tu cuenta de Valorant!",
+    icon: "📝",
     color: "from-primary to-secondary",
     delay: "0ms",
     image: "/images/register.jpg",
     features: [
-      "Registro con un solo clic usando tu cuenta de Riot",
-      "Verificación de correo electrónico instantánea",
-      "Proceso de registro seguro y encriptado",
-      "Recuperación de contraseña sencilla",
+      "Registro rápido y seguro",
+      "Sin datos personales obligatorios",
+      "Acceso inmediato a la plataforma",
+      "Personaliza tu perfil a tu gusto",
     ],
   },
   {
-    title: "Explora y Abre Cajas",
+    title: "Abre cajas y colecciona skins",
     description:
-      "¡Siente la emoción de descubrir tu skin con nuestra animación de apertura! Cada caja tiene una experiencia única de desbloqueo.",
-    icon: "✨",
+      "Siente la emoción de abrir cajas virtuales y descubre una gran variedad de skins exclusivas. ¡Cada apertura es una nueva sorpresa!",
+    icon: "🎁",
     color: "from-primary to-secondary",
     delay: "300ms",
     image: "/images/open-box.jpg",
     features: [
-      "Amplia variedad de cajas temáticas",
-      "Animaciones espectaculares de apertura",
-      "Efectos de sonido inmersivos",
-      "Celebraciones especiales para skins raras",
-      "Compartir resultados en redes sociales",
+      "Cajas temáticas y eventos especiales",
+      "Animaciones y efectos llamativos",
+      "Colecciona skins ficticias únicas",
+      "Sistema de rarezas y logros",
     ],
   },
   {
-    title: "Retira tu Skin o Usa tu Saldo",
+    title: "Comparte y compite con amigos",
     description:
-      "Añade la skin a tu inventario de Valorant a través de nuestro sistema de intercambio seguro o usa el valor para seguir abriendo cajas.",
-    icon: "🎮",
+      "Presume tu colección, comparte tus mejores aperturas y compite en rankings semanales.",
+    icon: "🏆",
     color: "from-primary to-secondary",
     delay: "450ms",
-    image: "/images/claim-skin.jpg",
+    image: "/images/compete.jpg",
     features: [
-      "Transferencia segura a tu cuenta de Valorant",
-      "Sistema de intercambio verificado por Riot",
-      "Historial detallado de transacciones",
-      "Opciones flexibles de uso de saldo",
+      "Ranking de usuarios y logros",
+      "Comparte tus skins en redes sociales",
+      "Eventos y desafíos ficticios",
+      "Sistema de niveles y recompensas virtuales",
     ],
   },
 ];
@@ -162,7 +161,7 @@ export const timelineData = processSteps.map((step, index) => ({
         </div>
       )}
 
-      {/* Paso 3: Retirar skin - Diseño de tarjeta con pestañas */}
+      {/* Paso 3: Compartir y competir - Diseño de tarjeta social */}
       {index === 2 && (
         <div className="bg-background/80 backdrop-blur-sm rounded-2xl border border-white/10 shadow-lg transition-all duration-500">
           <div className="flex border-b border-white/10">
@@ -170,10 +169,10 @@ export const timelineData = processSteps.map((step, index) => ({
               {step.title}
             </div>
             <div className="px-6 py-3 text-white/60 hover:text-white/80 transition-colors">
-              Historial
+              Comunidad
             </div>
             <div className="px-6 py-3 text-white/60 hover:text-white/80 transition-colors">
-              Ayuda
+              Rankings
             </div>
           </div>
 
@@ -213,23 +212,23 @@ export const timelineData = processSteps.map((step, index) => ({
                 <div className="relative w-full h-64 rounded-xl overflow-hidden mb-6 border border-white/10">
                   <div className="absolute inset-0 bg-gradient-to-b from-primary/30 to-background/90 mix-blend-overlay z-10" />
                   <div className="absolute inset-0 flex items-center justify-center bg-background/40 text-white text-opacity-80 text-lg z-20">
-                    Sistema de intercambio
+                    Ranking y comunidad
                   </div>
                 </div>
 
                 <div className="flex gap-4">
                   <button className="flex-1 bg-primary text-white px-4 py-3 rounded-xl transition-all duration-300 hover:bg-primary/80">
-                    Retirar skin
+                    Compartir logros
                   </button>
                   <button className="flex-1 bg-white/10 text-white px-4 py-3 rounded-xl transition-all duration-300 hover:bg-white/20">
-                    Usar saldo
+                    Ver ranking
                   </button>
                 </div>
               </div>
             </div>
 
             <div className="mt-6 pt-4 border-t border-white/5 flex justify-between items-center">
-              <span className="text-xs text-primary/70">Paso final</span>
+              <span className="text-xs text-primary/70">¡Sigue disfrutando de Valefy!</span>
               <div className="flex space-x-1">
                 {processSteps.map((_, i) => (
                   <div
