@@ -47,10 +47,14 @@ export default function LandingPage() {
 
         // Extraemos solo las URLs de los iconos para el carrusel
         setCarouselImages1(
-          randomCarouselSkins1.map((skin) => skin.displayIcon),
+          randomCarouselSkins1
+            .map((chroma) => chroma.displayIcon)
+            .filter((icon) => typeof icon === 'string'),
         );
         setCarouselImages2(
-          randomCarouselSkins2.map((skin) => skin.displayIcon),
+          randomCarouselSkins2
+            .map((chroma) => chroma.displayIcon)
+            .filter((icon) => typeof icon === 'string'),
         );
       } catch (error) {
         console.error("Error al cargar datos:", error);
@@ -84,17 +88,17 @@ export default function LandingPage() {
           </div>
 
           {/* Contenedor centrado para el título */}
-          <div className="container mx-auto max-w-7xl px-6 flex items-center justify-center relative h-full mt-60">
+          <div className="container mx-auto max-w-7xl px-6 flex items-center justify-center relative h-full mt-64">
             {/* Título y botón centrados */}
             <div className="flex flex-col items-center justify-center text-center max-w-3xl">
               <h1 className="inline-block mb-6 text-wrap">
-                <span className="tracking-tight inline font-bold text-[5rem] !important leading-none">
+                <span className="tracking-tight inline font-bold text-[5.4rem] !important leading-none">
                   Tu nuevo{" "}
                 </span>
-                <span className="tracking-tight inline font-bold text-[5rem] !important leading-none text-primary text-shadow-lg">
+                <span className="tracking-tight inline font-bold text-[5.4rem] !important leading-none text-primary text-shadow-lg">
                   mejor simulador{" "}
                 </span>
-                <span className="tracking-tight inline font-bold text-[5rem] !important leading-none">
+                <span className="tracking-tight inline font-bold text-[5.4rem] !important leading-none">
                   de cajas de Valorant
                 </span>
               </h1>
@@ -125,16 +129,17 @@ export default function LandingPage() {
           </div>
 
           {/* Carruseles con skins aleatorias */}
-          <div className="w-full overflow-hidden mt-44 relative">
+          <div className="w-full overflow-hidden mt-56 relative">
             {/* Separador visual superior */}
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
 
-            <div className="mt-4 mb-4">
+            <div className="mt-8 mb-4">
               <ImageCarousel
                 direction="left"
                 images={carouselImages1}
                 speed={10}
               />
+              <div className="my-0"></div>
               <ImageCarousel
                 direction="right"
                 images={carouselImages2}

@@ -81,7 +81,7 @@ export function ImageCarousel({
 
       <div
         ref={scrollRef}
-        className="flex gap-4 py-4"
+        className="flex gap-4 py-2"
         style={{
           animation: `${direction === "left" ? "scrollLeft" : "scrollRight"} ${speed}s linear infinite`,
           width: "fit-content",

@@ -37,6 +37,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { BookOpen } from "lucide-react";
 
 const items = [
   {
@@ -53,6 +54,11 @@ const items = [
     title: "Trade",
     url: "/main/trade",
     icon: ArrowLeftRight,
+  },
+  {
+    title: "Catálogo",
+    url: "/main/catalogo",
+    icon: BookOpen,
   },
 ];
 
@@ -77,7 +83,7 @@ export function AppSidebar() {
   return (
     <Sidebar className="fixed left-4 top-4 z-50 h-[calc(100vh-32px)] w-64 flex-col items-center rounded-2xl border border-white/10 bg-backgroundAlt/10 backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)]">
       <div className="flex flex-col items-center w-full py-6 gap-3 border-b border-white/5 relative rounded-t-2xl overflow-hidden bg-gradient-to-b from-white/5 to-transparent">
-        <Link className="block w-auto h-auto" href="/">
+        <Link className="block w-auto h-auto" href="/main">
           <Image
             alt="Valefy Logo"
             className="object-contain drop-shadow-custom"

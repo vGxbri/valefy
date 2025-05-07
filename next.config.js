@@ -7,6 +7,11 @@ const nextConfig = {
         hostname: 'res.cloudinary.com',
         pathname: '**',
       },
+      {
+        protocol: 'https',
+        hostname: 'media.valorant-api.com',
+        pathname: '**',
+      },
     ],
   },
 };

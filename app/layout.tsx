@@ -9,7 +9,7 @@ import { Providers } from "./providers";
 import Loading from "./loading";
 
 import { siteConfig } from "@/config/site";
-import { fontSans } from "@/config/fonts";
+import { fontSans, fontRaleway } from "@/config/fonts";
 
 export const metadata: Metadata = {
   title: {
@@ -41,6 +41,7 @@ export default async function RootLayout({
         className={clsx(
           "min-h-screen font-sans antialiased bg-background text-text",
           fontSans.variable,
+          fontRaleway.variable
         )}
       >
         <Providers>

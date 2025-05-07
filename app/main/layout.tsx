@@ -14,10 +14,12 @@ export default async function Layout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
-      <MainTransition>
-        {children}
-      </MainTransition>
+      <div className="bg-background">
+        <AppSidebar />
+      </div>
+        <MainTransition>
+          {children}
+        </MainTransition>
     </SidebarProvider>
   );
 }

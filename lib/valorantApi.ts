@@ -1,9 +1,18 @@
 // lib/valorantApi.ts
+export interface Chroma {
+  uuid: string;
+  displayName: string;
+  displayIcon: string | null;
+  // Puedes agregar más campos si los necesitas
+}
+
 export interface Skin {
   uuid: string;
   displayName: string;
   displayIcon: string;
   contentTierUuid: string | null;
+  themeUuid?: string; // UUID del tema/bundle al que pertenece la skin
+  chromas?: Chroma[]; // Añadimos chromas opcional
 }
 
 interface SkinsResponse {
@@ -23,7 +32,7 @@ export const getWeaponSkins = async (): Promise<Skin[]> => {
   return json.data;
 };
 
-export function getRandomSkins(skins: Skin[], count: number): Skin[] {
+export function getRandomSkins(skins: Skin[], count: number): Chroma[] {
   // Lista de nombres de armas a excluir
   const bannedWeaponNames = [
     "Classic",
@@ -45,82 +54,64 @@ export function getRandomSkins(skins: Skin[], count: number): Skin[] {
     "Odin",
     "Outlaw",
     "Melee",
-    "Sovereign Guardian",
   ];
 
-  // Filtramos las skins que contienen "standard" o "Sovereign Marshal" en su nombre
-  // Y también excluimos las que tienen exactamente el nombre de un arma
+  // Filtramos las skins que contienen "standard" en su nombre o que tienen exactamente el nombre de un arma
   const filteredSkins = skins.filter(
     (skin) =>
       !skin.displayName.toLowerCase().includes("standard") &&
-      skin.displayName !== "Sovereign Marshal" &&
       !bannedWeaponNames.includes(skin.displayName),
   );
 
-  // Agrupamos las skins por tipo de arma (extrayendo el nombre del arma de displayName)
-  const skinsByWeaponType = new Map<string, Skin[]>();
+  // Extraemos todos los chromas válidos (con displayIcon no nulo) de las skins filtradas
+  const allChromas: (Chroma & { weaponType: string })[] = filteredSkins.flatMap((skin) =>
+    (skin.chromas || [])
+      .filter((chroma) => chroma.displayIcon)
+      .map((chroma) => ({ ...chroma, weaponType: skin.displayName.split(" ")[0] }))
+  );
 
-  filteredSkins.forEach((skin) => {
-    // Extraemos el tipo de arma del nombre (generalmente es la primera palabra)
-    const weaponType = skin.displayName.split(" ")[0];
-
-    if (!skinsByWeaponType.has(weaponType)) {
-      skinsByWeaponType.set(weaponType, []);
+  // Agrupamos los chromas por tipo de arma
+  const chromasByWeaponType = new Map<string, (Chroma & { weaponType: string })[]>();
+  allChromas.forEach((chroma) => {
+    if (!chromasByWeaponType.has(chroma.weaponType)) {
+      chromasByWeaponType.set(chroma.weaponType, []);
     }
-
-    skinsByWeaponType.get(weaponType)?.push(skin);
+    chromasByWeaponType.get(chroma.weaponType)?.push(chroma);
   });
 
-  // Creamos un array con todas las categorías de armas
-  const weaponTypes = Array.from(skinsByWeaponType.keys());
+  const weaponTypes = Array.from(chromasByWeaponType.keys());
+  const result: (Chroma & { weaponType: string })[] = [];
 
-  // Resultado final
-  const result: Skin[] = [];
-
-  // Seleccionamos skins de diferentes tipos de armas de manera alternada
+  // Seleccionamos chromas de diferentes tipos de armas de manera alternada
   while (result.length < count && weaponTypes.length > 0) {
-    // Elegimos un tipo de arma al azar
     const randomTypeIndex = Math.floor(Math.random() * weaponTypes.length);
     const weaponType = weaponTypes[randomTypeIndex];
+    const availableChromas = chromasByWeaponType.get(weaponType) || [];
 
-    // Obtenemos las skins disponibles para este tipo
-    const availableSkins = skinsByWeaponType.get(weaponType) || [];
-
-    if (availableSkins.length > 0) {
-      // Elegimos una skin al azar de este tipo
-      const randomSkinIndex = Math.floor(Math.random() * availableSkins.length);
-      const selectedSkin = availableSkins[randomSkinIndex];
-
-      // Añadimos la skin al resultado
-      result.push(selectedSkin);
-
-      // Eliminamos la skin seleccionada para no repetirla
-      availableSkins.splice(randomSkinIndex, 1);
-
-      // Si ya no quedan skins de este tipo, eliminamos el tipo
-      if (availableSkins.length === 0) {
+    if (availableChromas.length > 0) {
+      const randomChromaIndex = Math.floor(Math.random() * availableChromas.length);
+      const selectedChroma = availableChromas[randomChromaIndex];
+      result.push(selectedChroma);
+      availableChromas.splice(randomChromaIndex, 1);
+      if (availableChromas.length === 0) {
         weaponTypes.splice(randomTypeIndex, 1);
       } else {
-        // Actualizamos el mapa con las skins restantes
-        skinsByWeaponType.set(weaponType, availableSkins);
+        chromasByWeaponType.set(weaponType, availableChromas);
       }
     } else {
-      // Si no hay skins disponibles para este tipo, lo eliminamos
       weaponTypes.splice(randomTypeIndex, 1);
     }
   }
 
-  // Si no hemos conseguido suficientes skins, completamos con skins aleatorias
+  // Si no hemos conseguido suficientes chromas, completamos con chromas aleatorios
   if (result.length < count) {
-    const remainingSkins = filteredSkins.filter(
-      (skin) => !result.includes(skin),
-    );
-    const additionalSkins = remainingSkins
+    const remainingChromas = allChromas.filter((chroma) => !result.includes(chroma));
+    const additionalChromas = remainingChromas
       .sort(() => Math.random() - 0.5)
       .slice(0, count - result.length);
-
-    result.push(...additionalSkins);
+    result.push(...additionalChromas);
   }
 
-  return result;
+  // Retornamos solo los chromas (sin el campo weaponType extra)
+  return result.map(({ weaponType, ...chroma }) => chroma);
 }

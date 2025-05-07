@@ -19,12 +19,16 @@ export default function MainTransition({ children }: { children: React.ReactNode
   }, [isLoading]);
 
   if (isLoading) {
-    return <div>Cargando...</div>; // O tu componente <Loading />
+    return (
+      <div className="w-full flex items-center justify-center py-10">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
+      </div>
+    );
   }
 
   return (
-    <div className={`transition-opacity duration-1500 ease-in-out ${showContent ? "opacity-100" : "opacity-0"}`}>
-      <main>{children}</main>
+    <div className={`transition-opacity duration-1500 ease-in-out w-full ${showContent ? "opacity-100" : "opacity-0"}`}>
+      <main className="w-full max-w-full">{children}</main>
     </div>
   );
 }

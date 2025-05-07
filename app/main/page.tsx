@@ -1,103 +1,73 @@
 // app/main/page.tsx
 import Image from "next/image";
+import StripeCard from "@/components/StripeCard"; // Importar StripeCard
+import { Raleway, Roboto } from "next/font/google";
 
 export default function MainPage() {
   return (
-    <div className="flex flex-col gap-8 p-8 md:p-12 lg:p-16 min-h-screen bg-gradient-to-br from-background/80 to-backgroundAlt/60">
-      {/* Header de bienvenida */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-        <div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg mb-2">
-            ¡Bienvenido a <span className="text-red-500">Valefy</span>!
-          </h1>
-          <p className="text-lg md:text-xl text-white/70 max-w-xl">
-            Gestiona tu inventario, realiza intercambios y mantente al tanto de todas tus notificaciones en un solo lugar.
-          </p>
+    <div className="flex flex-col gap-8 pl-16 md:pr-12 lg:pr-16 pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1" >
+      
+      {/*
+      <div className="w-full h-32 bg-primary/5 border border-red-500/20 rounded-2xl flex items-center justify-between overflow-hidden px-8 max-w-full">
+        <div className="text-white text-2xl font-bold">
+          ¡Bienvenido a Valefy!
         </div>
-        <Image
-          src="/logo-valefy.png"
-          alt="Valefy Logo"
-          width={120}
-          height={120}
-          className="drop-shadow-xl rounded-2xl bg-white/10 p-2"
-        />
+        <div className="h-full flex items-center">
+          <Image
+            src="/jett_1.png"
+            alt="Jett"
+            width={256}
+            height={256}
+            quality={100}
+            className="h-full w-auto object-contain"
+            priority
+          />
+        </div>
       </div>
+      */}
 
-      {/* Tarjetas de acceso rápido */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Inventario */}
-        <a
-          href="/main/inventario"
-          className="group bg-gradient-to-br from-white/5 to-red-500/10 border border-red-500/20 rounded-2xl p-8 flex flex-col items-center shadow-lg hover:scale-105 hover:shadow-red-500/30 transition-all duration-300"
-        >
-          <Image
-            src="/inventario-icon.png"
-            alt="Inventario"
-            width={48}
-            height={48}
-            className="mb-4"
-          />
-          <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-red-400 transition-colors">
-            Inventario
-          </h2>
-          <p className="text-white/70 text-center">
-            Consulta y administra todos tus ítems de manera sencilla y visual.
-          </p>
-        </a>
-        {/* Trade */}
-        <a
-          href="/main/trade"
-          className="group bg-gradient-to-br from-white/5 to-red-500/10 border border-red-500/20 rounded-2xl p-8 flex flex-col items-center shadow-lg hover:scale-105 hover:shadow-red-500/30 transition-all duration-300"
-        >
-          <Image
-            src="/trade-icon.png"
-            alt="Trade"
-            width={48}
-            height={48}
-            className="mb-4"
-          />
-          <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-red-400 transition-colors">
-            Trade
-          </h2>
-          <p className="text-white/70 text-center">
-            Intercambia ítems con otros usuarios de forma rápida y segura.
-          </p>
-        </a>
-        {/* Notificaciones */}
-        <a
-          href="#notificaciones"
-          className="group bg-gradient-to-br from-white/5 to-red-500/10 border border-red-500/20 rounded-2xl p-8 flex flex-col items-center shadow-lg hover:scale-105 hover:shadow-red-500/30 transition-all duration-300"
-        >
-          <Image
-            src="/notificaciones-icon.png"
-            alt="Notificaciones"
-            width={48}
-            height={48}
-            className="mb-4"
-          />
-          <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-red-400 transition-colors">
-            Notificaciones
-          </h2>
-          <p className="text-white/70 text-center">
-            Mantente informado sobre alertas, propuestas y novedades.
-          </p>
-        </a>
-      </div>
-
-      {/* Sección de novedades o tips */}
-      <div className="mt-8 bg-gradient-to-r from-red-500/10 to-white/5 border border-red-500/20 rounded-2xl p-6 shadow-inner flex flex-col md:flex-row items-center gap-6">
-        <Image
-          src="/tips-icon.png"
-          alt="Tips"
-          width={56}
-          height={56}
-          className="drop-shadow-lg"
-        />
-        <div>
-          <h3 className="text-xl font-bold text-white mb-1">¿Nuevo en Valefy?</h3>
-          <p className="text-white/70">
-            Explora el inventario, realiza tu primer intercambio y personaliza tu perfil para sacar el máximo provecho de la plataforma.
-          </p>
+      {/* Sección de Cajas Gratuitas */}
+      <div>
+        <h2 className="text-3xl font-bold text-foreground mb-4 flex items-center font-[Raleway] font-semibold italic tracking-widest">
+            / CAJAS GRATUITAS
+        </h2>
+        <div className="w-full rounded-3xl bg-gradient-to-br from-primary/10 via-backgroundAlt/30 to-secondary/5 backdrop-blur-sm border border-border/30 p-6 shadow-xl overflow-hidden relative">
+          {/* Efecto de fondo */}
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-30"></div>
+          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary/10 rounded-full blur-3xl opacity-30"></div>
+          {/* Estructura de dos columnas */}
+          <div className="flex flex-col md:flex-row gap-8 relative z-10">
+            {/* Primera columna: Título y descripción */}
+            
+            {/* Segunda columna: Contenedor de tarjetas */}
+            <div className="md:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="w-full">
+                <StripeCard
+                  imageUrl="/free_cage.png"
+                  title="Caja Diaria"
+                  link=""
+                  btnText="Reclamar ahora"
+                />
+              </div>
+              <div className="w-full">
+                <StripeCard
+                  imageUrl="/free_cage.png"
+                  title="Caja Semanal"
+                  link=""
+                  btnText="Reclamar ahora"
+                />
+              </div>
+              <div className="w-full">
+                <StripeCard
+                  imageUrl="/free_cage.png"
+                  title="Caja Especial"
+                  link=""
+                  btnText="Próximamente"
+                  disabled={true}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
