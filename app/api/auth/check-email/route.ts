@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { User } from "@/types/database";
 
 // Inicializar el cliente de Supabase con las variables de entorno
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

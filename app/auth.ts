@@ -5,6 +5,7 @@ import DiscordProvider from "next-auth/providers/discord";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createClient } from "@supabase/supabase-js";
 import bcryptjs from "bcryptjs";
+import { User } from "@/types/database";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

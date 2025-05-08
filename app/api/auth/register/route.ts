@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { User } from "@/types/database";
+import { v4 as uuidv4 } from "uuid";
 
 // Inicializar el cliente de Supabase con las variables de entorno
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -49,11 +51,12 @@ export async function POST(request: Request) {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Crear el usuario en la tabla usuarios
+    // Crear el usuario en la tabla usuarios con UUID
     const { data, error } = await supabase
       .from("usuarios")
-      .insert([
+      .insert<User>([
         {
+          id: uuidv4(),
           nombre_usuario: username,
           correo: email,
           password: hashedPassword,

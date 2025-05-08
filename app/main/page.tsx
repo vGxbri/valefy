@@ -1,9 +1,34 @@
-// app/main/page.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
 import Image from "next/image";
-import StripeCard from "@/components/StripeCard"; // Importar StripeCard
+import StripeCard from "@/components/StripeCard";
 import { Raleway, Roboto } from "next/font/google";
 
+interface Caja {
+  id: string;
+  nombre: string;
+  precio: number;
+}
+
 export default function MainPage() {
+  const [cajas, setCajas] = useState<Caja[]>([]);
+
+  useEffect(() => {
+    const fetchCajas = async () => {
+      try {
+        const response = await fetch('/api/cajas');
+        const data = await response.json();
+        if (data.cajas) {
+          setCajas(data.cajas);
+        }
+      } catch (error) {
+        console.error('Error al cargar las cajas:', error);
+      }
+    };
+
+    fetchCajas();
+  }, []);
   return (
     <div className="flex flex-col gap-8 pl-16 md:pr-12 lg:pr-16 pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1" >
       
@@ -41,31 +66,17 @@ export default function MainPage() {
             
             {/* Segunda columna: Contenedor de tarjetas */}
             <div className="md:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="w-full">
-                <StripeCard
-                  imageUrl="/free_cage.png"
-                  title="Caja Diaria"
-                  link=""
-                  btnText="Reclamar ahora"
-                />
-              </div>
-              <div className="w-full">
-                <StripeCard
-                  imageUrl="/free_cage.png"
-                  title="Caja Semanal"
-                  link=""
-                  btnText="Reclamar ahora"
-                />
-              </div>
-              <div className="w-full">
-                <StripeCard
-                  imageUrl="/free_cage.png"
-                  title="Caja Especial"
-                  link=""
-                  btnText="Próximamente"
-                  disabled={true}
-                />
-              </div>
+              {cajas.map((caja) => (
+                <div key={caja.id} className="w-full">
+                  <StripeCard
+                    imageUrl="/free_cage.png"
+                    title={caja.nombre}
+                    link=""
+                    btnText={caja.precio === 0 ? "Reclamar ahora" : `${caja.precio}€`}
+                    disabled={false}
+                  />
+                </div>
+              ))}
             </div>
           </div>
         </div>
