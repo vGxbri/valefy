@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import Image from "next/image";
 import StripeCard from "@/components/StripeCard";
+import DailyBox from "@/components/DailyBox";
+import { Skin, getWeaponSkins } from '@/lib/valorantApi';
 import { Raleway, Roboto } from "next/font/google";
 
 interface Caja {
@@ -13,6 +15,7 @@ interface Caja {
 
 export default function MainPage() {
   const [cajas, setCajas] = useState<Caja[]>([]);
+  const [activeTab, setActiveTab] = useState('daily');
 
   useEffect(() => {
     const fetchCajas = async () => {
@@ -51,33 +54,59 @@ export default function MainPage() {
       </div>
       */}
 
-      {/* Sección de Cajas Gratuitas */}
-      <div>
+      {/* Sección de Cajas */}
+      <div className="w-full">
         <h2 className="text-3xl font-bold text-foreground mb-4 flex items-center font-[Raleway] font-semibold italic tracking-widest">
-            / CAJAS GRATUITAS
+          / CAJAS
         </h2>
+        
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex border-b border-white/10">
+            <button
+              className={`px-4 py-2 text-sm font-medium ${
+                activeTab === 'daily'
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-white/70 hover:text-white'
+              }`}
+              onClick={() => setActiveTab('daily')}
+            >
+              Caja Diaria
+            </button>
+            <button
+              className={`px-4 py-2 text-sm font-medium ${
+                activeTab === 'premium'
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-white/70 hover:text-white'
+              }`}
+              onClick={() => setActiveTab('premium')}
+            >
+              Cajas Premium
+            </button>
+          </div>
+          
+          <button
+            onClick={() => window.location.href = '/admin'}
+            className="px-3 py-1 text-sm bg-background/40 hover:bg-background/60 text-white/70 hover:text-white border border-white/10 rounded-md transition-colors"
+            title="Panel de administración para pruebas"
+          >
+            Admin (Pruebas)
+          </button>
+        </div>
+        
         <div className="w-full rounded-3xl bg-gradient-to-br from-primary/10 via-backgroundAlt/30 to-secondary/5 backdrop-blur-sm border border-border/30 p-6 shadow-xl overflow-hidden relative">
           {/* Efecto de fondo */}
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-30"></div>
           <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary/10 rounded-full blur-3xl opacity-30"></div>
-          {/* Estructura de dos columnas */}
-          <div className="flex flex-col md:flex-row gap-8 relative z-10">
-            {/* Primera columna: Título y descripción */}
-            
-            {/* Segunda columna: Contenedor de tarjetas */}
-            <div className="md:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-4">
-              {cajas.map((caja) => (
-                <div key={caja.id} className="w-full">
-                  <StripeCard
-                    imageUrl="/free_cage.png"
-                    title={caja.nombre}
-                    link=""
-                    btnText={caja.precio === 0 ? "Reclamar ahora" : `${caja.precio}€`}
-                    disabled={false}
-                  />
-                </div>
-              ))}
-            </div>
+          
+          {/* Contenido según la pestaña activa */}
+          <div className="relative z-10">
+            {activeTab === 'daily' ? (
+              <DailyBox />
+            ) : (
+              <div className="flex flex-col items-center justify-center min-h-[400px] w-full">
+                <p className="text-white/80">Las cajas premium estarán disponibles próximamente</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
