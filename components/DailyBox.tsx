@@ -4,62 +4,18 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { Skin as ValorantSkin, getWeaponSkins, filterQualitySkins, getRandomSkins, filterSkinsByBundleWithIcon } from '@/lib/valorantApi';
+import { useSession } from 'next-auth/react';
+import { getWeaponSkins, filterSkinsByBundleWithIcon } from '@/lib/valorantApi';
 import { formatSkinForApp } from '@/lib/skinUtils';
+import { Skin, TierProbabilidad, processBoxOpening, selectRandomSkinByProbability, getTierData } from '@/lib/boxUtils';
 
-// Definir tipos para las skins y tiers
-type ContentTier = {
-  id: string;
-  nombre: string;
-  descripcion: string;
-  color: string;
-  uuid: string;
-};
-
-type Skin = {
-  id: string;
-  nombre: string;
-  bundleName?: string;
-  content_tier_id: string;
-  uuid: string;
-  imagen_url: string;
-  content_tier?: ContentTier;
-};
-
-type TierProbabilidad = {
-  id: string;
-  caja_id: string;
-  content_tier_id: string;
-  probabilidad: number;
-  cantidad_skins: number;
-  content_tier?: ContentTier;
-};
-
-// Nota: Ahora usamos la función getRandomSkins importada desde valorantApi.ts
-
-// Función para obtener los datos del tier desde la base de datos
-async function getTierData(supabase: any, tierUuid: string | null): Promise<{nombre: string, color: string}> {
-  if (!tierUuid) return { nombre: 'Select Edition', color: '#5a9fe2' };
-  
-  try {
-    const { data } = await supabase
-      .from('content_tiers')
-      .select('nombre, color')
-      .eq('uuid', tierUuid)
-      .maybeSingle();
-    
-    if (data) {
-      return { nombre: data.nombre, color: data.color };
-    }
-  } catch (error) {
-    // Silenciar error
-  }
-  
-  // Valores por defecto si no se encuentra en la base de datos
-  return { nombre: 'Select Edition', color: '#5a9fe2' };
-}
+// Nota: Ahora usamos funciones importadas desde boxUtils.ts
 
 export default function DailyBox() {
+  // Usar useSession para obtener la sesión del usuario
+  const { data: session, status } = useSession();
+  const isAuthenticated = status === 'authenticated' && !!session?.user;
+  
   const [isLoading, setIsLoading] = useState(true);
   const [cajaId, setCajaId] = useState<string | null>(null);
   const [skins, setSkins] = useState<Skin[]>([]);
@@ -84,11 +40,20 @@ export default function DailyBox() {
     let isSubscribed = true; // Para evitar actualizaciones si el componente se desmonta
     let timeoutId: NodeJS.Timeout | null = null;
     
+    // Función para limpiar el timeout
+    const clearLoadingTimeout = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    };
+    
     async function loadDailyBox() {
       try {
         if (isSubscribed) setIsLoading(true);
         
         // Establecer un timeout para evitar carga infinita
+        clearLoadingTimeout(); // Limpiar timeout anterior si existe
         timeoutId = setTimeout(() => {
           if (isSubscribed && isLoading) {
             console.error('Timeout al cargar la caja diaria');
@@ -438,7 +403,11 @@ export default function DailyBox() {
         }
         setError(error.message || 'Error al cargar la caja diaria');
       } finally {
-        setIsLoading(false);
+        if (isSubscribed) {
+          setIsLoading(false);
+        }
+        // Limpiar el timeout al finalizar
+        clearLoadingTimeout();
       }
     }
 
@@ -447,6 +416,8 @@ export default function DailyBox() {
     // Cleanup function
     return () => {
       isSubscribed = false;
+      // Limpiar el timeout cuando el componente se desmonte
+      clearLoadingTimeout();
     };
   }, []); // Array de dependencias vacío para evitar bucle infinito
 
@@ -457,113 +428,60 @@ export default function DailyBox() {
     setIsOpening(true);
     
     try {
-      // Generar un número aleatorio entre 0 y 1
-      const randomNum = Math.random();
-      let accumulatedProbability = 0;
-      let selectedTier: string | null = null;
-      
-      // Determinar el tier según la probabilidad
-      for (const prob of probabilidades) {
-        accumulatedProbability += prob.probabilidad;
-        if (randomNum <= accumulatedProbability) {
-          selectedTier = prob.content_tier_id;
-          break;
-        }
-      }
-      
-      // Si por alguna razón no se seleccionó un tier, usar el último
-      if (!selectedTier && probabilidades.length > 0) {
-        selectedTier = probabilidades[probabilidades.length - 1].content_tier_id;
-      }
-      
-      // Filtrar skins del tier seleccionado
-      const tierSkins = skins.filter(skin => skin.content_tier_id === selectedTier);
-      
-      // Si no hay skins en el tier seleccionado, usar cualquier skin
-      const availableSkins = tierSkins.length > 0 ? tierSkins : skins;
-      
-      // Seleccionar una skin aleatoria del tier
-      const randomIndex = Math.floor(Math.random() * availableSkins.length);
-      const selectedSkin = availableSkins[randomIndex];
-      
-      // Registrar la transacción en la base de datos
-      if (selectedSkin) {
-        try {
-          const { data: userData } = await supabase.auth.getUser();
-          
-          if (userData && userData.user) {
-            // Registrar la transacción
-            const { error: transactionError } = await supabase
-              .from('transacciones')
-              .insert({
-                usuario_id: userData.user.id,
-                caja_id: cajaId,
-                skin_id: selectedSkin.id,
-                fecha: new Date().toISOString()
-              });
-              
-            if (transactionError) {
-              console.error('Error al registrar la transacción:', transactionError);
+      // Si el usuario está autenticado, usar processBoxOpening para manejar todo el proceso
+      if (isAuthenticated && session?.user?.id) {
+        const userId = session.user.id;
+        console.log('Usuario autenticado con NextAuth:', userId);
+        
+        // Usar la función centralizada para el proceso completo
+        const result = await processBoxOpening(
+          userId,
+          cajaId,
+          skins,
+          probabilidades,
+          supabase
+        );
+        
+        if (result.selectedSkin) {
+          // Actualizar el estado local
+          if (result.inventorySuccess) {
+            if (result.alreadyInInventory) {
+              console.log(`La skin '${result.selectedSkin.nombre}' ya estaba en el inventario`);
+            } else {
+              console.log(`Skin '${result.selectedSkin.nombre}' añadida al inventario`);
             }
-            
-            // Registrar la skin en el inventario del usuario
-            // Primero verificar si ya existe en el inventario
-            const { data: existingItem } = await supabase
-              .from('inventario_usuario')
-              .select('*')
-              .eq('usuario_id', userData.user.id)
-              .eq('skin_id', selectedSkin.id)
-              .maybeSingle();
-            
-            // Solo insertar si no existe
-            if (!existingItem) {
-              await supabase
-                .from('inventario_usuario')
-                .insert({
-                  usuario_id: userData.user.id,
-                  skin_id: selectedSkin.id
-                });
-            }
-              
             // Actualizar el inventario local
-            setUserInventory(prev => [...prev, selectedSkin.id]);
-          } else {
-            // Usuario no autenticado, usar ID de prueba
-            const userId = 'usuario-prueba';
-            
-            // Registrar la transacción
-            const { error: transactionError } = await supabase
-              .from('transacciones')
-              .insert({
-                usuario_id: userId,
-                caja_id: cajaId,
-                skin_id: selectedSkin.id,
-                fecha: new Date().toISOString()
-              });
-              
-            if (transactionError) {
-              console.error('Error al registrar la transacción:', transactionError);
-            }
+            setUserInventory(prev => [...prev, result.selectedSkin?.id].filter(Boolean) as string[]);
           }
-        } catch (authError) {
-          console.error('Error al obtener usuario:', authError);
-          // Continuar con la apertura aunque falle la autenticación
+          
+          // Mostrar la skin obtenida
+          setResultSkin(result.selectedSkin);
+        } else {
+          console.error('Error al seleccionar skin:', result.error);
+        }
+      } else {
+        // Para usuarios no autenticados, solo seleccionar una skin aleatoria
+        const randomSkin = selectRandomSkinByProbability(skins, probabilidades);
+        if (randomSkin) {
+          setResultSkin(randomSkin);
+          console.warn('Usuario no autenticado. La skin no se guardará en el inventario.');
+        } else {
+          console.error('Error al seleccionar skin aleatoria');
         }
       }
-      
-      // Simular tiempo de apertura
-      setTimeout(() => {
-        setResultSkin(selectedSkin);
-        setIsOpening(false);
-        setDailyOpened(true);
-      }, 2000);
     } catch (error) {
       console.error('Error al abrir la caja:', error);
       setIsOpening(false);
       setError('Error al abrir la caja. Por favor, intenta de nuevo.');
+    } finally {
+      // Simular tiempo de apertura
+      setTimeout(() => {
+        setIsOpening(false);
+        setDailyOpened(true);
+      }, 2000);
     }
   };
-
+  
   // Formatear el tiempo restante para la próxima actualización
   const formatTimeRemaining = () => {
     if (!nextUpdate) return 'Actualización pendiente';
@@ -620,23 +538,23 @@ export default function DailyBox() {
         
         {resultSkin ? (
           <div className="flex flex-col items-center justify-center p-6 bg-black/30 rounded-lg border border-white/5">
-            <h3 className="text-xl font-medium mb-2" style={{ color: resultSkin.content_tier?.color || '#fff' }}>
+            <h3 className="text-xl font-medium mb-2" style={{ color: resultSkin?.content_tier?.color || '#fff' }}>
               ¡Has obtenido!
             </h3>
             <div className="relative w-64 h-64 mb-4">
-              {resultSkin.imagen_url && (
+              {resultSkin?.imagen_url && (
                 <Image 
                   src={resultSkin.imagen_url} 
-                  alt={resultSkin.nombre}
+                  alt={resultSkin.nombre || 'Skin'}
                   fill
                   className="object-contain"
                 />
               )}
             </div>
-            <h4 className="text-2xl font-bold mb-1" style={{ color: resultSkin.content_tier?.color || '#fff' }}>
-              {resultSkin.nombre}
+            <h4 className="text-2xl font-bold mb-1" style={{ color: resultSkin?.content_tier?.color || '#fff' }}>
+              {resultSkin?.nombre || 'Skin'}
             </h4>
-            <p className="text-white/80 mb-4">{resultSkin.content_tier?.nombre || 'Skin'}</p>
+            <p className="text-white/80 mb-4">{resultSkin?.content_tier?.nombre || 'Skin'}</p>
             <Button 
               onClick={() => setResultSkin(null)}
               className="mt-2"

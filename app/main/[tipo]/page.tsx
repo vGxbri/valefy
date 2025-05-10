@@ -11,6 +11,8 @@ import dynamic from 'next/dynamic';
 import { getWeaponSkins, type Skin as ValorantSkin, filterQualitySkins, filterSkinsByIds } from '@/lib/valorantApi';
 import { formatSkinForApp } from '@/lib/skinUtils';
 import { motion } from 'framer-motion';
+import { useSession } from 'next-auth/react';
+import { processBoxOpening, selectRandomSkinByProbability, TierProbabilidad as BoxTierProbabilidad, Skin as BoxSkin } from '@/lib/boxUtils';
 
 // Singleton para el cliente de Supabase
 let supabaseClient: ReturnType<typeof createClient> | null = null;
@@ -124,6 +126,10 @@ export default function CajaPage() {
   const router = useRouter();
   const tipoParam = typeof params.tipo === 'string' ? params.tipo : params.tipo?.[0] || '';
   
+  // Usar useSession para obtener la sesión del usuario
+  const { data: session, status } = useSession();
+  const isAuthenticated = status === 'authenticated' && !!session?.user;
+  
   // Estados para manejar los tipos de cajas disponibles
   const [tiposDisponibles, setTiposDisponibles] = useState<string[]>(['premium', 'diaria', 'ultra']);
   const [tipoValidado, setTipoValidado] = useState<TipoCaja>(tipoParam || 'premium');
@@ -131,6 +137,8 @@ export default function CajaPage() {
   // Estados principales
   const [caja, setCaja] = useState<Caja | null>(crearCajaDefault(tipoValidado));
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  // Estado para las probabilidades de tiers
+  const [probabilidades, setProbabilidades] = useState<BoxTierProbabilidad[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isOpening, setIsOpening] = useState<boolean>(false);
   
@@ -341,8 +349,8 @@ export default function CajaPage() {
     };
   }, [tipoValidado]);
 
-  // Función para manejar la apertura de la caja
-  const handleOpenBox = (caja: Caja) => {
+  // Función para manejar la apertura de la caja con boxUtils
+  const handleOpenBox = async (caja: Caja) => {
     if (!caja.esta_disponible || isOpening) return;
     
     // Si no hay skins disponibles, mostrar error
@@ -354,30 +362,151 @@ export default function CajaPage() {
     
     setIsOpening(true);
     
-    // Simular el proceso de apertura (en una app real, esto sería una llamada a la API)
-    setTimeout(() => {
-      // Seleccionar una skin aleatoria de las disponibles en la caja
-      const randomIndex = Math.floor(Math.random() * cajaSkins.length);
-      const randomSkin = cajaSkins[randomIndex];
-      
-      // Mostrar la recompensa
-      setReward(randomSkin);
-      setShowReward(true);
-      setIsOpening(false);
-      
-      // En una app real, aquí actualizaríamos el inventario del usuario
-      // Por ejemplo, con una llamada a Supabase:
-      /*
+    try {
+      // Obtener el cliente de Supabase
       const supabase = getSupabaseClient();
-      if (supabase) {
-        supabase.from('inventario_usuario').insert({
-          user_id: 'id_del_usuario_actual',
-          skin_id: randomSkin.id,
-          fecha_obtencion: new Date().toISOString()
-        });
+      if (!supabase) {
+        setError('Error al conectar con la base de datos');
+        setIsOpening(false);
+        return;
       }
-      */
-    }, 2000); // Simular 2 segundos de animación de apertura
+      
+      // Si no hay probabilidades definidas, crear unas por defecto
+      if (probabilidades.length === 0) {
+        // Probabilidades por defecto (similar a la caja diaria)
+        const defaultProbabilities: BoxTierProbabilidad[] = [
+          {
+            id: '1',
+            caja_id: caja.id,
+            content_tier_id: '411e4a55-4e59-7757-41f0-86a53f101bb5', // Ultra
+            probabilidad: 0.01, // 1%
+            cantidad_skins: 1,
+            content_tier: {
+              id: '411e4a55-4e59-7757-41f0-86a53f101bb5',
+              nombre: 'Ultra Edition',
+              descripcion: 'Las skins más raras y exclusivas',
+              color: '#fad663',
+              uuid: '411e4a55-4e59-7757-41f0-86a53f101bb5'
+            }
+          },
+          {
+            id: '2',
+            caja_id: caja.id,
+            content_tier_id: '60bca009-4182-7998-dee7-b8a2558dc369', // Premium
+            probabilidad: 0.25, // 25%
+            cantidad_skins: 3,
+            content_tier: {
+              id: '60bca009-4182-7998-dee7-b8a2558dc369',
+              nombre: 'Premium Edition',
+              descripcion: 'Skins de alta calidad',
+              color: '#d1548d',
+              uuid: '60bca009-4182-7998-dee7-b8a2558dc369'
+            }
+          },
+          {
+            id: '3',
+            caja_id: caja.id,
+            content_tier_id: '0cebb8be-46d7-c12a-d306-e9907bfc5a25', // Deluxe
+            probabilidad: 0.74, // 74%
+            cantidad_skins: 15,
+            content_tier: {
+              id: '0cebb8be-46d7-c12a-d306-e9907bfc5a25',
+              nombre: 'Deluxe Edition',
+              descripcion: 'Skins de buena calidad',
+              color: '#009587',
+              uuid: '0cebb8be-46d7-c12a-d306-e9907bfc5a25'
+            }
+          }
+        ];
+        
+        setProbabilidades(defaultProbabilities);
+      }
+      
+      // Si el usuario está autenticado, usar processBoxOpening para todo el proceso
+      if (isAuthenticated && session?.user?.id) {
+        const userId = session.user.id;
+        console.log('Usuario autenticado con NextAuth:', userId);
+        
+        // Convertir cajaSkins a BoxSkin[] si es necesario
+        const boxCompatibleSkins = cajaSkins.map(skin => ({
+          ...skin,
+          content_tier: skin.content_tier ? {
+            ...skin.content_tier,
+            descripcion: skin.content_tier.descripcion || ''
+          } : undefined
+        })) as BoxSkin[];
+        
+        // Intentar procesar la apertura de la caja usando la función centralizada
+        const result = await processBoxOpening(
+          userId,
+          caja.id,
+          boxCompatibleSkins,
+          probabilidades,
+          supabase
+        );
+        
+        if (result.selectedSkin) {
+          // Convertir el resultado a Skin local
+          const localSkin: Skin = {
+            ...result.selectedSkin,
+            content_tier: result.selectedSkin.content_tier ? {
+              ...result.selectedSkin.content_tier,
+              descripcion: result.selectedSkin.content_tier.descripcion || ''
+            } : undefined
+          } as Skin;
+          
+          // Actualizar inventario local si es necesario
+          if (result.inventorySuccess) {
+            if (result.alreadyInInventory) {
+              console.log(`La skin '${localSkin.nombre}' ya estaba en el inventario`);
+            } else {
+              console.log(`Skin '${localSkin.nombre}' añadida al inventario`);
+            }
+          }
+          
+          // Mostrar la recompensa
+          setReward(localSkin);
+          setShowReward(true);
+        } else {
+          console.error('Error al seleccionar skin:', result.error);
+          setError('Error al seleccionar una skin. Por favor, intenta de nuevo.');
+        }
+      } else {
+        // Para usuarios no autenticados, solo seleccionar una skin aleatoria
+        // Convertir cajaSkins a BoxSkin[] si es necesario
+        const boxCompatibleSkins = cajaSkins.map(skin => ({
+          ...skin,
+          content_tier: skin.content_tier ? {
+            ...skin.content_tier,
+            descripcion: skin.content_tier.descripcion || ''
+          } : undefined
+        })) as BoxSkin[];
+        
+        const randomSkin = selectRandomSkinByProbability(boxCompatibleSkins, probabilidades);
+        if (randomSkin) {
+          // Convertir a Skin local
+          const localSkin: Skin = {
+            ...randomSkin,
+            content_tier: randomSkin.content_tier ? {
+              ...randomSkin.content_tier,
+              descripcion: randomSkin.content_tier.descripcion || ''
+            } : undefined
+          } as Skin;
+          
+          setReward(localSkin);
+          setShowReward(true);
+          console.warn('Usuario no autenticado. La skin no se guardará en el inventario.');
+        } else {
+          console.error('Error al seleccionar skin aleatoria');
+          setError('Error al seleccionar una skin. Por favor, intenta de nuevo.');
+        }
+      }
+    } catch (error) {
+      console.error('Error al abrir la caja:', error);
+      setError('Error al abrir la caja. Por favor, intenta de nuevo.');
+    } finally {
+      setIsOpening(false);
+    }
   };
 
   // Importar el componente DailyBox para la caja diaria
