@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { Skin as ValorantSkin, getWeaponSkins } from '@/lib/valorantApi';
+import { Skin as ValorantSkin, getWeaponSkins, filterQualitySkins, getRandomSkins, filterSkinsByBundleWithIcon } from '@/lib/valorantApi';
+import { formatSkinForApp } from '@/lib/skinUtils';
 
 // Definir tipos para las skins y tiers
 type ContentTier = {
@@ -34,38 +35,28 @@ type TierProbabilidad = {
   content_tier?: ContentTier;
 };
 
-// Función para obtener skins aleatorias
-function getRandomSkins(skins: ValorantSkin[], count: number): ValorantSkin[] {
-  const shuffled = [...skins].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count);
-}
+// Nota: Ahora usamos la función getRandomSkins importada desde valorantApi.ts
 
-// Función para obtener el nombre del tier basado en el UUID
-function getTierName(tierUuid: string | null): string {
-  if (!tierUuid) return 'Select Edition';
-  // Mapeo de UUIDs conocidos a nombres (según la API oficial de Valorant)
-  const tierMap: {[key: string]: string} = {
-    '0cebb8be-46d7-c12a-d306-e9907bfc5a25': 'Deluxe Edition',
-    'e046854e-406c-37f4-6607-19a9ba8426fc': 'Exclusive Edition',
-    '60bca009-4182-7998-dee7-b8a2558dc369': 'Premium Edition',
-    '12683d76-48d7-84a3-4e09-6985794f0445': 'Select Edition',
-    '411e4a55-4e59-7757-41f0-86a53f101bb5': 'Ultra Edition'
-  };
-  return tierMap[tierUuid] || 'Select Edition';
-}
-
-// Función para obtener el color del tier basado en el UUID
-function getTierColor(tierUuid: string | null): string {
-  if (!tierUuid) return '#5a9fe2';
-  // Mapeo de UUIDs conocidos a colores (basados en los highlightColor de la API)
-  const colorMap: {[key: string]: string} = {
-    '0cebb8be-46d7-c12a-d306-e9907bfc5a25': '#009587', // Deluxe - Verde
-    'e046854e-406c-37f4-6607-19a9ba8426fc': '#f5955b', // Exclusive - Naranja
-    '60bca009-4182-7998-dee7-b8a2558dc369': '#d1548d', // Premium - Rosa
-    '12683d76-48d7-84a3-4e09-6985794f0445': '#5a9fe2', // Select - Azul
-    '411e4a55-4e59-7757-41f0-86a53f101bb5': '#fad663'  // Ultra - Amarillo
-  };
-  return colorMap[tierUuid] || '#7E8DAA';
+// Función para obtener los datos del tier desde la base de datos
+async function getTierData(supabase: any, tierUuid: string | null): Promise<{nombre: string, color: string}> {
+  if (!tierUuid) return { nombre: 'Select Edition', color: '#5a9fe2' };
+  
+  try {
+    const { data } = await supabase
+      .from('content_tiers')
+      .select('nombre, color')
+      .eq('uuid', tierUuid)
+      .maybeSingle();
+    
+    if (data) {
+      return { nombre: data.nombre, color: data.color };
+    }
+  } catch (error) {
+    // Silenciar error
+  }
+  
+  // Valores por defecto si no se encuentra en la base de datos
+  return { nombre: 'Select Edition', color: '#5a9fe2' };
 }
 
 export default function DailyBox() {
@@ -79,6 +70,9 @@ export default function DailyBox() {
   const [nextUpdate, setNextUpdate] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [userInventory, setUserInventory] = useState<string[]>([]);
+  const [dailyOpened, setDailyOpened] = useState(false);
+
   // Crear cliente de Supabase
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -88,9 +82,20 @@ export default function DailyBox() {
   // Cargar datos de la caja diaria
   useEffect(() => {
     let isSubscribed = true; // Para evitar actualizaciones si el componente se desmonta
+    let timeoutId: NodeJS.Timeout | null = null;
+    
     async function loadDailyBox() {
       try {
-        setIsLoading(true);
+        if (isSubscribed) setIsLoading(true);
+        
+        // Establecer un timeout para evitar carga infinita
+        timeoutId = setTimeout(() => {
+          if (isSubscribed && isLoading) {
+            console.error('Timeout al cargar la caja diaria');
+            setError('Tiempo de espera agotado. Por favor, recarga la página.');
+            setIsLoading(false);
+          }
+        }, 15000); // 15 segundos de timeout
         
         // Obtener la caja diaria
         const { data: cajasData, error: cajasError } = await supabase
@@ -99,37 +104,68 @@ export default function DailyBox() {
           .eq('es_diaria', true)
           .limit(1);
         
-        if (cajasError) throw cajasError;
+        if (!isSubscribed) return; // Verificar si el componente sigue montado
+        
+        if (cajasError) {
+          console.error('Error al obtener la caja diaria:', cajasError);
+          setError('Error al obtener la caja diaria: ' + cajasError.message);
+          setIsLoading(false);
+          return;
+        }
         
         let cajaIdLocal: string | null = null;
 
         if (!cajasData || cajasData.length === 0) {
-          // Si no hay caja diaria, intentar crearla
-          const { data: nuevaCajaId, error: nuevaCajaError } = await supabase.rpc('crear_caja_diaria');
+          console.log('No se encontró la caja diaria, intentando crearla...');
+          // Si no hay caja diaria, intentar crearla mediante la función RPC
+          const { data: nuevaCajaId, error: nuevaCajaError } = await supabase.rpc('forzar_actualizacion_caja_diaria');
           
+          if (!isSubscribed) return;
           
-          if (nuevaCajaError) throw nuevaCajaError;
+          if (nuevaCajaError) {
+            console.error('Error al crear la caja diaria:', nuevaCajaError);
+            setError('Error al crear la caja diaria: ' + nuevaCajaError.message);
+            setIsLoading(false);
+            return;
+          }
           
-          if (!nuevaCajaId) {
+          // Obtener el ID de la caja recién creada
+          const { data: nuevaCajaData, error: nuevaCajaDataError } = await supabase
+            .from('cajas')
+            .select('id')
+            .eq('es_diaria', true)
+            .limit(1);
+            
+          if (!isSubscribed) return;
+          
+          if (nuevaCajaDataError) {
+            console.error('Error al obtener la caja recién creada:', nuevaCajaDataError);
+            setError('Error al obtener la caja recién creada: ' + nuevaCajaDataError.message);
+            setIsLoading(false);
+            return;
+          }
+          
+          if (!nuevaCajaData || nuevaCajaData.length === 0) {
+            console.error('No se pudo crear la caja diaria');
             setError('No se pudo crear la caja diaria');
             setIsLoading(false);
             return;
           }
           
-          // Asegurarse de que el ID sea un string válido
-          cajaIdLocal = String(nuevaCajaId);
-          
-          setCajaId(cajaIdLocal);
+          cajaIdLocal = nuevaCajaData[0].id;
+          if (isSubscribed) setCajaId(cajaIdLocal);
         } else {
-          cajaIdLocal = String(cajasData[0].id);
-          
-          setCajaId(cajaIdLocal);
+          cajaIdLocal = cajasData[0].id;
+          if (isSubscribed) setCajaId(cajaIdLocal);
         }
         
         // Validar que cajaIdLocal no sea null antes de consultas dependientes
         if (!cajaIdLocal) {
-          setError('La caja diaria no está disponible.');
-          setIsLoading(false);
+          console.error('La caja diaria no está disponible');
+          if (isSubscribed) {
+            setError('La caja diaria no está disponible.');
+            setIsLoading(false);
+          }
           return;
         }
 
@@ -140,61 +176,179 @@ export default function DailyBox() {
           .eq('caja_id', cajaIdLocal)
           .limit(1);
         
-        if (configError) throw configError;
+        if (!isSubscribed) return;
         
-        if (configData && configData.length > 0) {
-          setNextUpdate(configData[0].proxima_actualizacion);
+        if (configError) {
+          console.error('Error al obtener la configuración de la caja diaria:', configError);
+          // No interrumpimos el flujo por este error, solo lo registramos
+        } else if (configData && configData.length > 0) {
+          if (isSubscribed) setNextUpdate(configData[0].proxima_actualizacion);
         }
         
-        // Obtener skins desde la API de Valorant
-        try {
-          const valorantSkins = await getWeaponSkins();
+        // Verificar si hay skins en la caja
+        const { data: cajaSkins, error: cajasSkinsError } = await supabase
+          .from('cajas_skins')
+          .select('skin_id, content_tier_id')
+          .eq('caja_id', cajaIdLocal);
           
-          // Filtrar skins según los mismos criterios del catálogo
-          const filteredSkins = valorantSkins.filter(skin => 
-            skin.themeUuid && // Solo skins que pertenecen a un bundle/tema
-            skin.displayIcon && // Solo skins con icono
-            !skin.displayName.toLowerCase().includes('standard') && // Excluir skins estándar
-            skin.displayName.split(' ').length > 1 // Excluir nombres de armas simples
-          );
-          
-          // Seleccionar 20 skins aleatorias para la caja diaria
-          const randomSkins = getRandomSkins(filteredSkins, 20);
-          
-          // Formatear las skins para que coincidan con nuestro tipo Skin
-          const formattedSkins = randomSkins.map((skin: ValorantSkin) => ({
-            id: skin.uuid,
-            nombre: skin.displayName,
-            bundleName: skin.displayName.split(' ')[0],
-            content_tier_id: skin.contentTierUuid || '',
-            uuid: skin.uuid,
-            imagen_url: skin.displayIcon,
-            content_tier: {
-              id: skin.contentTierUuid || '',
-              nombre: getTierName(skin.contentTierUuid),
-              descripcion: '',
-              color: getTierColor(skin.contentTierUuid),
-              uuid: skin.contentTierUuid || ''
-            }
-          }));
-          
-          setSkins(formattedSkins);
-        } catch (error) {
-          console.error('Error al obtener skins de Valorant:', error);
-          setError('Error al cargar las skins. Por favor, intenta de nuevo más tarde.');
+        if (!isSubscribed) return;
+        
+        if (cajasSkinsError) {
+          console.error('Error al obtener las skins de la caja:', cajasSkinsError);
+          setError('Error al cargar las skins de la caja: ' + cajasSkinsError.message);
           setIsLoading(false);
           return;
         }
         
+        // Si no hay skins en la caja, obtenerlas de la API de Valorant y guardarlas
+        if (!cajaSkins || cajaSkins.length === 0) {
+          try {
+            console.log('No hay skins en la caja diaria, obteniendo de la API de Valorant...');
+            const valorantSkins = await getWeaponSkins();
+            
+            if (!isSubscribed) return;
+            
+            // Filtrar las skins usando la función centralizada
+            // Solo skins que pertenecen a bundles con imagen de portada
+            const filteredSkins = await filterSkinsByBundleWithIcon(valorantSkins);
+            
+            if (!isSubscribed) return;
+            
+            // Asegurarse de tener suficientes skins para la selección
+            if (filteredSkins.length < 20) {
+              console.warn(`Solo se encontraron ${filteredSkins.length} skins válidas, menos de las 20 requeridas.`);
+            }
+            
+            // Seleccionar exactamente 20 skins aleatorias para la caja diaria
+            const shuffled = [...filteredSkins].sort(() => 0.5 - Math.random());
+            const randomSkins = shuffled.slice(0, Math.min(20, shuffled.length));
+            
+            console.log(`Seleccionadas ${randomSkins.length} skins para la caja diaria.`);
+            
+            // Formatear las skins para que coincidan con nuestro tipo Skin
+            const formattedSkins: Skin[] = [];
+            
+            // Procesar cada skin y obtener sus datos de tier
+            for (const skin of randomSkins) {
+              if (!isSubscribed) return;
+              
+              // Obtener los datos del tier desde la base de datos
+              const tierData = await getTierData(supabase, skin.contentTierUuid);
+              
+              // Usar la función de utilidad para formatear la skin
+              formattedSkins.push(formatSkinForApp(skin, tierData));
+            }
+            
+            if (!isSubscribed) return;
+            
+            // Primero, eliminar todas las skins anteriores de esta caja
+            try {
+              console.log('Eliminando skins anteriores de la caja diaria...');
+              const { error: deleteError } = await supabase
+                .from('cajas_skins')
+                .delete()
+                .eq('caja_id', cajaIdLocal);
+              
+              if (deleteError) {
+                console.error('Error al eliminar skins anteriores:', deleteError);
+              }
+            } catch (deleteErr) {
+              console.error('Error al eliminar skins anteriores:', deleteErr);
+              // Capturamos el error pero continuamos
+            }
+            
+            if (!isSubscribed) return;
+            
+            // Guardar las nuevas skins en la base de datos (máximo 10 para evitar demasiadas)
+            const skinsToSave = formattedSkins.slice(0, 10);
+            console.log(`Guardando ${skinsToSave.length} skins en la base de datos...`);
+            
+            const insertPromises = [];
+            
+            for (const skin of skinsToSave) {
+              if (!isSubscribed) return;
+              
+              // Obtener el ID y nombre del content tier
+              const { data: tierData } = await supabase
+                .from('content_tiers')
+                .select('id, nombre')
+                .eq('uuid', skin.content_tier_id)
+                .limit(1);
+                
+              if (!isSubscribed) return;
+                
+              const contentTierId = tierData && tierData.length > 0 ? tierData[0].id : null;
+              const tierNombre = tierData && tierData.length > 0 ? tierData[0].nombre : null;
+              
+              // Insertar la skin en la tabla cajas_skins
+              const insertPromise = supabase
+                .from('cajas_skins')
+                .insert({
+                  id: crypto.randomUUID(), // Generamos un UUID aleatorio para el id
+                  caja_id: cajaIdLocal,
+                  skin_id: skin.id,
+                  skin_nombre: skin.nombre, // Guardar también el nombre de la skin
+                  content_tier_id: contentTierId,
+                  tier_nombre: tierNombre // Guardar el nombre del tier
+                });
+                
+              insertPromises.push(insertPromise);
+            }
+            
+            // Esperar a que todas las inserciones terminen
+            await Promise.all(insertPromises);
+            
+            if (isSubscribed) {
+              console.log('Skins guardadas correctamente en la base de datos');
+              setSkins(formattedSkins);
+            }
+          } catch (error) {
+            console.error('Error al cargar las skins:', error);
+            if (isSubscribed) {
+              setError('Error al cargar las skins. Por favor, intenta de nuevo más tarde.');
+              setIsLoading(false);
+            }
+            return;
+          }
+        } else {
+          // Si ya hay skins en la caja, obtener sus detalles de la API de Valorant
+          try {
+            const valorantSkins = await getWeaponSkins();
+            
+            // Mapear las skins de la caja con los datos de la API
+            const cajaSkinsIds = cajaSkins.map(s => s.skin_id);
+            const cajaSkinsData = valorantSkins.filter(s => cajaSkinsIds.includes(s.uuid));
+            
+            // Formatear las skins
+            const formattedSkins: Skin[] = [];
+            
+            // Procesar cada skin y obtener sus datos de tier
+            for (const skin of cajaSkinsData) {
+              // Obtener los datos del tier desde la base de datos
+              const tierData = await getTierData(supabase, skin.contentTierUuid);
+              
+              // Usar la función de utilidad para formatear la skin
+              formattedSkins.push(formatSkinForApp(skin, tierData));
+            }
+            
+            setSkins(formattedSkins);
+          } catch (error) {
+            console.error('Error al obtener detalles de skins:', error);
+            setError('Error al cargar los detalles de las skins.');
+            setIsLoading(false);
+            return;
+          }
+        }
+        
         // Usar las funciones definidas fuera del bloque
         
-        // Crear probabilidades predefinidas para los tiers (según la API oficial de Valorant)
+        // Crear probabilidades predefinidas para los tiers (según los requisitos específicos)
         const defaultProbabilities = [
           {
             id: '1',
             caja_id: cajaIdLocal || '',
             content_tier_id: '411e4a55-4e59-7757-41f0-86a53f101bb5', // Ultra (rank 4)
-            probabilidad: 0.05, // 5%
+            probabilidad: 0.01, // 1%
             cantidad_skins: 1,
             content_tier: {
               id: '411e4a55-4e59-7757-41f0-86a53f101bb5',
@@ -208,8 +362,8 @@ export default function DailyBox() {
             id: '2',
             caja_id: cajaIdLocal || '',
             content_tier_id: 'e046854e-406c-37f4-6607-19a9ba8426fc', // Exclusive (rank 3)
-            probabilidad: 0.10, // 10%
-            cantidad_skins: 2,
+            probabilidad: 0.005, // 0.5%
+            cantidad_skins: 1,
             content_tier: {
               id: 'e046854e-406c-37f4-6607-19a9ba8426fc',
               nombre: 'Exclusive Edition',
@@ -222,8 +376,8 @@ export default function DailyBox() {
             id: '3',
             caja_id: cajaIdLocal || '',
             content_tier_id: '60bca009-4182-7998-dee7-b8a2558dc369', // Premium (rank 2)
-            probabilidad: 0.15, // 15%
-            cantidad_skins: 3,
+            probabilidad: 0.085, // 8.5%
+            cantidad_skins: 2,
             content_tier: {
               id: '60bca009-4182-7998-dee7-b8a2558dc369',
               nombre: 'Premium Edition',
@@ -236,8 +390,8 @@ export default function DailyBox() {
             id: '4',
             caja_id: cajaIdLocal || '',
             content_tier_id: '0cebb8be-46d7-c12a-d306-e9907bfc5a25', // Deluxe (rank 1)
-            probabilidad: 0.30, // 30%
-            cantidad_skins: 5,
+            probabilidad: 0.25, // 25%
+            cantidad_skins: 4,
             content_tier: {
               id: '0cebb8be-46d7-c12a-d306-e9907bfc5a25',
               nombre: 'Deluxe Edition',
@@ -250,8 +404,8 @@ export default function DailyBox() {
             id: '5',
             caja_id: cajaIdLocal || '',
             content_tier_id: '12683d76-48d7-84a3-4e09-6985794f0445', // Select (rank 0)
-            probabilidad: 0.40, // 40%
-            cantidad_skins: 9,
+            probabilidad: 0.65, // 65%
+            cantidad_skins: 12,
             content_tier: {
               id: '12683d76-48d7-84a3-4e09-6985794f0445',
               nombre: 'Select Edition',
@@ -261,6 +415,12 @@ export default function DailyBox() {
             }
           }
         ];
+        
+        // Verificar que la suma de probabilidades sea 1
+        const totalProbability = defaultProbabilities.reduce((sum, prob) => sum + prob.probabilidad, 0);
+        if (Math.abs(totalProbability - 1) > 0.001) {
+          console.warn(`La suma de probabilidades (${totalProbability}) no es exactamente 1. Esto podría causar problemas.`);
+        }
         
         setProbabilidades(defaultProbabilities);
         
@@ -290,46 +450,118 @@ export default function DailyBox() {
     };
   }, []); // Array de dependencias vacío para evitar bucle infinito
 
-  // Función para abrir la caja
-  const openBox = () => {
-    if (!skins.length || isOpening) return;
+  // Función para abrir la caja diaria
+  const openBox = async () => {
+    if (!skins.length || isOpening || !cajaId || dailyOpened) return;
     
-    // ...
+    setIsOpening(true);
     
-    // Generar un número aleatorio entre 0 y 1
-    const randomNum = Math.random();
-    let accumulatedProbability = 0;
-    let selectedTier: string | null = null;
-    
-    // Determinar el tier según la probabilidad
-    for (const prob of probabilidades) {
-      accumulatedProbability += prob.probabilidad;
-      if (randomNum <= accumulatedProbability) {
-        selectedTier = prob.content_tier_id;
-        break;
-      }
-    }
-    
-    // Si por alguna razón no se seleccionó un tier, usar el último
-    if (!selectedTier && probabilidades.length > 0) {
-      selectedTier = probabilidades[probabilidades.length - 1].content_tier_id;
-    }
-    
-    // Filtrar skins del tier seleccionado
-    const tierSkins = skins.filter(skin => skin.content_tier_id === selectedTier);
-    
-    // Seleccionar una skin aleatoria del tier
-    const randomIndex = Math.floor(Math.random() * tierSkins.length);
-    const selectedSkin = tierSkins[randomIndex] || skins[0];
-    
-    // Simular tiempo de apertura
-    setTimeout(() => {
-      setResultSkin(selectedSkin);
-      setIsOpening(false);
+    try {
+      // Generar un número aleatorio entre 0 y 1
+      const randomNum = Math.random();
+      let accumulatedProbability = 0;
+      let selectedTier: string | null = null;
       
-      // Registrar la transacción (esto se implementaría en una fase posterior)
-      // registerTransaction(selectedSkin);
-    }, 2000);
+      // Determinar el tier según la probabilidad
+      for (const prob of probabilidades) {
+        accumulatedProbability += prob.probabilidad;
+        if (randomNum <= accumulatedProbability) {
+          selectedTier = prob.content_tier_id;
+          break;
+        }
+      }
+      
+      // Si por alguna razón no se seleccionó un tier, usar el último
+      if (!selectedTier && probabilidades.length > 0) {
+        selectedTier = probabilidades[probabilidades.length - 1].content_tier_id;
+      }
+      
+      // Filtrar skins del tier seleccionado
+      const tierSkins = skins.filter(skin => skin.content_tier_id === selectedTier);
+      
+      // Si no hay skins en el tier seleccionado, usar cualquier skin
+      const availableSkins = tierSkins.length > 0 ? tierSkins : skins;
+      
+      // Seleccionar una skin aleatoria del tier
+      const randomIndex = Math.floor(Math.random() * availableSkins.length);
+      const selectedSkin = availableSkins[randomIndex];
+      
+      // Registrar la transacción en la base de datos
+      if (selectedSkin) {
+        try {
+          const { data: userData } = await supabase.auth.getUser();
+          
+          if (userData && userData.user) {
+            // Registrar la transacción
+            const { error: transactionError } = await supabase
+              .from('transacciones')
+              .insert({
+                usuario_id: userData.user.id,
+                caja_id: cajaId,
+                skin_id: selectedSkin.id,
+                fecha: new Date().toISOString()
+              });
+              
+            if (transactionError) {
+              console.error('Error al registrar la transacción:', transactionError);
+            }
+            
+            // Registrar la skin en el inventario del usuario
+            // Primero verificar si ya existe en el inventario
+            const { data: existingItem } = await supabase
+              .from('inventario_usuario')
+              .select('*')
+              .eq('usuario_id', userData.user.id)
+              .eq('skin_id', selectedSkin.id)
+              .maybeSingle();
+            
+            // Solo insertar si no existe
+            if (!existingItem) {
+              await supabase
+                .from('inventario_usuario')
+                .insert({
+                  usuario_id: userData.user.id,
+                  skin_id: selectedSkin.id
+                });
+            }
+              
+            // Actualizar el inventario local
+            setUserInventory(prev => [...prev, selectedSkin.id]);
+          } else {
+            // Usuario no autenticado, usar ID de prueba
+            const userId = 'usuario-prueba';
+            
+            // Registrar la transacción
+            const { error: transactionError } = await supabase
+              .from('transacciones')
+              .insert({
+                usuario_id: userId,
+                caja_id: cajaId,
+                skin_id: selectedSkin.id,
+                fecha: new Date().toISOString()
+              });
+              
+            if (transactionError) {
+              console.error('Error al registrar la transacción:', transactionError);
+            }
+          }
+        } catch (authError) {
+          console.error('Error al obtener usuario:', authError);
+          // Continuar con la apertura aunque falle la autenticación
+        }
+      }
+      
+      // Simular tiempo de apertura
+      setTimeout(() => {
+        setResultSkin(selectedSkin);
+        setIsOpening(false);
+        setDailyOpened(true);
+      }, 2000);
+    } catch (error) {
+      console.error('Error al abrir la caja:', error);
+      setIsOpening(false);
+      setError('Error al abrir la caja. Por favor, intenta de nuevo.');
+    }
   };
 
   // Formatear el tiempo restante para la próxima actualización
@@ -352,7 +584,6 @@ export default function DailyBox() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] w-full">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        <p className="mt-4 text-white/80">Cargando caja diaria...</p>
       </div>
     );
   }
@@ -370,6 +601,8 @@ export default function DailyBox() {
       </div>
     );
   }
+
+
 
   return (
     <div className="flex flex-col items-center w-full max-w-4xl mx-auto">
@@ -453,24 +686,41 @@ export default function DailyBox() {
             {showProbabilities && (
               <div className="w-full bg-black/20 rounded-lg p-4 border border-white/10">
                 <h3 className="text-lg font-medium text-white mb-3">Probabilidades de obtención</h3>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {probabilidades
                     .sort((a, b) => b.probabilidad - a.probabilidad)
-                    .map((prob) => (
-                      <div key={prob.id} className="flex justify-between items-center">
-                        <div className="flex items-center">
-                          <div 
-                            className="w-3 h-3 rounded-full mr-2" 
-                            style={{ backgroundColor: prob.content_tier?.color || '#fff' }}
-                          ></div>
-                          <span className="text-white/90">{prob.content_tier?.nombre || 'Desconocido'}</span>
+                    .map((prob) => {
+                      // Calcular el ancho de la barra de progreso basado en la probabilidad
+                      const barWidth = `${Math.max(prob.probabilidad * 100, 0.5)}%`;
+                      return (
+                        <div key={prob.id} className="space-y-1">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center">
+                              <div 
+                                className="w-3 h-3 rounded-full mr-2" 
+                                style={{ backgroundColor: prob.content_tier?.color || '#fff' }}
+                              ></div>
+                              <span className="text-white/90">{prob.content_tier?.nombre || 'Desconocido'}</span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <span className="text-white/70">{prob.cantidad_skins} skins</span>
+                              <span className="text-white font-medium">{(prob.probabilidad * 100).toFixed(1)}%</span>
+                            </div>
+                          </div>
+                          {/* Barra de progreso para visualizar la probabilidad */}
+                          <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full rounded-full" 
+                              style={{ 
+                                width: barWidth, 
+                                backgroundColor: prob.content_tier?.color || '#fff',
+                                transition: 'width 0.5s ease-in-out'
+                              }}
+                            ></div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <span className="text-white/70">{prob.cantidad_skins} skins</span>
-                          <span className="text-white font-medium">{(prob.probabilidad * 100).toFixed(1)}%</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </div>
             )}

@@ -14,14 +14,20 @@ interface StripeCardProps {
   link?: string; // Optional link
   btnText?: string; // Optional text for the link
   disabled?: boolean; // Optional disabled state for Herou
+  badge?: string; // Optional badge text (e.g. "Diaria")
 }
 
 // Update the component to accept props
-function StripeCard({ imageUrl, title, link = '#', btnText = 'Learn more', disabled = false }: StripeCardProps) {
+function StripeCard({ imageUrl, title, link = '#', btnText = 'Learn more', disabled = false, badge }: StripeCardProps) {
   return (
     <>
       <div className='w-full h-76 group bg-backgroundAlt/10 backdrop-blur-sm p-4 border border-border/50 overflow-hidden rounded-2xl shadow-xl hover:shadow-primary/5 transition-all duration-300'>
         <figure className='w-full h-40 group-hover:h-36 transition-all duration-300 bg-muted/30 rounded-xl relative overflow-hidden'>
+          {badge && (
+            <div className="absolute top-2 right-2 z-10 bg-primary/80 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">
+              {badge}
+            </div>
+          )}
           <div
             style={{
               background:

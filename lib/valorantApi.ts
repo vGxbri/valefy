@@ -6,19 +6,37 @@ export interface Chroma {
   // Puedes agregar más campos si los necesitas
 }
 
+export interface SkinLevel {
+  uuid: string;
+  displayName: string;
+  levelItem: string | null;
+  displayIcon: string | null;
+  streamedVideo: string | null;
+  assetPath: string;
+}
+
 export interface Skin {
   uuid: string;
   displayName: string;
-  displayIcon: string;
+  displayIcon: string | null; // Cambiado a null porque puede fallar
   contentTierUuid: string | null;
   themeUuid?: string; // UUID del tema/bundle al que pertenece la skin
   chromas?: Chroma[]; // Añadimos chromas opcional
+  levels?: SkinLevel[]; // Añadimos el array de niveles
 }
 
 interface SkinsResponse {
   status: number;
   data: Skin[];
 }
+
+// Lista de nombres de armas a excluir (constante reutilizable)
+export const BANNED_WEAPON_NAMES = [
+  "Classic", "Shorty", "Frenzy", "Ghost", "Sheriff",
+  "Stinger", "Spectre", "Bucky", "Judge", "Bulldog",
+  "Guardian", "Phantom", "Vandal", "Marshal", "Operator",
+  "Ares", "Odin", "Outlaw", "Melee"
+];
 
 export const getWeaponSkins = async (): Promise<Skin[]> => {
   const res = await fetch("https://valorant-api.com/v1/weapons/skins");
@@ -32,35 +50,118 @@ export const getWeaponSkins = async (): Promise<Skin[]> => {
   return json.data;
 };
 
-export function getRandomSkins(skins: Skin[], count: number): Chroma[] {
-  // Lista de nombres de armas a excluir
-  const bannedWeaponNames = [
-    "Classic",
-    "Shorty",
-    "Frenzy",
-    "Ghost",
-    "Sheriff",
-    "Stinger",
-    "Spectre",
-    "Bucky",
-    "Judge",
-    "Bulldog",
-    "Guardian",
-    "Phantom",
-    "Vandal",
-    "Marshal",
-    "Operator",
-    "Ares",
-    "Odin",
-    "Outlaw",
-    "Melee",
-  ];
+/**
+ * Obtiene el mejor displayIcon disponible para una skin
+ * @param skin La skin de la que obtener el icono
+ * @returns La URL del icono o null si no hay ninguno disponible
+ */
+export const getBestDisplayIcon = (skin: Skin): string | null => {
+  // SIEMPRE usamos el icono del primer nivel si existe
+  if (skin.levels && skin.levels.length > 0 && skin.levels[0].displayIcon) {
+    return skin.levels[0].displayIcon;
+  }
+  
+  // SOLO si no hay niveles o el primer nivel no tiene icono, usamos el icono principal
+  // Esto debería ocurrir muy raramente
+  if (skin.displayIcon) {
+    console.warn(`Usando displayIcon principal para ${skin.displayName} porque no tiene levels[0].displayIcon`);
+    return skin.displayIcon;
+  }
+  
+  // Si no hay ningún icono disponible
+  return null;
+};
 
-  // Filtramos las skins que contienen "standard" en su nombre o que tienen exactamente el nombre de un arma
+/**
+ * Filtra las skins según criterios de calidad consistentes en toda la aplicación
+ * @param skins Array de skins a filtrar
+ * @returns Array de skins filtradas
+ */
+export const filterQualitySkins = (skins: Skin[]): Skin[] => {
+  return skins.filter(skin => 
+    skin.themeUuid && // Solo skins que pertenecen a un bundle/tema
+    (getBestDisplayIcon(skin) !== null) && // Verificar que tenga un icono disponible
+    !skin.displayName.toLowerCase().includes('standard') && // Excluir skins estándar
+    skin.displayName.split(' ').length > 1 && // Excluir nombres de armas simples
+    !BANNED_WEAPON_NAMES.includes(skin.displayName) // Excluir nombres de armas básicas
+  );
+};
+
+/**
+ * Filtra skins por IDs específicos
+ * @param allSkins Todas las skins disponibles
+ * @param skinIds Array de IDs de skins a incluir
+ * @returns Array de skins que coinciden con los IDs proporcionados
+ */
+export const filterSkinsByIds = (allSkins: Skin[], skinIds: string[]): Skin[] => {
+  return allSkins.filter(skin => skinIds.includes(skin.uuid));
+};
+
+/**
+ * Obtiene un número específico de skins aleatorias del conjunto proporcionado
+ * @param skins Array de skins para seleccionar aleatoriamente
+ * @param count Número de skins a seleccionar
+ * @returns Array de skins seleccionadas aleatoriamente
+ */
+export function getRandomSkins(skins: Skin[], count: number): Skin[] {
+  // Primero aplicamos el filtro de calidad
+  const filteredSkins = filterQualitySkins(skins);
+  
+  // Luego seleccionamos aleatoriamente
+  const shuffled = [...filteredSkins].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
+/**
+ * Filtra skins que pertenecen a bundles con imagen de portada
+ * @param skins Array de skins a filtrar
+ * @returns Promise con array de skins filtradas
+ */
+export const filterSkinsByBundleWithIcon = async (skins: Skin[]): Promise<Skin[]> => {
+  // Obtener los bundles para verificar cuáles tienen imagen de portada
+  const bundlesResponse = await fetch('https://valorant-api.com/v1/bundles');
+  const bundlesData = await bundlesResponse.json();
+  const bundles = bundlesData.data;
+  
+  // Crear un mapa de bundles para búsquedas rápidas
+  interface Bundle {
+    uuid: string;
+    displayName: string;
+    displayIcon: string;
+  }
+  
+  const bundleMap = new Map<string, Bundle>();
+  bundles.forEach((bundle: Bundle) => {
+    bundleMap.set(bundle.displayName.toLowerCase(), bundle);
+  });
+  
+  // Filtrar las skins:
+  // 1. Solo las que tienen themeUuid
+  // 2. Solo las que pertenecen a un bundle con imagen de portada
+  return skins.filter(skin => {
+    if (!skin.themeUuid) return false;
+    
+    const bundleName = skin.displayName.split(' ')[0];
+    const bundle = bundleMap.get(bundleName.toLowerCase());
+    
+    // Verificar que el bundle tenga imagen de portada
+    return bundle && bundle.displayIcon;
+  });
+};
+
+/**
+ * Obtiene chromas aleatorios con diversidad de tipos de armas
+ * @param skins Array de skins para extraer chromas
+ * @param count Número de chromas a seleccionar
+ * @returns Array de chromas seleccionados aleatoriamente
+ */
+export function getRandomChromas(skins: Skin[], count: number): Chroma[] {
+  // Filtramos las skins según criterios de calidad
   const filteredSkins = skins.filter(
     (skin) =>
       !skin.displayName.toLowerCase().includes("standard") &&
-      !bannedWeaponNames.includes(skin.displayName),
+      !BANNED_WEAPON_NAMES.includes(skin.displayName) &&
+      getBestDisplayIcon(skin) !== null, // Asegurarnos de que tenga un icono disponible
   );
 
   // Extraemos todos los chromas válidos (con displayIcon no nulo) de las skins filtradas

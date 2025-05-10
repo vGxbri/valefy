@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Skin, getWeaponSkins } from '@/lib/valorantApi';
+import { Skin, getWeaponSkins, getBestDisplayIcon, filterSkinsByBundleWithIcon } from '@/lib/valorantApi';
 import { Pagination } from '@heroui/pagination';
 import { Plus, X } from 'lucide-react';
 import BundleModal from '@/components/BundleModal';
@@ -50,7 +50,13 @@ export default function Page() {
         setLoading(true);
         setError(null);
         
+        // Obtener todas las skins
         const skins = await getWeaponSkins();
+        
+        // Usar la función centralizada para filtrar skins por bundles con imagen
+        const filteredSkins = await filterSkinsByBundleWithIcon(skins);
+        
+        // Obtener los bundles para asociar las skins con sus imágenes de portada
         const bundlesResponse = await fetch('https://valorant-api.com/v1/bundles');
         const bundlesData = await bundlesResponse.json();
         const bundles: Bundle[] = bundlesData.data;
@@ -60,15 +66,18 @@ export default function Page() {
           bundleMap.set(bundle.displayName.toLowerCase(), bundle);
         });
 
-        const bundleSkinsData: BundleSkin[] = skins
-          .filter(skin => skin.themeUuid)
+        const bundleSkinsData: BundleSkin[] = filteredSkins
           .map(skin => {
             const bundleName = skin.displayName.split(' ')[0];
             const bundle = bundleMap.get(bundleName.toLowerCase());
+            
+            // Usar getBestDisplayIcon para obtener el mejor icono disponible
+            const bestIcon = getBestDisplayIcon(skin);
+            
             return {
               skinName: skin.displayName,
               bundleName: bundleName,
-              skinIcon: skin.displayIcon || '',
+              skinIcon: bestIcon || '', // Usar el mejor icono disponible
               bundleIcon: bundle?.displayIcon || '',
               themeUuid: skin.themeUuid || '',
               bundleUuid: bundle?.uuid || ''
@@ -95,11 +104,10 @@ export default function Page() {
     return groups;
   }, {} as Record<string, BundleSkin[]>);
 
+  // Ya no necesitamos filtrar por bundleIcon porque filterSkinsByBundleWithIcon ya lo hace
   const filteredBundleGroups = Object.entries(bundleGroups)
     .filter(([bundleName, skins]) => 
-      bundleName.toLowerCase().includes(searchTerm.toLowerCase()) && 
-      // Filtrar solo bundles que tienen imagen de portada
-      skins[0].bundleIcon
+      bundleName.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
   const totalBundles = filteredBundleGroups.length;
@@ -176,7 +184,6 @@ export default function Page() {
           </div>
         ) : (
           <>
-            {/* ... (tu grid y paginación) ... */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {paginatedBundles.map(([bundleName, skins]) => (
                 <button
