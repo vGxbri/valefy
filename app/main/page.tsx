@@ -5,6 +5,7 @@ import Image from "next/image";
 import StripeCard from "@/components/StripeCard";
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
+import { extraerTipoCaja } from '@/lib/boxUtils';
 
 interface Caja {
   id: string;
@@ -36,6 +37,25 @@ const getSupabaseClient = () => {
   return supabaseClient;
 };
 
+// Función para actualizar la ruta de una caja en la base de datos
+const updateCajaRuta = async (cajaId: string, ruta: string) => {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    
+    const { error } = await supabase
+      .from('cajas')
+      .update({ ruta })
+      .eq('id', cajaId);
+      
+    if (error) {
+      console.error('Error al actualizar ruta de caja:', error);
+    }
+  } catch (err) {
+    console.error('Error en updateCajaRuta:', err);
+  }
+};
+
 export default function MainPage() {
   const [cajas, setCajas] = useState<Caja[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -57,10 +77,13 @@ export default function MainPage() {
         }
         
         // Obtener cajas desde Supabase
+        // Importa el tipo Caja si no está ya importado
+        // import type { Caja } from '@/types/database';
         const { data: cajasData, error: cajasError } = await supabase
           .from('cajas')
           .select('*')
-          .order('precio', { ascending: true });
+          .order('precio', { ascending: true })
+          .returns<Caja[]>();
           
         if (cajasError) {
           throw cajasError;
@@ -166,10 +189,27 @@ export default function MainPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {cajas.map((caja) => {
-                  // Extraer el tipo de caja del nombre (por ejemplo, "Caja Premium" -> "premium")
-                  const tipoCaja = caja.nombre.split(' ')[1]?.toLowerCase() || 'diaria';
-                  // Construir la ruta dinámica
-                  const rutaDinamica = `/main/${tipoCaja}`;
+                  // Usar la función centralizada para extraer el tipo de caja
+                  const tipoCaja = extraerTipoCaja(caja.nombre, caja.es_diaria);
+                  
+                  // Casos especiales para rutas
+                  let rutaEspecial = null;
+                  
+                  // Caso especial para Caja de Darío
+                  if (caja.nombre === 'Caja de Darío') {
+                    rutaEspecial = '/main/dario';
+                    console.log('Ruta especial para Caja de Darío:', rutaEspecial);
+                  }
+                  
+                  // Construir la ruta dinámica (usar ruta especial si existe)
+                  const rutaDinamica = rutaEspecial || `/main/${tipoCaja}`;
+                  
+                  // Guardar la ruta en la base de datos para futuras referencias
+                  if (caja.ruta !== rutaDinamica) {
+                    console.log(`Actualizando ruta para ${caja.nombre}: ${rutaDinamica}`);
+                    // No bloqueamos la renderización con await
+                    updateCajaRuta(caja.id, rutaDinamica);
+                  }
                   
                   return (
                     <Link href={rutaDinamica} key={caja.id} className="block transform transition-all duration-200 hover:scale-[1.02]">

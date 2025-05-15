@@ -5,14 +5,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { createClient } from '@supabase/supabase-js';
-import dynamic from 'next/dynamic';
-import { getWeaponSkins, type Skin as ValorantSkin, filterQualitySkins, filterSkinsByIds } from '@/lib/valorantApi';
-import { formatSkinForApp } from '@/lib/skinUtils';
-import { motion } from 'framer-motion';
-import { useSession } from 'next-auth/react';
-import { processBoxOpening, selectRandomSkinByProbability, TierProbabilidad as BoxTierProbabilidad, Skin as BoxSkin } from '@/lib/boxUtils';
+import { getWeaponSkins, filterQualitySkins, filterSkinsByIds } from '@/lib/valorantApi';
+import { extraerTipoCaja } from '@/lib/boxUtils';
+import BoxComponent, { BoxCaja } from '@/components/BoxComponent';
 
 // Singleton para el cliente de Supabase
 let supabaseClient: ReturnType<typeof createClient> | null = null;
@@ -32,51 +28,11 @@ const getSupabaseClient = () => {
   return supabaseClient;
 };
 
-// Definir tipos para las skins y tiers (igual que en DailyBox.tsx)
-type ContentTier = {
-  id: string;
-  nombre: string;
-  descripcion: string;
-  color: string;
-  uuid: string;
-};
-
-type Skin = {
-  id: string;
-  nombre: string;
-  bundleName?: string;
-  content_tier_id: string;
-  uuid: string;
-  imagen_url: string;
-  content_tier?: ContentTier;
-};
-
-type TierProbabilidad = {
-  id: string;
-  caja_id: string;
-  content_tier_id: string;
-  probabilidad: number;
-  cantidad_skins: number;
-  content_tier?: ContentTier;
-};
-
-interface Caja {
-  id: string;
-  nombre: string;
-  precio: number;
-  imagen_url: string;
-  descripcion: string;
-  ruta: string;
-  esta_disponible: boolean;
-  es_diaria?: boolean;
-  fecha_actualizacion?: string;
-}
-
 // Tipos de cajas disponibles
 type TipoCaja = string; // Ahora puede ser cualquier string, no solo 'premium', 'diaria' o 'ultra'
 
 // Función para crear datos por defecto mientras se cargan los datos reales
-const crearCajaDefault = (tipo: TipoCaja): Caja => {
+const crearCajaDefault = (tipo: TipoCaja): BoxCaja => {
   // Valores por defecto genéricos que se usarán para cualquier tipo de caja
   return {
     id: `${tipo}-default`,
@@ -94,17 +50,18 @@ const obtenerCajasDisponibles = async (supabase: any): Promise<string[]> => {
   try {
     const { data } = await supabase
       .from('cajas')
-      .select('nombre')
+      .select('nombre, es_diaria, ruta')
       .eq('esta_disponible', true);
     
     if (data && data.length > 0) {
-      // Extraer los nombres y convertirlos a formato de ruta (lowercase)
       return data.map((caja: any) => {
-        // Extraer el nombre después de "Caja " si existe
-        const nombreSinPrefijo = caja.nombre.startsWith('Caja ') 
-          ? caja.nombre.substring(5).toLowerCase() 
-          : caja.nombre.toLowerCase();
-        return nombreSinPrefijo;
+        // Si la caja tiene una ruta guardada, extraer el tipo de la ruta
+        if (caja.ruta && caja.ruta.startsWith('/main/')) {
+          // Extraer el tipo de la ruta: /main/[tipo] -> tipo
+          return caja.ruta.split('/').pop();
+        }
+        // Si no tiene ruta, usar la función centralizada para extraer el tipo
+        return extraerTipoCaja(caja.nombre, caja.es_diaria);
       });
     }
   } catch (error) {
@@ -115,215 +72,342 @@ const obtenerCajasDisponibles = async (supabase: any): Promise<string[]> => {
   return ['premium', 'diaria', 'ultra'];
 };
 
-// Definimos la animación personalizada para el rebote lento
-const bounceKeyframes = {
-  '0%, 100%': { transform: 'translateY(0)' },
-  '50%': { transform: 'translateY(-20px)' },
-};
+// Ya no necesitamos dynamic import para DailyBox, usamos BoxComponent para todos los tipos de cajas
 
 export default function CajaPage() {
   const params = useParams();
   const router = useRouter();
   const tipoParam = typeof params.tipo === 'string' ? params.tipo : params.tipo?.[0] || '';
   
-  // Usar useSession para obtener la sesión del usuario
-  const { data: session, status } = useSession();
-  const isAuthenticated = status === 'authenticated' && !!session?.user;
-  
   // Estados para manejar los tipos de cajas disponibles
   const [tiposDisponibles, setTiposDisponibles] = useState<string[]>(['premium', 'diaria', 'ultra']);
   const [tipoValidado, setTipoValidado] = useState<TipoCaja>(tipoParam || 'premium');
   
   // Estados principales
-  const [caja, setCaja] = useState<Caja | null>(crearCajaDefault(tipoValidado));
+  const [caja, setCaja] = useState<BoxCaja | null>(crearCajaDefault(tipoValidado));
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  // Estado para las probabilidades de tiers
-  const [probabilidades, setProbabilidades] = useState<BoxTierProbabilidad[]>([]);
+  const [cajaSkins, setCajaSkins] = useState<any[]>([]);
+  const [probabilidades, setProbabilidades] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [isOpening, setIsOpening] = useState<boolean>(false);
+  
+  // Estados para panel de administración
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+  
+  // Obtener el cliente de Supabase
+  const supabase = getSupabaseClient();
   
   // Efecto para cargar los tipos de cajas disponibles
   useEffect(() => {
     const cargarTiposDisponibles = async () => {
-      const supabase = getSupabaseClient();
       if (!supabase) return;
       
-      const tipos = await obtenerCajasDisponibles(supabase);
-      setTiposDisponibles(tipos);
-      
-      // Validar que el tipo de caja solicitado esté disponible
-      if (tipoParam && tipos.includes(tipoParam)) {
-        setTipoValidado(tipoParam);
-      } else {
-        // Si el tipo no es válido, usar 'premium' o el primer tipo disponible
-        const tipoDefault = tipos.includes('premium') ? 'premium' : tipos[0];
-        setTipoValidado(tipoDefault);
+      try {
+        // Normalizar el tipo del parámetro para comparación
+        const tipoParamNormalizado = tipoParam.trim().toLowerCase().replace(/\s+/g, '-');
         
-        // Si estamos en el cliente y el tipo no es válido, redirigir
-        if (typeof window !== 'undefined' && tipoParam !== tipoDefault) {
-          router.replace(`/main/${tipoDefault}`);
+        // Obtener todas las cajas disponibles directamente de la base de datos
+        const { data: cajasDisponibles } = await supabase
+          .from('cajas')
+          .select('id, nombre, es_diaria')
+          .eq('esta_disponible', true);
+        
+        console.log('Cajas disponibles en la base de datos:', cajasDisponibles?.map((c: any) => c.nombre));
+        
+        // Extraer los tipos normalizados para el estado
+        const tiposExtraidos = cajasDisponibles?.map((caja: any) => 
+          extraerTipoCaja(caja.nombre, caja.es_diaria)
+        ) || [];
+        
+        setTiposDisponibles(tiposExtraidos);
+        
+        // Crear un mapa de tipos normalizados a nombres completos de cajas
+        const tipoACaja = new Map<string, any>();
+        
+        if (cajasDisponibles && cajasDisponibles.length > 0) {
+          cajasDisponibles.forEach((caja: any) => {
+            // Extraer el tipo normalizado para cada caja
+            const tipoNormalizado = extraerTipoCaja(caja.nombre, caja.es_diaria);
+            tipoACaja.set(tipoNormalizado, caja);
+            console.log(`Caja '${caja.nombre}' mapeada a tipo '${tipoNormalizado}'`);
+          });
         }
+        
+        // Verificar si el tipo solicitado existe directamente
+        if (tipoParamNormalizado && tipoACaja.has(tipoParamNormalizado)) {
+          setTipoValidado(tipoParamNormalizado);
+          console.log(`Tipo de caja válido (coincidencia directa): ${tipoParamNormalizado}`);
+          return;
+        }
+        
+        // Buscar coincidencias parciales si no hay coincidencia exacta
+        let mejorCoincidencia: string | null = null;
+        let maxPuntuacion = 0;
+        
+        tipoACaja.forEach((caja, tipo) => {
+          // Evitar confundir 'diaria' con otros tipos que contengan 'd'
+          if (tipo === 'diaria' && tipoParamNormalizado !== 'diaria') {
+            return;
+          }
+          
+          // Calcular puntuación de coincidencia
+          let puntuacion = 0;
+          
+          // Coincidencia exacta tiene la mayor puntuación
+          if (tipo === tipoParamNormalizado) {
+            puntuacion = 100;
+          }
+          // Coincidencia de prefijo
+          else if (tipo.startsWith(tipoParamNormalizado) || tipoParamNormalizado.startsWith(tipo)) {
+            puntuacion = 75;
+          }
+          // Coincidencia de contiene
+          else if (tipo.includes(tipoParamNormalizado) || tipoParamNormalizado.includes(tipo)) {
+            puntuacion = 50;
+          }
+          
+          // Si encontramos una mejor coincidencia, actualizarla
+          if (puntuacion > maxPuntuacion) {
+            maxPuntuacion = puntuacion;
+            mejorCoincidencia = tipo;
+          }
+        });
+        
+        // Si encontramos alguna coincidencia
+        if (mejorCoincidencia && maxPuntuacion > 0) {
+          setTipoValidado(mejorCoincidencia);
+          console.log(`Tipo de caja válido (coincidencia parcial): ${mejorCoincidencia}`);
+        } else {
+          // Si no hay coincidencia, usar el primer tipo disponible
+          let tipoDefault = 'premium';
+          
+          if (tipoACaja.size > 0) {
+            // Obtener la primera clave del Map de forma segura
+            const primeraKey = Array.from(tipoACaja.keys())[0];
+            tipoDefault = primeraKey || 'premium';
+          } else if (tiposExtraidos.includes('premium')) {
+            tipoDefault = 'premium';
+          } else if (tiposExtraidos.includes('diaria')) {
+            tipoDefault = 'diaria';
+          } else if (tiposExtraidos.length > 0) {
+            tipoDefault = tiposExtraidos[0];
+          }
+          
+          setTipoValidado(tipoDefault);
+          console.log(`Tipo de caja inválido: ${tipoParamNormalizado}, redirigiendo a: ${tipoDefault}`);
+          
+          // Si estamos en el cliente y el tipo no es válido, redirigir
+          if (typeof window !== 'undefined' && tipoParamNormalizado !== tipoDefault) {
+            router.replace(`/main/${tipoDefault}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error al cargar tipos de cajas:', error);
+        // En caso de error, usar un valor por defecto
+        setTipoValidado('premium');
       }
     };
     
     cargarTiposDisponibles();
-  }, [tipoParam]);
-  const [reward, setReward] = useState<Skin | null>(null);
-  const [showReward, setShowReward] = useState<boolean>(false);
-  const [cajaSkins, setCajaSkins] = useState<Skin[]>([]);
+  }, [tipoParam, router, supabase]);
 
+  // Efecto para cargar los datos de la caja y sus skins
   useEffect(() => {
     let isMounted = true;
     
     const fetchCaja = async () => {
+      if (!supabase) return;
+      
       try {
         setIsLoading(true);
         setError(null);
-        
-        // Obtener el cliente de Supabase
-        const supabase = getSupabaseClient();
-        
-        if (!supabase) {
-          throw new Error('No se pudo conectar con la base de datos');
-        }
         
         // Crear un AbortController para manejar timeout
         const controller = new AbortController();
         // Timeout de 5 segundos
         const timeoutId = setTimeout(() => controller.abort(), 5000);
         
-        // Obtener la caja desde Supabase
+        // Normalizar el tipo para búsqueda (reemplazar guiones por espacios)
+        const tipoNormalizado = tipoValidado.replace(/-/g, ' ');
+        
+        // Estrategias de búsqueda para encontrar la caja
         let cajaData: any = null;
         let cajaError = null;
         
-        // Primero intentamos con el formato "Caja Tipo" (ej: "Caja Premium")
-        const resultado1 = await supabase
-          .from('cajas')
-          .select('*')
-          .eq('nombre', `Caja ${tipoValidado.charAt(0).toUpperCase() + tipoValidado.slice(1)}`)
-          .maybeSingle();
-          
-        if (resultado1.data) {
-          cajaData = resultado1.data;
-        } else {
-          // Si no funciona, intentamos con solo el tipo (ej: "Premium")
-          const resultado2 = await supabase
+        // Estrategia 1: Buscar por es_diaria si el tipo es 'diaria'
+        if (tipoValidado === 'diaria') {
+          const resultadoDiaria = await supabase
             .from('cajas')
             .select('*')
-            .eq('nombre', `${tipoValidado.charAt(0).toUpperCase() + tipoValidado.slice(1)}`)
+            .eq('es_diaria', true)
             .maybeSingle();
             
-          if (resultado2.data) {
-            cajaData = resultado2.data;
+          if (resultadoDiaria.data) {
+            cajaData = resultadoDiaria.data;
+          }
+        }
+        
+        // Si no encontramos la caja diaria o no estamos buscando la diaria
+        if (!cajaData) {
+          // Estrategia 2: Buscar con formato "Caja Tipo" (ej: "Caja Premium")
+          const tipoCapitalizado = tipoNormalizado.charAt(0).toUpperCase() + tipoNormalizado.slice(1);
+          const resultado1 = await supabase
+            .from('cajas')
+            .select('*')
+            .eq('nombre', `Caja ${tipoCapitalizado}`)
+            .maybeSingle();
+            
+          if (resultado1.data) {
+            cajaData = resultado1.data;
           } else {
-            // Si aún no funciona, intentamos buscar por tipo en cualquier parte del nombre
-            const resultado3 = await supabase
+            // Estrategia 3: Buscar solo con el tipo capitalizado (ej: "Premium")
+            const resultado2 = await supabase
               .from('cajas')
               .select('*')
-              .ilike('nombre', `%${tipoValidado}%`)
+              .eq('nombre', tipoCapitalizado)
               .maybeSingle();
               
-            if (resultado3.data) {
-              cajaData = resultado3.data;
+            if (resultado2.data) {
+              cajaData = resultado2.data;
             } else {
-              cajaError = resultado1.error || resultado2.error || resultado3.error;
+              // Estrategia 4: Buscar con ILIKE para encontrar coincidencias parciales
+              const resultado3 = await supabase
+                .from('cajas')
+                .select('*')
+                .ilike('nombre', `%${tipoNormalizado}%`)
+                .maybeSingle();
+                
+              if (resultado3.data) {
+                cajaData = resultado3.data;
+              } else {
+                // Estrategia 5: Última oportunidad - buscar cualquier coincidencia
+                const resultado4 = await supabase
+                  .from('cajas')
+                  .select('*')
+                  .limit(1);
+                  
+                if (resultado4.data && resultado4.data.length > 0) {
+                  cajaData = resultado4.data[0];
+                  console.warn(`No se encontró la caja '${tipoValidado}', usando la primera caja disponible.`);
+                } else {
+                  cajaError = resultado1.error || resultado2.error || resultado3.error || resultado4.error;
+                }
+              }
             }
           }
         }
         
-        // Si encontramos la caja, cargar las skins asociadas
+        // Si encontramos la caja
         if (cajaData) {
-          // Obtener las skins asociadas a esta caja desde la tabla cajas_skins
+          // Obtener las skins asociadas a esta caja
           try {
-            // Primero, obtener solo los IDs de las skins asociadas a esta caja
-            const { data: skinIdsData, error: skinIdsError } = await supabase
+            const { data: skinIdsData } = await supabase
               .from('cajas_skins')
               .select('skin_id')
               .eq('caja_id', cajaData.id);
             
-            if (skinIdsError) {
-              // Continuamos con la caja sin skins, sin mostrar error al usuario
-            } else if (!skinIdsData || skinIdsData.length === 0) {
-              // Si es la caja diaria y no tiene skins, intentamos actualizarla
-              if (tipoValidado === 'diaria' && !isUpdating) {
-                setTimeout(() => forceUpdateDailyBox(), 500);
-              }
-            } else {
-              // Extraer los IDs de las skins con comprobación de seguridad
-              const skinIds = skinIdsData ? skinIdsData.map((item: any) => item.skin_id) : [];
+            if (skinIdsData && skinIdsData.length > 0) {
+              const skinIds = skinIdsData.map((item: any) => item.skin_id);
               
-              try {
-                // Obtener todas las skins de la API de Valorant
-                const allSkins = await getWeaponSkins();
+              // Obtener todas las skins de la API de Valorant
+              const allSkins = await getWeaponSkins();
+              
+              // Filtrar por los IDs específicos de esta caja
+              const matchingSkins = filterSkinsByIds(
+                filterQualitySkins(allSkins), 
+                skinIds
+              );
+              
+              if (matchingSkins.length > 0) {
+                // Convertir al formato interno
+                const formattedSkins = matchingSkins.map(skin => ({
+                  id: skin.uuid,
+                  nombre: skin.displayName,
+                  bundleName: skin.displayName.split(' ')[0],
+                  content_tier_id: skin.contentTierUuid || '',
+                  uuid: skin.uuid,
+                  imagen_url: skin.displayIcon || '',
+                }));
                 
-                // Primero aplicar el filtro de calidad a todas las skins
-                const qualitySkins = filterQualitySkins(allSkins);
-                
-                // Extraer los IDs de las skins con comprobación de seguridad
-                const skinIds = skinIdsData ? skinIdsData.map((item: any) => item.skin_id) : [];
-                
-                // Luego filtrar por los IDs específicos de esta caja
-                const matchingSkins = filterSkinsByIds(qualitySkins, skinIds);
-                
-                if (matchingSkins.length > 0) {
-                  // Obtener datos de tier para cada skin
-                  const formattedSkins: Skin[] = [];
-                  
-                  for (const skin of matchingSkins) {
-                    // Usar valores por defecto para el tier si no tenemos datos específicos
-                    const tierData = { 
-                      nombre: 'Desconocido', 
-                      color: '#5a9fe2' // Azul por defecto
-                    };
-                    
-                    // Usar la función de utilidad para formatear la skin
-                    formattedSkins.push(formatSkinForApp(skin, tierData));
-                  }
-                
-                  setCajaSkins(formattedSkins);
-                  
-                  // Opcionalmente, si necesitas los content_tiers, puedes cargarlos en una consulta separada
-                  // Pero por ahora, simplemente usamos los datos básicos de las skins
-                }
-              } catch (apiError) {
-                // Continuamos sin mostrar error al usuario
+                setCajaSkins(formattedSkins);
               }
             }
-          } catch (error) {
-            // Capturamos el error pero continuamos sin interrumpir la experiencia
+            
+            // Obtener las probabilidades de la caja
+            if (cajaData.id) {
+              const { data: probData } = await supabase
+                .from('tier_probabilidades')
+                .select(`
+                  id,
+                  caja_id,
+                  content_tier_id,
+                  probabilidad,
+                  cantidad_skins,
+                  content_tier:content_tier_id (
+                    id,
+                    nombre,
+                    descripcion,
+                    color,
+                    uuid
+                  )
+                `)
+                .eq('caja_id', cajaData.id);
+                
+              if (probData) {
+                // Mapeo seguro para las probabilidades
+                const mappedProbs = probData.map((item: any) => ({
+                  id: String(item.id),
+                  caja_id: String(item.caja_id),
+                  content_tier_id: String(item.content_tier_id),
+                  probabilidad: Number(item.probabilidad),
+                  cantidad_skins: Number(item.cantidad_skins),
+                  content_tier: item.content_tier && typeof item.content_tier === 'object' && !('code' in item.content_tier)
+                    ? {
+                        id: String(item.content_tier.id),
+                        nombre: String(item.content_tier.nombre),
+                        descripcion: String(item.content_tier.descripcion || ''),
+                        color: String(item.content_tier.color),
+                        uuid: String(item.content_tier.uuid),
+                      }
+                    : undefined,
+                }));
+                
+                setProbabilidades(mappedProbs);
+              }
+            }
+          } catch (skinError) {
+            console.error('Error al cargar skins o probabilidades:', skinError);
           }
         }
         
         // Limpiar el timeout
         clearTimeout(timeoutId);
         
-        if (cajaError) {
-          console.warn(`No se encontró la caja '${tipoValidado}' en la base de datos:`, cajaError);
-          // No lanzamos error, simplemente continuamos con los datos por defecto
-        }
-        
         if (isMounted) {
           if (cajaData) {
-            // Convertir primero a unknown y luego a Caja para evitar el error de TypeScript
-            // Esta es una forma segura de hacer la conversión cuando estamos seguros de la estructura
-            const cajaTyped = cajaData as unknown as Caja;
-            setCaja(cajaTyped);
+            setCaja(cajaData);
           } else {
-            // Usar los datos por defecto para esta caja
             setCaja(crearCajaDefault(tipoValidado));
+            if (cajaError) {
+              console.warn(`No se encontró la caja '${tipoValidado}' en la base de datos:`, cajaError);
+            }
           }
+          setIsLoading(false);
         }
       } catch (error: any) {
         console.error(`Error al cargar la caja ${tipoValidado}:`, error);
         
         if (isMounted) {
           if (error.name === 'AbortError') {
-            console.error('Timeout al cargar la caja:', error);
             setError('Tiempo de espera agotado. Mostrando datos locales.');
           } else {
-            console.error(`Error al cargar la caja ${tipoValidado}:`, error);
             setError(`No se pudo conectar con el servidor. Mostrando datos locales.`);
           }
+          
+          // Usar datos por defecto en caso de error
+          setCaja(crearCajaDefault(tipoValidado));
+          setIsLoading(false);
           
           // Esperar un momento y luego ocultar el mensaje de error
           setTimeout(() => {
@@ -331,269 +415,36 @@ export default function CajaPage() {
               setError(null);
             }
           }, 3000);
-          // Usar datos por defecto en caso de error
-          setCaja(crearCajaDefault(tipoValidado));
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
         }
       }
     };
     
     fetchCaja();
     
-    // Cleanup al desmontar el componente
+    // Limpieza al desmontar
     return () => {
       isMounted = false;
     };
-  }, [tipoValidado]);
-
-  // Función para manejar la apertura de la caja con boxUtils
-  const handleOpenBox = async (caja: Caja) => {
-    if (!caja.esta_disponible || isOpening) return;
-    
-    // Si no hay skins disponibles, mostrar error
-    if (cajaSkins.length === 0) {
-      setError('No hay skins disponibles en esta caja');
-      setTimeout(() => setError(null), 3000);
-      return;
-    }
-    
-    setIsOpening(true);
-    
-    try {
-      // Obtener el cliente de Supabase
-      const supabase = getSupabaseClient();
-      if (!supabase) {
-        setError('Error al conectar con la base de datos');
-        setIsOpening(false);
-        return;
-      }
-      
-      // Si no hay probabilidades definidas, crear unas por defecto
-      if (probabilidades.length === 0) {
-        // Probabilidades por defecto (similar a la caja diaria)
-        const defaultProbabilities: BoxTierProbabilidad[] = [
-          {
-            id: '1',
-            caja_id: caja.id,
-            content_tier_id: '411e4a55-4e59-7757-41f0-86a53f101bb5', // Ultra
-            probabilidad: 0.01, // 1%
-            cantidad_skins: 1,
-            content_tier: {
-              id: '411e4a55-4e59-7757-41f0-86a53f101bb5',
-              nombre: 'Ultra Edition',
-              descripcion: 'Las skins más raras y exclusivas',
-              color: '#fad663',
-              uuid: '411e4a55-4e59-7757-41f0-86a53f101bb5'
-            }
-          },
-          {
-            id: '2',
-            caja_id: caja.id,
-            content_tier_id: '60bca009-4182-7998-dee7-b8a2558dc369', // Premium
-            probabilidad: 0.25, // 25%
-            cantidad_skins: 3,
-            content_tier: {
-              id: '60bca009-4182-7998-dee7-b8a2558dc369',
-              nombre: 'Premium Edition',
-              descripcion: 'Skins de alta calidad',
-              color: '#d1548d',
-              uuid: '60bca009-4182-7998-dee7-b8a2558dc369'
-            }
-          },
-          {
-            id: '3',
-            caja_id: caja.id,
-            content_tier_id: '0cebb8be-46d7-c12a-d306-e9907bfc5a25', // Deluxe
-            probabilidad: 0.74, // 74%
-            cantidad_skins: 15,
-            content_tier: {
-              id: '0cebb8be-46d7-c12a-d306-e9907bfc5a25',
-              nombre: 'Deluxe Edition',
-              descripcion: 'Skins de buena calidad',
-              color: '#009587',
-              uuid: '0cebb8be-46d7-c12a-d306-e9907bfc5a25'
-            }
-          }
-        ];
-        
-        setProbabilidades(defaultProbabilities);
-      }
-      
-      // Si el usuario está autenticado, usar processBoxOpening para todo el proceso
-      if (isAuthenticated && session?.user?.id) {
-        const userId = session.user.id;
-        console.log('Usuario autenticado con NextAuth:', userId);
-        
-        // Convertir cajaSkins a BoxSkin[] si es necesario
-        const boxCompatibleSkins = cajaSkins.map(skin => ({
-          ...skin,
-          content_tier: skin.content_tier ? {
-            ...skin.content_tier,
-            descripcion: skin.content_tier.descripcion || ''
-          } : undefined
-        })) as BoxSkin[];
-        
-        // Intentar procesar la apertura de la caja usando la función centralizada
-        const result = await processBoxOpening(
-          userId,
-          caja.id,
-          boxCompatibleSkins,
-          probabilidades,
-          supabase
-        );
-        
-        if (result.selectedSkin) {
-          // Convertir el resultado a Skin local
-          const localSkin: Skin = {
-            ...result.selectedSkin,
-            content_tier: result.selectedSkin.content_tier ? {
-              ...result.selectedSkin.content_tier,
-              descripcion: result.selectedSkin.content_tier.descripcion || ''
-            } : undefined
-          } as Skin;
-          
-          // Actualizar inventario local si es necesario
-          if (result.inventorySuccess) {
-            if (result.alreadyInInventory) {
-              console.log(`La skin '${localSkin.nombre}' ya estaba en el inventario`);
-            } else {
-              console.log(`Skin '${localSkin.nombre}' añadida al inventario`);
-            }
-          }
-          
-          // Mostrar la recompensa
-          setReward(localSkin);
-          setShowReward(true);
-        } else {
-          console.error('Error al seleccionar skin:', result.error);
-          setError('Error al seleccionar una skin. Por favor, intenta de nuevo.');
-        }
-      } else {
-        // Para usuarios no autenticados, solo seleccionar una skin aleatoria
-        // Convertir cajaSkins a BoxSkin[] si es necesario
-        const boxCompatibleSkins = cajaSkins.map(skin => ({
-          ...skin,
-          content_tier: skin.content_tier ? {
-            ...skin.content_tier,
-            descripcion: skin.content_tier.descripcion || ''
-          } : undefined
-        })) as BoxSkin[];
-        
-        const randomSkin = selectRandomSkinByProbability(boxCompatibleSkins, probabilidades);
-        if (randomSkin) {
-          // Convertir a Skin local
-          const localSkin: Skin = {
-            ...randomSkin,
-            content_tier: randomSkin.content_tier ? {
-              ...randomSkin.content_tier,
-              descripcion: randomSkin.content_tier.descripcion || ''
-            } : undefined
-          } as Skin;
-          
-          setReward(localSkin);
-          setShowReward(true);
-          console.warn('Usuario no autenticado. La skin no se guardará en el inventario.');
-        } else {
-          console.error('Error al seleccionar skin aleatoria');
-          setError('Error al seleccionar una skin. Por favor, intenta de nuevo.');
-        }
-      }
-    } catch (error) {
-      console.error('Error al abrir la caja:', error);
-      setError('Error al abrir la caja. Por favor, intenta de nuevo.');
-    } finally {
-      setIsOpening(false);
-    }
-  };
-
-  // Importar el componente DailyBox para la caja diaria
-  const DailyBox = dynamic(() => import('@/components/DailyBox'), {
-    loading: () => ( 
-      <div className="flex flex-col items-center justify-center min-h-[400px] w-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    ),
-    ssr: false
-  });
-
-  // Estado para el panel de administración (solo para la caja diaria)
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+  }, [tipoValidado, supabase]);
 
   // Función para forzar la actualización de la caja diaria
   const forceUpdateDailyBox = async () => {
-    if (isUpdating) return;
+    if (isUpdating || !supabase) return;
     
     try {
       setIsUpdating(true);
       setUpdateMessage(null);
       
-      const supabase = getSupabaseClient();
-      
-      if (!supabase) {
-        throw new Error('No se pudo conectar con la base de datos');
-      }
-      
+      if (!caja?.id) throw new Error('No se encontró la caja diaria');
+
       // Obtener todas las skins disponibles
       const allSkins = await getWeaponSkins();
       
-      if (!caja?.id) throw new Error('No se encontró la caja diaria');
-
-      // Lista de nombres de armas a excluir
-      const bannedWeaponNames = [
-        "Classic", "Shorty", "Frenzy", "Ghost", "Sheriff",
-        "Stinger", "Spectre", "Bucky", "Judge", "Bulldog",
-        "Guardian", "Phantom", "Vandal", "Marshal", "Operator",
-        "Ares", "Odin", "Outlaw", "Melee"
-      ];
-
-      // Variable para almacenar las skins filtradas
-      let filteredSkins: ValorantSkin[] = [];
-
-      // Obtener información de bundles como en el catálogo
-      try {
-        const bundlesResponse = await fetch('https://valorant-api.com/v1/bundles');
-        const bundlesData = await bundlesResponse.json();
-        const bundles: any[] = bundlesData.data;
-
-        // Crear un mapa de bundles para búsqueda rápida
-        const bundleMap = new Map<string, any>();
-        bundles.forEach((bundle: any) => {
-          bundleMap.set(bundle.displayName.toLowerCase(), bundle);
-        });
-
-        // Filtramos las skins que contienen "standard" en su nombre o que tienen exactamente el nombre de un arma
-        // También filtramos para incluir solo skins que pertenecen a un bundle (tienen themeUuid)
-        // Y aseguramos que tengan displayIcon válido para mostrar
-        // Además, verificamos si el bundle tiene imagen (como en el catálogo)
-        filteredSkins = allSkins.filter((skin: ValorantSkin) => {
-          if (!skin.themeUuid || !skin.displayIcon || 
-              skin.displayName.toLowerCase().includes("standard") || 
-              bannedWeaponNames.includes(skin.displayName)) {
-            return false;
-          }
-          
-          // Verificar si el bundle tiene imagen (como en el catálogo)
-          const bundleName = skin.displayName.split(' ')[0];
-          const bundle = bundleMap.get(bundleName.toLowerCase());
-          return bundle && bundle.displayIcon;
-        });
-      } catch (error) {
-        console.error('Error al obtener información de bundles:', error);
-        
-        // Filtrado básico como fallback en caso de error
-        filteredSkins = allSkins.filter(
-          (skin: ValorantSkin) =>
-            !skin.displayName.toLowerCase().includes("standard") &&
-            !bannedWeaponNames.includes(skin.displayName) &&
-            skin.themeUuid && // Solo incluir skins que pertenecen a un bundle
-            skin.displayIcon // Asegurar que tienen una imagen para mostrar
-        );
-      }
+      // Importar y usar la función centralizada de filtrado de skins
+      // Esta función garantiza que solo se incluyan skins que pertenecen a bundles con imagen
+      const { filterSkinsByBundleWithIcon } = await import('@/lib/valorantApi');
+      // Esperar a que se resuelva la promesa de filterSkinsByBundleWithIcon
+      const filteredSkins = await filterSkinsByBundleWithIcon(allSkins);
 
       // Obtener las probabilidades de la caja diaria
       const { data: probabilidades, error: probError } = await supabase
@@ -634,7 +485,7 @@ export default function CajaPage() {
       }
 
       // Preparar las skins por tier usando las skins filtradas
-      const skinsByTier = new Map<string, { skins: ValorantSkin[], cantidad: number }>();
+      const skinsByTier = new Map<string, { skins: any[], cantidad: number }>();
       (probabilidades as TierProbabilidad[]).forEach((prob) => {
         // Obtener el UUID correspondiente al ID interno
         const tierUuid = tierIdToUuid.get(prob.content_tier_id);
@@ -656,7 +507,7 @@ export default function CajaPage() {
       interface SelectedSkin {
         skin_id: string;
         content_tier_id: string;
-        skin_nombre: string; // Añadimos el nombre de la skin
+        skin_nombre: string;
       }
       
       const selectedSkins: SelectedSkin[] = [];
@@ -701,7 +552,7 @@ export default function CajaPage() {
           selectedSkins.push({
             skin_id: skin.uuid,
             content_tier_id: tierId,
-            skin_nombre: skin.displayName // Incluimos el nombre de la skin
+            skin_nombre: skin.displayName
           });
           console.log(`    * ${skin.displayName}`);
         });
@@ -812,93 +663,22 @@ export default function CajaPage() {
                   Reintentar
                 </Button>
               </div>
-            ) : tipoValidado.includes('diaria') ? (
-              <>
-                <div className="w-full flex justify-end mb-4">
-                  <Button 
-                    variant="secondary" 
-                    size="sm" 
-                    onClick={() => setShowAdminPanel(!showAdminPanel)}
-                    className="flex items-center gap-1"
-                  >
-                    {showAdminPanel ? '✖ Ocultar panel' : '⚙️ Administrar caja'}
-                  </Button>
-                </div>
-                <DailyBox />
-              </>
-            ) : caja ? (
-              <>
-                <div className="relative w-72 h-72 mb-6 transition-all duration-300 transform hover:scale-105">
-                  {caja.imagen_url && (
-                    <Image 
-                      src={caja.imagen_url} 
-                      alt={caja.nombre}
-                      width={200}
-                      height={200}
-                      className="object-contain"
-                    />
-                  )}
-                </div>
-                <h3 className="text-2xl font-bold text-primary mb-4">{caja.nombre}</h3>
-                <p className="text-white/80 text-center max-w-md mb-6">
-                  {caja.descripcion}
-                </p>
-                <Button
-                  disabled={!caja.esta_disponible || isOpening}
-                  className={`px-8 py-6 text-lg ${!caja.esta_disponible || isOpening ? 'opacity-70' : ''}`}
-                  onClick={() => handleOpenBox(caja)}
-                >
-                  {isOpening ? (
-                    <span className="flex items-center">
-                      <span className="animate-spin h-5 w-5 mr-2 border-t-2 border-b-2 border-white rounded-full"></span>
-                      Abriendo...
-                    </span>
-                  ) : (
-                    caja.esta_disponible ? `Abrir por ${caja.precio} VP` : 'Próximamente'
-                  )}
-                </Button>
-                
-                {/* Modal de recompensa */}
-                {showReward && reward && (
-                  <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-                    <div className="bg-backgroundAlt p-8 rounded-xl max-w-md w-full text-center relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-secondary/20 opacity-50"></div>
-                      <div className="relative z-10">
-                        <h3 className="text-2xl font-bold text-primary mb-2">¡Recompensa obtenida!</h3>
-                        <div className="my-6 p-4 flex justify-center">
-                          {reward.imagen_url && (
-                            <div className="relative w-48 h-48 animate-bounce-slow">
-                              <Image
-                                src={reward.imagen_url}
-                                alt={reward.nombre}
-                                width={200}
-                                height={200}
-                                className="object-contain"
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-xl font-semibold text-white mb-4">{reward.nombre}</p>
-                        {reward.content_tier && (
-                          <div 
-                            className="px-3 py-1 rounded-full text-sm font-medium mb-4 inline-block" 
-                            style={{ backgroundColor: reward.content_tier.color + '40', color: reward.content_tier.color }}
-                          >
-                            {reward.content_tier.nombre}
-                          </div>
-                        )}
-                        <Button
-                          onClick={() => setShowReward(false)}
-                          className="px-6 py-2"
-                        >
-                          Aceptar
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : null}
+            ) : (
+              <BoxComponent 
+                caja={caja}
+                isLoading={false}
+                error={null}
+                isAdmin={tipoValidado.includes('diaria')}
+                onAdminAction={tipoValidado.includes('diaria') ? forceUpdateDailyBox : undefined}
+                isUpdating={isUpdating}
+                updateMessage={updateMessage}
+                setShowAdminPanel={setShowAdminPanel}
+                showAdminPanel={showAdminPanel}
+                cajaSkins={cajaSkins}
+                probabilidades={probabilidades}
+                supabase={supabase}
+              />
+            )}
           </div>
         </div>
       </div>

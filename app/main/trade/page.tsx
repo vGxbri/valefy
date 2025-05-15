@@ -1,7 +1,17 @@
+'use client';
+
+import { CaseOpener } from '@/app/components/case-opener';
+import { Case } from '@/app/components/case-opener/types';
+
+// Caso de ejemplo
+const TRADE_CASE: Case = {
+  id: 'premium-case',
+  name: 'PREMIUM CASE',
+  price: 2500,
+  image: '/cases/premium-case.png',
+  description: 'Una caja premium con las mejores skins y una alta probabilidad de obtener objetos raros y legendarios.'
+};
+
 export default function Page() {
-  return (
-    <div className="flex flex-col gap-8 pl-16 md:pr-12 lg:pr-16 pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1" >
-      <h1 className="text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">/ TRADE</h1>
-    </div>
-  );
+  return <CaseOpener caseData={TRADE_CASE} />;
 }

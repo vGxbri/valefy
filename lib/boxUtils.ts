@@ -1,6 +1,39 @@
 // lib/boxUtils.ts
 import { SupabaseClient } from '@supabase/supabase-js';
 
+/**
+ * Extrae el tipo de caja a partir del nombre de la caja de manera consistente
+ * @param nombre Nombre de la caja
+ * @param esDiaria Indica si la caja es diaria
+ * @returns El tipo de caja normalizado para usar en URLs
+ */
+export function extraerTipoCaja(nombre: string, esDiaria?: boolean): string {
+  // Si es la caja diaria, siempre devolver 'diaria'
+  if (esDiaria) {
+    return 'diaria';
+  }
+  
+  // Para otras cajas, procesar el nombre
+  let tipoCaja = '';
+  
+  // Extraer el nombre después de "Caja " si existe
+  if (nombre.toLowerCase().startsWith('caja ')) {
+    tipoCaja = nombre.substring(5).toLowerCase();
+  } else {
+    tipoCaja = nombre.toLowerCase();
+  }
+  
+  // Normalizar caracteres especiales
+  tipoCaja = tipoCaja
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+    .replace(/[^a-z0-9\s-]/g, '') // Solo permitir letras, números, espacios y guiones
+    .trim();
+  
+  // Convertir espacios a guiones y eliminar guiones duplicados
+  return tipoCaja.replace(/\s+/g, '-').replace(/-+/g, '-');
+}
+
 // Tipos comunes
 export type ContentTier = {
   id: string;
