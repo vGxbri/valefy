@@ -19,7 +19,6 @@ export interface CajaSkin {
   skin_id: string; // UUID referencia a Skin
   skin_nombre?: string; // Nombre de la skin
   content_tier_id?: string; // UUID referencia a ContentTier
-
 }
 
 export interface Transaccion {

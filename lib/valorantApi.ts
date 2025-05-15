@@ -32,10 +32,25 @@ interface SkinsResponse {
 
 // Lista de nombres de armas a excluir (constante reutilizable)
 export const BANNED_WEAPON_NAMES = [
-  "Classic", "Shorty", "Frenzy", "Ghost", "Sheriff",
-  "Stinger", "Spectre", "Bucky", "Judge", "Bulldog",
-  "Guardian", "Phantom", "Vandal", "Marshal", "Operator",
-  "Ares", "Odin", "Outlaw", "Melee"
+  "Classic",
+  "Shorty",
+  "Frenzy",
+  "Ghost",
+  "Sheriff",
+  "Stinger",
+  "Spectre",
+  "Bucky",
+  "Judge",
+  "Bulldog",
+  "Guardian",
+  "Phantom",
+  "Vandal",
+  "Marshal",
+  "Operator",
+  "Ares",
+  "Odin",
+  "Outlaw",
+  "Melee",
 ];
 
 export const getWeaponSkins = async (): Promise<Skin[]> => {
@@ -60,14 +75,17 @@ export const getBestDisplayIcon = (skin: Skin): string | null => {
   if (skin.levels && skin.levels.length > 0 && skin.levels[0].displayIcon) {
     return skin.levels[0].displayIcon;
   }
-  
+
   // SOLO si no hay niveles o el primer nivel no tiene icono, usamos el icono principal
   // Esto debería ocurrir muy raramente
   if (skin.displayIcon) {
-    console.warn(`Usando displayIcon principal para ${skin.displayName} porque no tiene levels[0].displayIcon`);
+    console.warn(
+      `Usando displayIcon principal para ${skin.displayName} porque no tiene levels[0].displayIcon`,
+    );
+
     return skin.displayIcon;
   }
-  
+
   // Si no hay ningún icono disponible
   return null;
 };
@@ -78,12 +96,13 @@ export const getBestDisplayIcon = (skin: Skin): string | null => {
  * @returns Array de skins filtradas
  */
 export const filterQualitySkins = (skins: Skin[]): Skin[] => {
-  return skins.filter(skin => 
-    skin.themeUuid && // Solo skins que pertenecen a un bundle/tema
-    (getBestDisplayIcon(skin) !== null) && // Verificar que tenga un icono disponible
-    !skin.displayName.toLowerCase().includes('standard') && // Excluir skins estándar
-    skin.displayName.split(' ').length > 1 && // Excluir nombres de armas simples
-    !BANNED_WEAPON_NAMES.includes(skin.displayName) // Excluir nombres de armas básicas
+  return skins.filter(
+    (skin) =>
+      skin.themeUuid && // Solo skins que pertenecen a un bundle/tema
+      getBestDisplayIcon(skin) !== null && // Verificar que tenga un icono disponible
+      !skin.displayName.toLowerCase().includes("standard") && // Excluir skins estándar
+      skin.displayName.split(" ").length > 1 && // Excluir nombres de armas simples
+      !BANNED_WEAPON_NAMES.includes(skin.displayName), // Excluir nombres de armas básicas
   );
 };
 
@@ -93,8 +112,11 @@ export const filterQualitySkins = (skins: Skin[]): Skin[] => {
  * @param skinIds Array de IDs de skins a incluir
  * @returns Array de skins que coinciden con los IDs proporcionados
  */
-export const filterSkinsByIds = (allSkins: Skin[], skinIds: string[]): Skin[] => {
-  return allSkins.filter(skin => skinIds.includes(skin.uuid));
+export const filterSkinsByIds = (
+  allSkins: Skin[],
+  skinIds: string[],
+): Skin[] => {
+  return allSkins.filter((skin) => skinIds.includes(skin.uuid));
 };
 
 /**
@@ -106,9 +128,10 @@ export const filterSkinsByIds = (allSkins: Skin[], skinIds: string[]): Skin[] =>
 export function getRandomSkins(skins: Skin[], count: number): Skin[] {
   // Primero aplicamos el filtro de calidad
   const filteredSkins = filterQualitySkins(skins);
-  
+
   // Luego seleccionamos aleatoriamente
   const shuffled = [...filteredSkins].sort(() => 0.5 - Math.random());
+
   return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
@@ -117,33 +140,36 @@ export function getRandomSkins(skins: Skin[], count: number): Skin[] {
  * @param skins Array de skins a filtrar
  * @returns Promise con array de skins filtradas
  */
-export const filterSkinsByBundleWithIcon = async (skins: Skin[]): Promise<Skin[]> => {
+export const filterSkinsByBundleWithIcon = async (
+  skins: Skin[],
+): Promise<Skin[]> => {
   // Obtener los bundles para verificar cuáles tienen imagen de portada
-  const bundlesResponse = await fetch('https://valorant-api.com/v1/bundles');
+  const bundlesResponse = await fetch("https://valorant-api.com/v1/bundles");
   const bundlesData = await bundlesResponse.json();
   const bundles = bundlesData.data;
-  
+
   // Crear un mapa de bundles para búsquedas rápidas
   interface Bundle {
     uuid: string;
     displayName: string;
     displayIcon: string;
   }
-  
+
   const bundleMap = new Map<string, Bundle>();
+
   bundles.forEach((bundle: Bundle) => {
     bundleMap.set(bundle.displayName.toLowerCase(), bundle);
   });
-  
+
   // Filtrar las skins:
   // 1. Solo las que tienen themeUuid
   // 2. Solo las que pertenecen a un bundle con imagen de portada
-  return skins.filter(skin => {
+  return skins.filter((skin) => {
     if (!skin.themeUuid) return false;
-    
-    const bundleName = skin.displayName.split(' ')[0];
+
+    const bundleName = skin.displayName.split(" ")[0];
     const bundle = bundleMap.get(bundleName.toLowerCase());
-    
+
     // Verificar que el bundle tenga imagen de portada
     return bundle && bundle.displayIcon;
   });
@@ -165,14 +191,22 @@ export function getRandomChromas(skins: Skin[], count: number): Chroma[] {
   );
 
   // Extraemos todos los chromas válidos (con displayIcon no nulo) de las skins filtradas
-  const allChromas: (Chroma & { weaponType: string })[] = filteredSkins.flatMap((skin) =>
-    (skin.chromas || [])
-      .filter((chroma) => chroma.displayIcon)
-      .map((chroma) => ({ ...chroma, weaponType: skin.displayName.split(" ")[0] }))
+  const allChromas: (Chroma & { weaponType: string })[] = filteredSkins.flatMap(
+    (skin) =>
+      (skin.chromas || [])
+        .filter((chroma) => chroma.displayIcon)
+        .map((chroma) => ({
+          ...chroma,
+          weaponType: skin.displayName.split(" ")[0],
+        })),
   );
 
   // Agrupamos los chromas por tipo de arma
-  const chromasByWeaponType = new Map<string, (Chroma & { weaponType: string })[]>();
+  const chromasByWeaponType = new Map<
+    string,
+    (Chroma & { weaponType: string })[]
+  >();
+
   allChromas.forEach((chroma) => {
     if (!chromasByWeaponType.has(chroma.weaponType)) {
       chromasByWeaponType.set(chroma.weaponType, []);
@@ -190,8 +224,11 @@ export function getRandomChromas(skins: Skin[], count: number): Chroma[] {
     const availableChromas = chromasByWeaponType.get(weaponType) || [];
 
     if (availableChromas.length > 0) {
-      const randomChromaIndex = Math.floor(Math.random() * availableChromas.length);
+      const randomChromaIndex = Math.floor(
+        Math.random() * availableChromas.length,
+      );
       const selectedChroma = availableChromas[randomChromaIndex];
+
       result.push(selectedChroma);
       availableChromas.splice(randomChromaIndex, 1);
       if (availableChromas.length === 0) {
@@ -206,10 +243,13 @@ export function getRandomChromas(skins: Skin[], count: number): Chroma[] {
 
   // Si no hemos conseguido suficientes chromas, completamos con chromas aleatorios
   if (result.length < count) {
-    const remainingChromas = allChromas.filter((chroma) => !result.includes(chroma));
+    const remainingChromas = allChromas.filter(
+      (chroma) => !result.includes(chroma),
+    );
     const additionalChromas = remainingChromas
       .sort(() => Math.random() - 0.5)
       .slice(0, count - result.length);
+
     result.push(...additionalChromas);
   }
 

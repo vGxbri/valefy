@@ -228,7 +228,9 @@ export const timelineData = processSteps.map((step, index) => ({
             </div>
 
             <div className="mt-6 pt-4 border-t border-white/5 flex justify-between items-center">
-              <span className="text-xs text-primary/70">¡Sigue disfrutando de Valefy!</span>
+              <span className="text-xs text-primary/70">
+                ¡Sigue disfrutando de Valefy!
+              </span>
               <div className="flex space-x-1">
                 {processSteps.map((_, i) => (
                   <div

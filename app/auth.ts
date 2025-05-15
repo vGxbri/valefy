@@ -5,7 +5,6 @@ import DiscordProvider from "next-auth/providers/discord";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createClient } from "@supabase/supabase-js";
 import bcryptjs from "bcryptjs";
-import { User } from "@/types/database";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,6 +36,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           !credentials.password
         ) {
           console.log("[authorize] Faltan credenciales válidas");
+
           return null;
         }
         // Buscar usuario en la tabla 'usuarios'
@@ -60,6 +60,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           console.log(
             "[authorize] Usuario no encontrado o password inválido en la base de datos",
           );
+
           return null;
         }
 
@@ -75,6 +76,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
         if (!isValid) {
           console.log("[authorize] Contraseña incorrecta");
+
           return null;
         }
 
@@ -87,6 +89,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         };
 
         console.log("[authorize] Usuario autenticado correctamente:", userObj);
+
         return userObj;
       },
     }),
@@ -124,9 +127,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             ])
             .select()
             .single();
-          console.log("[OAuth] Resultado de inserción:", { nuevo, insertError });
+
+          console.log("[OAuth] Resultado de inserción:", {
+            nuevo,
+            insertError,
+          });
           if (insertError || !nuevo) {
-            throw new Error("No se pudo crear el usuario OAuth en la tabla usuarios: " + (insertError?.message || "Desconocido"));
+            throw new Error(
+              "No se pudo crear el usuario OAuth en la tabla usuarios: " +
+                (insertError?.message || "Desconocido"),
+            );
           }
           usuario = nuevo;
         }
@@ -151,6 +161,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.email = String(token.email);
         session.user.name = String(token.name);
       }
+
       return session;
     },
   },

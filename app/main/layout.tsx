@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
-import { auth } from "@/app/auth";
 import { redirect } from "next/navigation";
+
+import { auth } from "@/app/auth";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import MainTransition from "@/components/MainTransition";
@@ -17,9 +18,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
       <div className="bg-background">
         <AppSidebar />
       </div>
-        <MainTransition>
-          {children}
-        </MainTransition>
+      <MainTransition>{children}</MainTransition>
     </SidebarProvider>
   );
 }

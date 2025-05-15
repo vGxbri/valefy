@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   LayoutGrid,
@@ -22,6 +22,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { signOut } from "next-auth/react";
+import { BookOpen } from "lucide-react";
 
 import {
   Popover,
@@ -37,7 +38,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { BookOpen } from "lucide-react";
 
 const items = [
   {

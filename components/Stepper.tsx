@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { signIn } from "next-auth/react"; // Importar signIn
 import { FaGoogle, FaDiscord } from "react-icons/fa"; // Importar iconos
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff } from 'lucide-react';
-import PasswordInput from '@/components/landing/premade/PasswordInput';
+import { Eye, EyeOff } from "lucide-react";
+
+import PasswordInput from "@/components/landing/premade/PasswordInput";
 
 interface StepperProps {
   onComplete: () => void;
@@ -39,6 +40,7 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
 
     // Prevent scrolling on mount
     document.body.style.overflow = "hidden";
+
     // Re-enable scrolling on unmount
     return () => {
       document.body.style.overflow = originalStyle;
@@ -92,6 +94,7 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
       const passwordValid = PASSWORD_REQUIREMENTS.every((req) =>
         req.regex.test(formData.password),
       );
+
       if (!passwordValid) {
         newErrors.password = "La contraseña no cumple con los requisitos";
       }
@@ -191,6 +194,7 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
           setErrors({
             email: message || "Este correo electrónico ya está registrado",
           });
+
           return;
         }
       }
@@ -239,15 +243,15 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
                 >
                   {index < currentStep ? (
                     <svg
-                      xmlns="http://www.w3.org/2000/svg"
                       className="h-5 w-5"
-                      viewBox="0 0 20 20"
                       fill="currentColor"
+                      viewBox="0 0 20 20"
+                      xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                         clipRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        fillRule="evenodd"
                       />
                     </svg>
                   ) : (
@@ -261,13 +265,13 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
                   {" "}
                   {/* Adjusted container for centering */}
                   {/* Background line */}
-                  <div className="h-[2px] bg-white/20 w-full absolute left-0 right-0" /> 
+                  <div className="h-[2px] bg-white/20 w-full absolute left-0 right-0" />
                   {/* Progress line */}
                   {currentStep > index && (
                     <motion.div
-                      animate={{ width: '100%' }}
+                      animate={{ width: "100%" }}
                       className="h-[2px] bg-primary absolute left-0 right-0" // Use left/right-0 for full width within relative parent
-                      initial={{ width: '0%' }}
+                      initial={{ width: "0%" }}
                       transition={{ duration: 0.5, ease: "easeInOut" }}
                     />
                   )}
@@ -314,15 +318,15 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
                 {errors.email && (
                   <div className="mt-2 flex items-center space-x-2 p-2 bg-primary/10 border border-primary/20 rounded-lg">
                     <svg
-                      xmlns="http://www.w3.org/2000/svg"
                       className="h-4 w-4 text-primary flex-shrink-0"
-                      viewBox="0 0 20 20"
                       fill="currentColor"
+                      viewBox="0 0 20 20"
+                      xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
-                        fillRule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
                         clipRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        fillRule="evenodd"
                       />
                     </svg>
                     <p className="text-xs text-red-500">{errors.email}</p>
@@ -336,7 +340,7 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
             <div className="space-y-2">
               <div>
                 <input
-                  className={`w-full px-4 py-2 bg-white/5 border ${errors.username ? 'border-red-500' : 'border-white/10'} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-white`}
+                  className={`w-full px-4 py-2 bg-white/5 border ${errors.username ? "border-red-500" : "border-white/10"} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-white`}
                   id="username"
                   name="username"
                   placeholder="Tu nombre de usuario"
@@ -347,15 +351,15 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
                 {errors.username && (
                   <div className="mt-2 flex items-center space-x-2 p-2 bg-primary/10 border border-primary/20 rounded-lg">
                     <svg
-                      xmlns="http://www.w3.org/2000/svg"
                       className="h-4 w-4 text-primary flex-shrink-0"
-                      viewBox="0 0 20 20"
                       fill="currentColor"
+                      viewBox="0 0 20 20"
+                      xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
-                        fillRule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
                         clipRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        fillRule="evenodd"
                       />
                     </svg>
                     <p className="text-xs text-red-500">{errors.username}</p>
@@ -364,15 +368,15 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
               </div>
               <div className="flex items-center space-x-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
                 <svg
-                  xmlns="http://www.w3.org/2000/svg"
                   className="h-4 w-4 text-amber-500 flex-shrink-0"
-                  viewBox="0 0 20 20"
                   fill="currentColor"
+                  viewBox="0 0 20 20"
+                  xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
-                    fillRule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
                     clipRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    fillRule="evenodd"
                   />
                 </svg>
                 <p className="text-xs text-amber-500">
@@ -399,15 +403,17 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
               <div>
                 <div className="relative">
                   <input
-                    className={`w-full px-4 py-2 bg-white/5 border ${errors.confirmPassword ? 'border-red-500' : 'border-white/10'} rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-white pr-10`}
+                    className={`w-full px-4 py-2 bg-white/5 border ${errors.confirmPassword ? "border-red-500" : "border-white/10"} rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-white pr-10`}
                     id="confirmPassword"
                     name="confirmPassword"
-                    type={isVisible ? 'text' : 'password'}
+                    type={isVisible ? "text" : "password"}
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                   />
                   <button
-                    aria-label={isVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    aria-label={
+                      isVisible ? "Ocultar contraseña" : "Mostrar contraseña"
+                    }
                     className="absolute inset-y-0 right-0 outline-none flex items-center justify-center w-10 text-white/50 hover:text-white"
                     type="button"
                     onClick={() => setIsVisible((prev) => !prev)}
@@ -418,15 +424,15 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
                 {errors.confirmPassword && (
                   <div className="mt-2 flex items-center space-x-2 p-2 bg-primary/10 border border-primary/20 rounded-lg">
                     <svg
-                      xmlns="http://www.w3.org/2000/svg"
                       className="h-4 w-4 text-primary flex-shrink-0"
-                      viewBox="0 0 20 20"
                       fill="currentColor"
+                      viewBox="0 0 20 20"
+                      xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
-                        fillRule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
                         clipRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        fillRule="evenodd"
                       />
                     </svg>
                     <p className="text-xs text-red-500">
@@ -438,29 +444,29 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
               <div className="flex items-start mt-4">
                 <div className="text-sm">
                   <label
-                    htmlFor="agreeTerms"
                     className="flex flex-row items-center gap-2.5 text-white"
+                    htmlFor="agreeTerms"
                   >
                     <input
+                      checked={formData.agreeTerms}
+                      className="peer hidden"
                       id="agreeTerms"
                       name="agreeTerms"
                       type="checkbox"
-                      checked={formData.agreeTerms}
                       onChange={handleInputChange}
-                      className="peer hidden"
                     />
                     <div className="h-5 w-5 flex rounded-md border border-[#a2a1a833] bg-white/5 peer-checked:bg-alternative transition">
                       <svg
+                        className="w-5 h-5 stroke-[#212121]"
                         fill="none"
                         viewBox="0 0 24 24"
-                        className="w-5 h-5 stroke-[#212121]"
                         xmlns="http://www.w3.org/2000/svg"
                       >
                         <path
                           d="M4 12.6111L8.92308 17.5L20 6.5"
-                          strokeWidth={2}
                           strokeLinecap="round"
                           strokeLinejoin="round"
+                          strokeWidth={2}
                         />
                       </svg>
                     </div>
@@ -471,15 +477,15 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
               {errors.agreeTerms && (
                 <div className="mt-2 flex items-center space-x-2 p-2 bg-primary/10 border border-primary/20 rounded-lg">
                   <svg
-                    xmlns="http://www.w3.org/2000/svg"
                     className="h-4 w-4 text-primary flex-shrink-0"
-                    viewBox="0 0 20 20"
                     fill="currentColor"
+                    viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg"
                   >
                     <path
-                      fillRule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
                       clipRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      fillRule="evenodd"
                     />
                   </svg>
                   <p className="text-xs text-red-500">{errors.agreeTerms}</p>
@@ -493,36 +499,36 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
       <div className="flex justify-between">
         <button
           className={`relative inline-flex items-center justify-center transition-[filter] duration-150 ${
-            currentStep === 0 ? 'opacity-50 cursor-not-allowed' : ''
+            currentStep === 0 ? "opacity-50 cursor-not-allowed" : ""
           }`}
           disabled={currentStep === 0}
           onClick={prevStep}
         >
           <svg
-            width="15"
+            className="h-5 w-5 text-neutral-600 rotate-180 hover:drop-shadow-[0_2px_8px_rgba(252,78,91,0.7)] transition-[filter] duration-150"
+            fill="none"
             height="15"
             viewBox="0 0 15 15"
-            fill="none"
+            width="15"
             xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 text-neutral-600 rotate-180 hover:drop-shadow-[0_2px_8px_rgba(252,78,91,0.7)] transition-[filter] duration-150"
           >
             <path
+              clipRule="evenodd"
               d="M8.14645 3.14645C8.34171 2.95118 8.65829 2.95118 8.85355 3.14645L12.8536 7.14645C13.0488 7.34171 13.0488 7.65829 12.8536 7.85355L8.85355 11.8536C8.65829 12.0488 8.34171 12.0488 8.14645 11.8536C7.95118 11.6583 7.95118 11.3417 8.14645 11.1464L11.2929 8H2.5C2.22386 8 2 7.77614 2 7.5C2 7.22386 2.22386 7 2.5 7H11.2929L8.14645 3.85355C7.95118 3.65829 7.95118 3.34171 8.14645 3.14645Z"
               fill="#FFFFFF"
               fillRule="evenodd"
-              clipRule="evenodd"
-            ></path>
+            />
           </svg>
         </button>
 
         <button
-          className={`group relative inline-flex h-12 items-center justify-center overflow-hidden rounded-[0.9em] px-6 ${isSubmitting ? 'opacity-70 cursor-not-allowed bg-primary/40 border-1 border-primary' : 'bg-primary/40 border-1 border-primary'} text-white transition-all duration-300 before:absolute before:inset-0 before:rounded-[0.9em] before:p-[1.5px] before:-z-10 before:content-['']`}
+          className={`group relative inline-flex h-12 items-center justify-center overflow-hidden rounded-[0.9em] px-6 ${isSubmitting ? "opacity-70 cursor-not-allowed bg-primary/40 border-1 border-primary" : "bg-primary/40 border-1 border-primary"} text-white transition-all duration-300 before:absolute before:inset-0 before:rounded-[0.9em] before:p-[1.5px] before:-z-10 before:content-['']`}
           disabled={isSubmitting}
           onClick={nextStep}
         >
           {isSubmitting ? (
             <div className="flex items-center">
-              <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+              <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
               <span>Procesando</span>
             </div>
           ) : (
@@ -530,19 +536,19 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
               <span className="font-medium">Continuar</span>
               <div className="w-0 translate-x-[100%] pl-0 opacity-0 transition-all duration-200 group-hover:w-5 group-hover:translate-x-0 group-hover:pl-1 group-hover:opacity-100">
                 <svg
-                  width="15"
+                  className="h-5 w-5"
+                  fill="none"
                   height="15"
                   viewBox="0 0 15 15"
-                  fill="none"
+                  width="15"
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
                 >
                   <path
+                    clipRule="evenodd"
                     d="M8.14645 3.14645C8.34171 2.95118 8.65829 2.95118 8.85355 3.14645L12.8536 7.14645C13.0488 7.34171 13.0488 7.65829 12.8536 7.85355L8.85355 11.8536C8.65829 12.0488 8.34171 12.0488 8.14645 11.8536C7.95118 11.6583 7.95118 11.3417 8.14645 11.1464L11.2929 8H2.5C2.22386 8 2 7.77614 2 7.5C2 7.22386 2.22386 7 2.5 7H11.2929L8.14645 3.85355C7.95118 3.65829 7.95118 3.34171 8.14645 3.14645Z"
                     fill="currentColor"
                     fillRule="evenodd"
-                    clipRule="evenodd"
-                  ></path>
+                  />
                 </svg>
               </div>
             </>
@@ -569,14 +575,14 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
             <button
               className="w-full flex items-center justify-center px-4 py-2 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-colors duration-200"
               type="button"
-              onClick={() => signIn('google', { callbackUrl: '/main' })}
+              onClick={() => signIn("google", { callbackUrl: "/main" })}
             >
               <FaGoogle className="mr-2" /> Registrarse con Google
             </button>
             <button
               className="w-full flex items-center justify-center px-4 py-2 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-colors duration-200"
               type="button"
-              onClick={() => signIn('discord', { callbackUrl: '/main' })}
+              onClick={() => signIn("discord", { callbackUrl: "/main" })}
             >
               <FaDiscord className="mr-2" /> Registrarse con Discord
             </button>

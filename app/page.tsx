@@ -49,12 +49,12 @@ export default function LandingPage() {
         setCarouselImages1(
           randomCarouselSkins1
             .map((chroma) => chroma.displayIcon)
-            .filter((icon) => typeof icon === 'string'),
+            .filter((icon) => typeof icon === "string"),
         );
         setCarouselImages2(
           randomCarouselSkins2
             .map((chroma) => chroma.displayIcon)
-            .filter((icon) => typeof icon === 'string'),
+            .filter((icon) => typeof icon === "string"),
         );
       } catch (error) {
         console.error("Error al cargar datos:", error);
@@ -139,7 +139,7 @@ export default function LandingPage() {
                 images={carouselImages1}
                 speed={10}
               />
-              <div className="my-0"></div>
+              <div className="my-0" />
               <ImageCarousel
                 direction="right"
                 images={carouselImages2}

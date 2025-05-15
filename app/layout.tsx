@@ -41,7 +41,7 @@ export default async function RootLayout({
         className={clsx(
           "min-h-screen font-sans antialiased bg-background text-text",
           fontSans.variable,
-          fontRaleway.variable
+          fontRaleway.variable,
         )}
       >
         <Providers>

@@ -1,8 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { User } from "@/types/database";
 import { v4 as uuidv4 } from "uuid";
+
+import { User } from "@/types/database";
 
 // Inicializar el cliente de Supabase con las variables de entorno
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
