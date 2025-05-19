@@ -38,7 +38,6 @@ export function extraerTipoCaja(nombre: string, esDiaria?: boolean): string {
 export type ContentTier = {
   id: string;
   nombre: string;
-  descripcion?: string;
   color: string;
   uuid: string;
 };
@@ -133,52 +132,72 @@ export async function isSkinInInventory(
 }
 
 /**
- * Añade una skin al inventario del usuario
+ * Añade una skin al inventario del usuario o actualiza su cantidad si ya existe.
  * @param userId ID del usuario
- * @param skin Objeto de la skin
+ * @param skinFromApi Objeto de la skin tal como viene de la API (debe contener uuid y displayName)
  * @param supabase Cliente de Supabase
- * @returns Un objeto con {success: boolean, error?: any, alreadyExists?: boolean}
+ * @returns Un objeto con {success: boolean, error?: any, operationType: 'added' | 'updated' | 'error'}
  */
 export async function addSkinToInventory(
   userId: string,
-  skin: Skin,
+  skinFromApi: { uuid: string; displayName: string; contentTierUuid?: string },
   supabase: SupabaseClient,
-): Promise<{ success: boolean; error?: any; alreadyExists?: boolean }> {
+): Promise<{ success: boolean; error?: any; operationType: "added" | "updated" | "error" }> {
   try {
-    // Primero verificar si ya existe
-    const exists = await isSkinInInventory(userId, skin.id, supabase);
+    // Verificar si la skin (basada en skinFromApi.uuid) ya existe en el inventario del usuario
+    const { data: existingInventoryItem, error: fetchError } = await supabase
+      .from("inventario_usuario")
+      .select("id, cantidad") // Seleccionar id y cantidad actual
+      .eq("usuario_id", userId)
+      .eq("skin_id", skinFromApi.uuid) // skin_id en la DB es el UUID de la API
+      .maybeSingle();
 
-    if (exists) {
+    if (fetchError) {
+      console.error("Error al verificar el inventario:", fetchError);
+      return { success: false, error: fetchError, operationType: "error" };
+    }
+
+    if (existingInventoryItem) {
+      // La skin ya existe, actualizar cantidad
+      const newQuantity = (existingInventoryItem.cantidad || 0) + 1;
+      const { error: updateError } = await supabase
+        .from("inventario_usuario")
+        .update({ cantidad: newQuantity, fecha_obtencion: new Date().toISOString() })
+        .eq("id", existingInventoryItem.id);
+
+      if (updateError) {
+        console.error("Error al actualizar la cantidad en el inventario:", updateError);
+        return { success: false, error: updateError, operationType: "error" };
+      }
       console.log(
-        `La skin '${skin.nombre}' ya está en el inventario del usuario ${userId}`,
+        `Cantidad de skin '${skinFromApi.displayName}' actualizada a ${newQuantity} para el usuario ${userId}`,
       );
+      return { success: true, operationType: "updated" };
+    } else {
+      // La skin no existe, añadirla con cantidad 1
+      const { error: insertError } = await supabase
+        .from("inventario_usuario")
+        .insert({
+          usuario_id: userId,
+          skin_id: skinFromApi.uuid,
+          skin_nombre: skinFromApi.displayName,
+          fecha_obtencion: new Date().toISOString(),
+          cantidad: 1,
+          // metodo_adquisicion puede ser añadido aquí si se pasa
+        });
 
-      return { success: true, alreadyExists: true };
+      if (insertError) {
+        console.error("Error al guardar nueva skin en el inventario:", insertError);
+        return { success: false, error: insertError, operationType: "error" };
+      }
+      console.log(
+        `Skin '${skinFromApi.displayName}' añadida al inventario del usuario ${userId} con cantidad 1`,
+      );
+      return { success: true, operationType: "added" };
     }
-
-    // Si no existe, añadirla
-    const { error } = await supabase.from("inventario_usuario").insert({
-      usuario_id: userId,
-      skin_id: skin.id,
-      skin_nombre: skin.nombre,
-      fecha_obtencion: new Date().toISOString(),
-    });
-
-    if (error) {
-      console.error("Error al guardar en el inventario:", error);
-
-      return { success: false, error };
-    }
-
-    console.log(
-      `Skin '${skin.nombre}' añadida al inventario del usuario ${userId}`,
-    );
-
-    return { success: true };
   } catch (error) {
-    console.error("Error al guardar en el inventario:", error);
-
-    return { success: false, error };
+    console.error("Error general en addSkinToInventory:", error);
+    return { success: false, error, operationType: "error" };
   }
 }
 
@@ -253,50 +272,51 @@ export async function processBoxOpening(
 ): Promise<{
   selectedSkin: Skin | null;
   transactionSuccess: boolean;
-  inventorySuccess: boolean;
-  alreadyInInventory: boolean;
+  inventoryOperationType: "added" | "updated" | "error";
   error?: any;
 }> {
   try {
     // Seleccionar skin aleatoria según probabilidades
-    const selectedSkin = selectRandomSkinByProbability(skins, probabilidades);
+    const selectedSkinFromPool = selectRandomSkinByProbability(skins, probabilidades);
 
-    if (!selectedSkin) {
+    if (!selectedSkinFromPool) {
       return {
         selectedSkin: null,
         transactionSuccess: false,
-        inventorySuccess: false,
-        alreadyInInventory: false,
-        error: "No se pudo seleccionar una skin",
+        inventoryOperationType: "error",
+        error: "No se pudo seleccionar una skin del pool",
       };
     }
 
-    // Registrar la transacción
-    const { success: transactionSuccess, error: transactionError } =
-      await recordTransaction(userId, cajaId, selectedSkin.id, supabase);
+    // Asumimos que selectedSkinFromPool.id es el API UUID de la skin
+    // y selectedSkinFromPool.nombre es el displayName.
+    const skinApiRepresentation = {
+        uuid: selectedSkinFromPool.id, 
+        displayName: selectedSkinFromPool.nombre,
+        contentTierUuid: selectedSkinFromPool.content_tier?.uuid 
+    };
 
-    // Añadir al inventario
-    const {
-      success: inventorySuccess,
-      alreadyExists,
-      error: inventoryError,
-    } = await addSkinToInventory(userId, selectedSkin, supabase);
+    // Registrar la transacción (usa selectedSkinFromPool.id, que es el API UUID)
+    const { success: transactionSuccess, error: transactionError } =
+      await recordTransaction(userId, cajaId, selectedSkinFromPool.id, supabase);
+
+    // Añadir al inventario o actualizar cantidad
+    // La variable inventorySuccess ya no existe, usamos operationType para determinar éxito
+    const { operationType, error: inventoryError } =
+      await addSkinToInventory(userId, skinApiRepresentation, supabase);
 
     return {
-      selectedSkin,
+      selectedSkin: selectedSkinFromPool,
       transactionSuccess,
-      inventorySuccess,
-      alreadyInInventory: !!alreadyExists,
+      inventoryOperationType: operationType, // operationType puede ser 'added', 'updated', o 'error'
       error: transactionError || inventoryError,
     };
   } catch (error) {
     console.error("Error al procesar la apertura de la caja:", error);
-
     return {
       selectedSkin: null,
       transactionSuccess: false,
-      inventorySuccess: false,
-      alreadyInInventory: false,
+      inventoryOperationType: "error",
       error,
     };
   }

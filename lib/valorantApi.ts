@@ -30,6 +30,23 @@ interface SkinsResponse {
   data: Skin[];
 }
 
+export interface ContentTier {
+  uuid: string;
+  displayName: string;
+  devName: string;
+  rank: number;
+  juiceValue: number;
+  juiceCost: number;
+  highlightColor: string;
+  displayIcon: string;
+  assetPath: string;
+}
+
+interface ContentTiersResponse {
+  status: number;
+  data: ContentTier[];
+}
+
 // Lista de nombres de armas a excluir (constante reutilizable)
 export const BANNED_WEAPON_NAMES = [
   "Classic",
@@ -62,6 +79,17 @@ export const getWeaponSkins = async (): Promise<Skin[]> => {
 
   const json: SkinsResponse = await res.json();
 
+  return json.data;
+};
+
+export const getContentTiers = async (): Promise<ContentTier[]> => {
+  const res = await fetch("https://valorant-api.com/v1/contenttiers");
+
+  if (!res.ok) {
+    throw new Error("Error al obtener los niveles de contenido (content tiers)");
+  }
+
+  const json: ContentTiersResponse = await res.json();
   return json.data;
 };
 

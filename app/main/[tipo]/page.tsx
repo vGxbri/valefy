@@ -4,16 +4,18 @@ import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 import { Button } from "@/components/ui/button";
 import {
   getWeaponSkins,
   filterQualitySkins,
   filterSkinsByIds,
+  Skin as ValorantSkin,
 } from "@/lib/valorantApi";
-import { extraerTipoCaja } from "@/lib/boxUtils";
+import { extraerTipoCaja, getTierData, Skin } from "@/lib/boxUtils";
 import BoxComponent, { BoxCaja } from "@/components/BoxComponent";
+import { formatSkinForApp } from "@/lib/skinUtils";
 
 // Singleton para el cliente de Supabase
 let supabaseClient: ReturnType<typeof createClient> | null = null;
@@ -44,7 +46,6 @@ const crearCajaDefault = (tipo: TipoCaja): BoxCaja => {
     nombre: `Caja ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`,
     precio: 1000, // Precio por defecto
     imagen_url: "/img/caja-default.png", // Imagen por defecto
-    descripcion: "Cargando descripción...",
     ruta: `/main/${tipo}`,
     esta_disponible: true,
   };
@@ -101,7 +102,7 @@ export default function CajaPage() {
     crearCajaDefault(tipoValidado),
   );
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [cajaSkins, setCajaSkins] = useState<any[]>([]);
+  const [cajaSkins, setCajaSkins] = useState<Skin[]>([]);
   const [probabilidades, setProbabilidades] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -359,31 +360,29 @@ export default function CajaPage() {
               .select("skin_id")
               .eq("caja_id", cajaData.id);
 
-            if (skinIdsData && skinIdsData.length > 0) {
+            if (!skinIdsData || skinIdsData.length === 0) {
+              // Si no hay skins asociadas, la caja estará vacía
+              setCajaSkins([]); // Asegurar que cajaSkins es un array vacío
+              // No es necesario obtener todas las skins si no hay IDs
+            } else {
+              // Extraer los IDs de las skins
               const skinIds = skinIdsData.map((item: any) => item.skin_id);
 
               // Obtener todas las skins de la API de Valorant
-              const allSkins = await getWeaponSkins();
+              const allSkinsFromApi = await getWeaponSkins();
 
               // Filtrar por los IDs específicos de esta caja
-              const matchingSkins = filterSkinsByIds(
-                filterQualitySkins(allSkins),
-                skinIds,
-              );
+              let rawSkinsForBox = filterSkinsByIds(allSkinsFromApi, skinIds);
 
-              if (matchingSkins.length > 0) {
-                // Convertir al formato interno
-                const formattedSkins = matchingSkins.map((skin) => ({
-                  id: skin.uuid,
-                  nombre: skin.displayName,
-                  bundleName: skin.displayName.split(" ")[0],
-                  content_tier_id: skin.contentTierUuid || "",
-                  uuid: skin.uuid,
-                  imagen_url: skin.displayIcon || "",
-                }));
-
-                setCajaSkins(formattedSkins);
+              // Formatear las skins para la aplicación
+              const formattedSkins: Skin[] = [];
+              if (supabase) {
+                for (const rawSkin of rawSkinsForBox) { // rawSkin is ValorantSkin
+                  const tierData = await getTierData(supabase as SupabaseClient, rawSkin.contentTierUuid);
+                  formattedSkins.push(formatSkinForApp(rawSkin, tierData));
+                }
               }
+              setCajaSkins(formattedSkins);
             }
 
             // Obtener las probabilidades de la caja
@@ -400,7 +399,6 @@ export default function CajaPage() {
                   content_tier:content_tier_id (
                     id,
                     nombre,
-                    descripcion,
                     color,
                     uuid
                   )
@@ -423,9 +421,6 @@ export default function CajaPage() {
                       ? {
                           id: String(item.content_tier.id),
                           nombre: String(item.content_tier.nombre),
-                          descripcion: String(
-                            item.content_tier.descripcion || "",
-                          ),
                           color: String(item.content_tier.color),
                           uuid: String(item.content_tier.uuid),
                         }

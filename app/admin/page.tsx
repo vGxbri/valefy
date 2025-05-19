@@ -35,7 +35,6 @@ const getSupabaseClient = () => {
 interface Caja {
   id?: string;
   nombre: string;
-  descripcion: string;
   precio: number;
   imagen_url: string;
   esta_disponible: boolean;
@@ -53,7 +52,6 @@ interface TierProbabilidad {
   content_tier?: {
     id: string;
     nombre: string;
-    descripcion: string;
     color: string;
     uuid: string;
   };
@@ -76,7 +74,6 @@ export default function AdminPage() {
   const [cajas, setCajas] = useState<Caja[]>([]);
   const [nuevaCaja, setNuevaCaja] = useState<Caja>({
     nombre: "",
-    descripcion: "",
     precio: 250,
     imagen_url: "/free_cage.png",
     esta_disponible: true,
@@ -162,7 +159,6 @@ export default function AdminPage() {
             content_tier: {
               id: String(tier.id),
               nombre: String(tier.nombre || "Sin nombre"),
-              descripcion: String(tier.descripcion || ""),
               uuid: String(tier.uuid || ""),
               color: String(tier.color || "#FFFFFF"),
             },
@@ -562,7 +558,6 @@ export default function AdminPage() {
         .insert([
           {
             nombre: nuevaCaja.nombre,
-            descripcion: nuevaCaja.descripcion,
             precio: nuevaCaja.precio,
             imagen_url: nuevaCaja.imagen_url,
             esta_disponible: nuevaCaja.esta_disponible,
@@ -622,7 +617,6 @@ export default function AdminPage() {
       // Resetear formulario
       setNuevaCaja({
         nombre: "",
-        descripcion: "",
         precio: 250,
         imagen_url: "/free_cage.png",
         esta_disponible: true,
@@ -721,17 +715,6 @@ export default function AdminPage() {
                       Considera usar solo letras sin tildes.
                     </div>
                   )}
-                </div>
-                <div>
-                  <Label htmlFor="descripcion">Descripción</Label>
-                  <Textarea
-                    id="descripcion"
-                    name="descripcion"
-                    placeholder="Describe la caja..."
-                    rows={3}
-                    value={nuevaCaja.descripcion}
-                    onChange={handleCajaChange}
-                  />
                 </div>
                 <div>
                   <Label htmlFor="precio">Precio (VP)</Label>
@@ -895,8 +878,15 @@ export default function AdminPage() {
                       <div key={bundle.uuid} className="mb-2">
                         {/* Encabezado del bundle */}
                         <div
+                          role="button"
+                          tabIndex={0}
                           className="flex items-center gap-2 cursor-pointer p-2 rounded-lg transition-all duration-200 bg-gradient-to-br from-black/60 to-black/90 border border-white/10 hover:border-primary/40 hover:shadow-lg"
                           onClick={() => loadSkinsForBundle(bundle)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              loadSkinsForBundle(bundle);
+                            }
+                          }}
                         >
                           <div className="relative flex-shrink-0">
                             <Image
@@ -961,6 +951,8 @@ export default function AdminPage() {
                             ) : (
                               skinsByBundle[bundle.uuid].map((skin) => (
                                 <div
+                                  role="button"
+                                  tabIndex={0}
                                   key={skin.id}
                                   className={`p-1.5 rounded-md cursor-pointer transition-all ${
                                     selectedSkins.some((s) => s.id === skin.id)
@@ -968,6 +960,11 @@ export default function AdminPage() {
                                       : "bg-black/20 border border-white/10 hover:bg-black/40"
                                   }`}
                                   onClick={() => toggleSkinSelection(skin)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      toggleSkinSelection(skin);
+                                    }
+                                  }}
                                 >
                                   <div className="relative aspect-square mb-1 bg-black/30 rounded-sm overflow-hidden">
                                     {skin.imagen_url ? (
@@ -1025,7 +1022,7 @@ export default function AdminPage() {
             <h2 className="text-xl font-semibold mb-4">Cajas Existentes</h2>
             {cajas.length === 0 ? (
               <p className="text-white/70 py-4">
-                No hay cajas creadas. Crea una desde la pestaña "Nueva Caja".
+                No hay cajas creadas. Crea una desde la pestaña &quot;Nueva Caja&quot;.
               </p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1062,11 +1059,6 @@ export default function AdminPage() {
                         </p>
                       </div>
                     </div>
-                    {caja.descripcion && (
-                      <p className="text-sm text-white/70 mt-2 mb-3 line-clamp-2">
-                        {caja.descripcion}
-                      </p>
-                    )}
                     <div className="flex justify-end gap-2 mt-2">
                       <Link
                         className="text-xs px-2 py-1 bg-primary/20 hover:bg-primary/40 text-primary rounded transition-colors"

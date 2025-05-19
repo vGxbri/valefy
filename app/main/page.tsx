@@ -12,7 +12,6 @@ interface Caja {
   nombre: string;
   precio: number;
   imagen_url: string;
-  descripcion: string;
   ruta: string;
   esta_disponible: boolean;
   es_diaria?: boolean;
@@ -167,17 +166,6 @@ export default function MainPage() {
           </button>
         </div>
 
-        {nextUpdate && (
-          <div className="mb-4 text-sm text-white/60 flex items-center">
-            <span className="mr-2">
-              Próxima actualización de la caja diaria:
-            </span>
-            <span className="font-semibold text-primary">
-              {formatNextUpdate()}
-            </span>
-          </div>
-        )}
-
         <div className="w-full rounded-3xl bg-gradient-to-br from-primary/10 via-backgroundAlt/30 to-secondary/5 backdrop-blur-sm border border-border/30 p-6 shadow-xl overflow-hidden relative">
           {/* Efecto de fondo */}
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-30" />
@@ -236,7 +224,6 @@ export default function MainPage() {
                       href={rutaDinamica}
                     >
                       <StripeCard
-                        badge={caja.es_diaria ? "Diaria" : undefined}
                         btnText={
                           caja.precio === 0
                             ? "Abrir gratis"

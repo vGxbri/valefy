@@ -3,9 +3,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { ChevronRight, Mail, MessageCircle, ExternalLink } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+
+  // Animación para los enlaces
+  const linkAnimation = {
+    initial: { opacity: 0.6, x: -5 },
+    hover: { opacity: 1, x: 0, color: "#FC4E5B" },
+    transition: { duration: 0.2 }
+  };
 
   // Social media links with proper URLs
   const socialLinks = [
@@ -55,89 +63,144 @@ export default function Footer() {
 
   return (
     <motion.footer
-      animate={{ opacity: 1 }}
-      className="py-12 border-t border-white/10"
       initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
+      className="relative py-16 overflow-hidden"
     >
-      <div className="container mx-auto max-w-7xl px-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-          <div>
-            <Link className="flex items-center gap-1 mb-4" href="/">
+      {/* Elementos decorativos de fondo */}
+      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-70" />
+      <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl opacity-50" />
+      <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl opacity-50" />
+      
+      <div className="container mx-auto max-w-7xl px-6 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 mb-16">
+          {/* Logo y descripción */}
+          <div className="md:col-span-4 space-y-6">
+            <Link 
+              className="inline-block transform transition-transform duration-300 hover:scale-105" 
+              href="/"
+            >
               <Image
                 alt="Valefy Logo"
-                className="object-contain"
-                height={25}
+                className="object-contain drop-shadow-glow"
+                height={35}
                 src="/logo-valefy.png"
-                width={110}
+                width={140}
               />
             </Link>
-            <p className="text-white/60 text-sm">
+            
+            <p className="text-slate-400 text-base leading-relaxed">
               El mejor simulador de cajas de Valorant. Experimenta la emoción
               sin gastar dinero real.
             </p>
-            <div className="flex space-x-4 mt-6">
+            
+            <div className="flex space-x-5 mt-6">
               {socialLinks.map((link) => (
-                <a
+                <motion.a
                   key={link.name}
                   aria-label={link.name}
-                  className="text-white/60 hover:text-primary transition-colors"
+                  initial="initial"
+                  whileHover="hover"
+                  className="text-slate-400 hover:text-primary p-2 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-primary/30 transition-all duration-300"
                   href={link.href}
                   rel="noopener noreferrer"
                   target="_blank"
                 >
                   {link.icon}
-                </a>
+                </motion.a>
               ))}
             </div>
           </div>
 
-          <div>
-            <h4 className="text-white font-medium mb-4">Enlaces</h4>
-            <ul className="space-y-2">
+          {/* Enlaces de navegación */}
+          <div className="md:col-span-2 md:ml-auto">
+            <h4 className="text-white font-semibold mb-5 text-lg">Enlaces</h4>
+            <ul className="space-y-3">
               {navLinks.map((link) => (
                 <li key={link.name}>
-                  <Link
-                    className="text-white/60 hover:text-primary transition-colors"
-                    href={link.href}
+                  <motion.div
+                    initial="initial"
+                    whileHover="hover"
                   >
-                    {link.name}
-                  </Link>
+                    <Link
+                      className="text-slate-400 hover:text-primary transition-colors flex items-center group"
+                      href={link.href}
+                    >
+                      <ChevronRight className="h-4 w-0 opacity-0 group-hover:w-4 group-hover:opacity-100 transition-all duration-300 text-primary" />
+                      <motion.span variants={linkAnimation}>{link.name}</motion.span>
+                    </Link>
+                  </motion.div>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div>
-            <h4 className="text-white font-medium mb-4">Legal</h4>
-            <ul className="space-y-2">
+          {/* Enlaces legales */}
+          <div className="md:col-span-2">
+            <h4 className="text-white font-semibold mb-5 text-lg">Legal</h4>
+            <ul className="space-y-3">
               {legalLinks.map((link) => (
                 <li key={link.name}>
-                  <Link
-                    className="text-white/60 hover:text-primary transition-colors"
-                    href={link.href}
+                  <motion.div
+                    initial="initial"
+                    whileHover="hover"
                   >
-                    {link.name}
-                  </Link>
+                    <Link
+                      className="text-slate-400 hover:text-primary transition-colors flex items-center group"
+                      href={link.href}
+                    >
+                      <ChevronRight className="h-4 w-0 opacity-0 group-hover:w-4 group-hover:opacity-100 transition-all duration-300 text-primary" />
+                      <motion.span variants={linkAnimation}>{link.name}</motion.span>
+                    </Link>
+                  </motion.div>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div>
-            <h4 className="text-white font-medium mb-4">Contacto</h4>
-            <ul className="space-y-2">
-              <li className="text-white/60">soporte@valefy.com</li>
-              <li className="text-white/60">Discord: Valefy</li>
+          {/* Contacto */}
+          <div className="md:col-span-3">
+            <h4 className="text-white font-semibold mb-5 text-lg">Contacto</h4>
+            <ul className="space-y-4">
+              <li>
+                <a 
+                  href="mailto:soporte@valefy.com" 
+                  className="text-slate-400 hover:text-primary transition-colors flex items-center gap-3 group"
+                >
+                  <div className="p-2 bg-slate-800/70 rounded-lg border border-slate-700/50 group-hover:border-primary/30 group-hover:bg-primary/10 transition-all duration-300">
+                    <Mail className="h-4 w-4 text-primary/80" />
+                  </div>
+                  <span>soporte@valefy.com</span>
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="https://discord.gg/valefy" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-slate-400 hover:text-primary transition-colors flex items-center gap-3 group"
+                >
+                  <div className="p-2 bg-slate-800/70 rounded-lg border border-slate-700/50 group-hover:border-primary/30 group-hover:bg-primary/10 transition-all duration-300">
+                    <MessageCircle className="h-4 w-4 text-primary/80" />
+                  </div>
+                  <span>Discord: Valefy</span>
+                  <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity duration-300" />
+                </a>
+              </li>
             </ul>
           </div>
         </div>
 
-        <div className="pt-8 border-t border-white/10 text-center">
-          <p className="text-white/40 text-sm">
+        {/* Barra de copyright */}
+        <div className="pt-8 border-t border-slate-800/80 text-center">
+          <p className="text-slate-500 text-sm">
             © {currentYear} Valefy. Todos los derechos reservados. Valefy no
             está afiliado con Riot Games.
           </p>
+          <div className="mt-4 text-xs text-slate-600">
+            Diseñado con <span className="text-primary">♥</span> para la comunidad de Valorant
+          </div>
         </div>
       </div>
     </motion.footer>

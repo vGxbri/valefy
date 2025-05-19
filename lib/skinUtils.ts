@@ -30,7 +30,6 @@ export const formatSkinForApp = (
     content_tier: {
       id: skin.contentTierUuid || "",
       nombre: tierData ? tierData.nombre : defaultTierName,
-      descripcion: "",
       color: tierData ? tierData.color : defaultTierColor,
       uuid: skin.contentTierUuid || "",
     },
