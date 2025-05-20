@@ -25,13 +25,43 @@ const globalStyles = `
     opacity: 0.2;
   }
 }
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(252, 78, 91, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(252, 78, 91, 0.6);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes spin3D {
+  0% {
+    transform: rotateY(0deg) scale(1);
+  }
+  50% {
+    transform: rotateY(180deg) scale(1.05);
+  }
+  100% {
+    transform: rotateY(360deg) scale(1);
+  }
+}
 `;
 
 interface ContentTier {
   id: string;
   nombre: string;
   color: string;
-  uuid: string;
+  uuid_api: string;
 }
 
 export interface BoxCaja {
@@ -43,6 +73,7 @@ export interface BoxCaja {
   esta_disponible: boolean;
   es_diaria?: boolean;
   fecha_actualizacion?: string;
+  categoria?: string;
 }
 
 interface BoxComponentProps {
@@ -218,7 +249,7 @@ export default function BoxComponent({
             id,
             nombre,
             color,
-            uuid
+            uuid_api
           )
         `,
         )
@@ -256,7 +287,7 @@ export default function BoxComponent({
                 id: String(item.content_tier.id),
                 nombre: String(item.content_tier.nombre),
                 color: String(item.content_tier.color),
-                uuid: String(item.content_tier.uuid),
+                uuid_api: String(item.content_tier.uuid_api),
               }
             : undefined,
       }));
@@ -375,8 +406,8 @@ export default function BoxComponent({
     // Force reflow to apply the reset styles immediately
     void spinnerElement.offsetWidth;
 
-    // Set up the transition with a more aggressive cubic-bezier for a very long fast spin and very quick stop
-    spinnerElement.style.transition = `transform ${duration}ms cubic-bezier(0.10, 1.01, 0.64, 1.01)`;
+    // Set up the transition with a cubic-bezier for a very long fast spin and quick stop
+    spinnerElement.style.transition = `transform ${duration}ms cubic-bezier(0.12, 0.99, 0.62, 1.01)`;
     
     // Apply the final transform that will be animated
     spinnerElement.style.transform = `translateX(-${finalPosition}px)`;
@@ -509,7 +540,7 @@ export default function BoxComponent({
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6 max-w-md mx-auto shadow-lg">
           <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-red-500">
-              <path d="M12 8V12M12 16H12.01M7.8 21H16.2C17.8802 21 18.7202 21 19.362 20.673C19.9265 20.3854 20.3854 19.9265 20.673 19.362C21 18.7202 21 17.8802 21 16.2V7.8C21 6.11984 21 5.27976 20.673 4.63803C20.3854 4.07354 19.9265 3.6146 19.362 3.32698C18.7202 3 17.8802 3 16.2 3H7.8C6.11984 3 5.27976 3 4.63803 3.32698C4.07354 3.6146 3.6146 4.07354 3.32698 4.63803C3 5.27976 3 6.11984 3 7.8V16.2C3 17.8802 3 18.7202 3.32698 19.362C3.6146 19.9265 4.07354 20.3854 4.63803 20.673C5.27976 21 6.11984 21 7.8 21Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M12 8V12M12 16H12.01M7.8 21H16.2C17.8802 21 18.7202 21 19.362 20.673C19.9265 20.3854 20.3854 19.9265 20.673 19.362C21 18.7202 21 17.8802 21 16.2V7.8C21 6.11984 21 5.27976 20.673 4.63803C20.3854 4.07354 19.9265 3.6146 19.362 3.32698C18.7202 3 17.8802 3 16.2 3H7.8C6.11984 3 5.27976 3 4.63803 3.32698C4.07354 3.6146 3.6146 4.07354 3.32698 4.63803C3 5.27976 3 6.11984 3 7.8V16.2C3 17.8802 3.32698 19.362C3.6146 19.9265 4.07354 20.3854 4.63803 20.673C5.27976 21 6.11984 21 7.8 21Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
           <p className="text-red-500 text-center font-medium mb-4">{error}</p>
@@ -546,21 +577,31 @@ export default function BoxComponent({
   return (
     <div className="w-full flex flex-col items-center justify-center py-10">
       {resultSkin ? (
-        // Enhanced Result View
-        <div className="p-8 rounded-xl max-w-md w-full text-center bg-gradient-to-br from-slate-800 via-slate-900 to-black shadow-2xl border border-slate-700 flex flex-col items-center">
-          <h3 className="text-3xl font-bold text-primary mb-4">¡Recompensa Obtenida!</h3>
+        // Resultado de apertura de caja mejorado
+        <div className="p-8 md:p-10 rounded-xl max-w-md w-full text-center bg-gradient-to-br from-slate-800/80 via-slate-900/90 to-black/80 shadow-2xl border border-slate-700/50 backdrop-blur-md flex flex-col items-center">
+          <h3 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-amber-300 mb-4">
+            ¡Recompensa Obtenida!
+          </h3>
           {resultSkin.imagen_url && (
-            <div className="my-6 p-1 bg-slate-700/30 rounded-lg shadow-lg w-56 h-56 flex items-center justify-center">
-              <Image
-                src={resultSkin.imagen_url}
-                alt={resultSkin.nombre}
-                width={200}
-                height={200}
-                className="object-contain drop-shadow-[0_5px_15px_rgba(0,0,0,0.5)]"
-              />
+            <div className="my-6 p-3 bg-gradient-to-br from-slate-800/80 to-black/80 rounded-lg shadow-lg w-56 h-56 flex items-center justify-center relative">
+              <div className="absolute inset-0 rounded-lg" style={{
+                background: `radial-gradient(circle, ${resultSkin.content_tier?.color}20 0%, transparent 70%)`,
+                animation: 'glow 3s infinite ease-in-out'
+              }}></div>
+              <div className="relative animate-float" style={{animation: 'float 3s infinite ease-in-out'}}>
+                <Image
+                  src={resultSkin.imagen_url}
+                  alt={resultSkin.nombre}
+                  width={200}
+                  height={200}
+                  className="object-contain drop-shadow-[0_5px_15px_rgba(0,0,0,0.7)] hover:scale-105 transition-transform duration-300"
+                />
+              </div>
             </div>
           )}
-          <p className="text-2xl font-semibold text-white mb-3 capitalize tracking-wide">{resultSkin.nombre}</p>
+          <p className="text-2xl font-semibold text-white mb-3 capitalize tracking-wide">
+            {resultSkin.nombre}
+          </p>
           {resultSkin.content_tier && (
             <div className="mb-6">
               <div
@@ -581,42 +622,74 @@ export default function BoxComponent({
               setResultSkin(null);
               setIsOpening(false); // Ensure isOpening is reset when going back
             }}
-            className="mt-4 px-8 py-3 text-lg bg-primary hover:bg-primary/90 text-white rounded-lg shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+            className="mt-4 px-8 py-3 text-lg bg-gradient-to-r from-primary to-primary hover:from-primary/90 hover:to-primary text-white rounded-lg shadow-lg hover:shadow-primary/30 transition-all transform hover:scale-105 active:scale-95"
           >
             Abrir Otra Caja
           </Button>
         </div>
       ) : (
-        // Improved Box View 
+        // Vista principal de la caja mejorada
         <div className="flex flex-col items-center w-full max-w-4xl mx-auto">
           {caja && (
             <div className="w-full text-center relative z-0">
-              {/* Efecto de resplandor detrás de la caja */}
-              <div className="absolute -z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full opacity-20 blur-3xl bg-primary/40"></div>
+              {/* Efectos de resplandor mejorados detrás de la caja */}
+              <div className="absolute -z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full opacity-20 blur-3xl bg-gradient-radial from-primary/50 to-transparent"></div>
+              <div className="absolute -z-10 left-1/3 top-1/3 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] rounded-full opacity-10 blur-2xl bg-gradient-radial from-amber-300/50 to-transparent"></div>
               
-              <h3 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-primary mb-6">
+              <h3 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-primary mb-6 tracking-tight">
                 {caja.nombre}
               </h3>
+              
+              {/* Detalles de la caja */}
+              <div className="mb-6 mx-auto flex flex-wrap items-center justify-center gap-3">
+                <div className="px-4 py-2 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10 text-white/80 flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" className="text-primary" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" 
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <span>{caja.es_diaria ? 'Caja Diaria' : 'Caja Permanente'}</span>
+                </div>
+                
+                <div className="px-4 py-2 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10 text-white/80 flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" className="text-amber-400" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2v6m0 8v6M4.93 4.93l4.24 4.24m5.66 5.66 4.24 4.24M2 12h6m8 0h6M4.93 19.07l4.24-4.24m5.66-5.66 4.24-4.24" 
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <span>{caja.precio === 0 ? 'Gratis' : `${caja.precio} VP`}</span>
+                </div>
+                
+                {caja.categoria && (
+                  <div className="px-4 py-2 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10 text-white/80 flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" className="text-green-400" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="2" />
+                      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M8 18v2a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                    <span className="capitalize">{caja.categoria}</span>
+                  </div>
+                )}
+              </div>
 
               {isSpinning ? (
-                // Enhanced Spinning View
+                // Vista giratoria mejorada
                 <div className="w-full text-center mb-8 relative">
                   <div className="w-full mx-auto py-6 relative">
-                    {/* Top and bottom borders to create a frame */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-5/6 h-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent"></div>
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5/6 h-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent"></div>
+                    {/* Bordes superiores e inferiores para crear un marco */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-5/6 h-2 bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5/6 h-2 bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
                     
                     <div
-                      className="mx-auto overflow-hidden relative rounded-md bg-black/30 backdrop-blur-sm border border-white/10 shadow-xl"
+                      className="mx-auto overflow-hidden relative rounded-lg bg-black/50 backdrop-blur-lg border border-white/20 shadow-2xl"
                       style={{
-                        width: "clamp(300px, 80vw, 750px)",
+                        width: "clamp(300px, 85vw, 800px)",
                         height: "200px",
                       }}
                     >
-                      {/* Glow effect on the edges */}
+                      {/* Efecto de resplandor en los bordes */}
                       <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/60 to-transparent"></div>
-                        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/60 to-transparent"></div>
+                        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/80 to-transparent"></div>
+                        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/80 to-transparent"></div>
+                        <div className="absolute left-0 top-0 w-[2px] h-full bg-gradient-to-b from-transparent via-primary/40 to-transparent"></div>
+                        <div className="absolute right-0 top-0 w-[2px] h-full bg-gradient-to-b from-transparent via-primary/40 to-transparent"></div>
                       </div>
                       
                       <div
@@ -632,7 +705,7 @@ export default function BoxComponent({
                             key={`${skin.id}-${index}`}
                             className="p-2 flex-shrink-0 w-[150px] h-full flex flex-col justify-center items-center text-center transition-all"
                           >
-                            <div className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-md overflow-hidden bg-gradient-to-b from-slate-800 to-black border border-slate-700 shadow-md flex items-center justify-center">
+                            <div className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-lg overflow-hidden bg-gradient-to-b from-slate-800/80 to-black border border-slate-700/50 shadow-lg flex items-center justify-center">
                               {skin.imagen_url && (
                                 <Image
                                   alt={skin.nombre}
@@ -643,12 +716,12 @@ export default function BoxComponent({
                                 />
                               )}
                               
-                              {/* Subtle glow effect based on tier color */}
+                              {/* Efecto de resplandor sutil basado en el color del tier */}
                               <div 
                                 className="absolute inset-0 opacity-40 pointer-events-none"
                                 style={{
                                   boxShadow: skin.content_tier?.color 
-                                    ? `inset 0 0 10px ${skin.content_tier.color}` 
+                                    ? `inset 0 0 15px ${skin.content_tier.color}` 
                                     : 'none',
                                 }}
                               ></div>
@@ -657,9 +730,11 @@ export default function BoxComponent({
                         ))}
                       </div>
                       
-                      {/* Enhanced central marker line */}
+                      {/* Marcador central mejorado */}
                       <div className="absolute top-0 left-1/2 h-full transform -translate-x-1/2 pointer-events-none z-10 flex items-center justify-center">
                         <div className="w-[3px] h-full bg-gradient-to-b from-transparent via-primary to-transparent"></div>
+                        <div className="absolute top-0 w-1 h-5 bg-primary"></div>
+                        <div className="absolute bottom-0 w-1 h-5 bg-primary"></div>
                       </div>
                     </div>
                   </div>
@@ -671,31 +746,43 @@ export default function BoxComponent({
                   </p>
                 </div>
               ) : (
-                // Enhanced Initial Box Display View
+                // Vista inicial de la caja mejorada
                 <div className="my-8 flex flex-col items-center justify-center relative">
                   {caja.imagen_url && (
                     <div className="relative group">
-                      <div className="absolute -inset-1 bg-gradient-to-r from-primary/40 to-amber-500/40 rounded-lg blur opacity-40 group-hover:opacity-60 transition duration-500"></div>
-                      <div className="relative bg-gradient-to-br from-slate-800 to-black p-1 rounded-lg shadow-2xl border border-slate-700">
+                      <div className="absolute -inset-1 bg-gradient-to-r from-primary/40 to-amber-500/40 rounded-xl blur opacity-40 group-hover:opacity-70 transition duration-500"></div>
+                      <div className="relative bg-gradient-to-br from-slate-800/90 to-black/95 p-1 rounded-xl shadow-2xl border border-slate-700/60 overflow-hidden">
+                        <div className="absolute inset-0 bg-black/10 backdrop-blur-md z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500"
+                             style={{background: 'radial-gradient(circle at center, rgba(252, 78, 91, 0.3) 0%, transparent 70%)'}}></div>
                         <Image
                           alt={caja.nombre}
-                          className="object-contain p-2 transform group-hover:scale-105 transition-all duration-500"
-                          height={270}
+                          className="relative z-20 object-contain p-2 transform group-hover:scale-105 transition-transform duration-700 w-[350px] h-[350px]"
+                          height={350}
                           src={caja.imagen_url || "/free_cage.png"}
-                          width={270}
+                          width={350}
                         />
+                        <div className="absolute inset-0 z-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                          <div className="px-6 py-3 bg-primary/80 text-white font-bold rounded-full shadow-lg transform group-hover:scale-105 transition-transform duration-500">
+                            ¡CLICK PARA ABRIR!
+                          </div>
+                        </div>
                       </div>
                       
-                      {/* Subtle pulse animation */}
-                      <div className="absolute -inset-1 rounded-lg blur opacity-20 animate-pulse group-hover:opacity-0 transition"></div>
+                      {/* Animación de pulso sutil */}
+                      <div className="absolute -inset-1 rounded-xl blur opacity-20 animate-pulse group-hover:opacity-0 transition"></div>
                     </div>
                   )}
                 </div>
               )}
               
               {caja.es_diaria && nextUpdate && (
-                <div className="mb-8 text-white/90 bg-slate-800/50 border border-slate-700/50 rounded-lg py-3 px-5 shadow-md inline-block">
+                <div className="mb-8 text-white/90 bg-gradient-to-r from-slate-800/70 to-slate-900/70 border border-slate-700/70 rounded-lg py-3 px-5 shadow-lg inline-block">
                   <p className="flex items-center gap-2 font-medium">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M12 6v6l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
                     <span className="text-sm opacity-80">Próxima actualización:</span>
                     <span className="text-primary font-bold">{nextUpdate}</span>
                   </p>
@@ -704,27 +791,38 @@ export default function BoxComponent({
 
               {/* Sección de Skins de la Caja - Siempre visible en la vista inicial */}
               {!isSpinning && !resultSkin && cajaSkins && cajaSkins.length > 0 && (
-                <div className="w-full max-w-3xl mx-auto my-8 p-6 bg-slate-800/50 border border-slate-700/50 rounded-xl shadow-lg">
-                  <h4 className="text-xl font-semibold text-white mb-4 text-center">Contenido Destacado de la Caja</h4>
+                <div className="w-full max-w-3xl mx-auto mt-10 p-6 bg-gradient-to-br from-slate-800/50 via-slate-900/60 to-black/40 border border-slate-700/50 rounded-xl shadow-xl backdrop-blur-sm">
+                  <h4 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white to-white/80 mb-4 text-center">
+                    Contenido Destacado de la Caja
+                  </h4>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                     {cajaSkins.slice(0, 12).map((skin) => ( // Mostrar hasta 12 skins como preview
-                      <div key={skin.id} className="p-2 rounded-lg bg-black/30 border border-slate-700/70 hover:border-primary/50 transition-all aspect-square flex flex-col items-center justify-center text-center">
+                      <div 
+                        key={skin.id} 
+                        className="group p-2 rounded-lg bg-black/40 border border-slate-700/70 hover:border-primary/50 transition-all hover:shadow-md hover:shadow-primary/10 aspect-square flex flex-col items-center justify-center text-center relative overflow-hidden"
+                      >
+                        <div className="absolute inset-0 bg-gradient-radial from-transparent to-black opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
                         {skin.imagen_url && (
                           <Image 
                             src={skin.imagen_url} 
                             alt={skin.nombre} 
                             width={70} 
                             height={70} 
-                            className="object-contain drop-shadow-md mb-1"
+                            className="object-contain drop-shadow-md mb-1 transform group-hover:scale-110 transition-transform duration-300"
                           />
                         )}
-                        <p className="text-xs text-white/80 truncate w-full" style={{color: skin.content_tier?.color || 'white'}}>{skin.nombre}</p>
-                        <p className="text-[10px] text-slate-400 truncate w-full">{skin.content_tier?.nombre}</p>
+                        <p className="text-xs group-hover:text-white text-white/80 truncate w-full" 
+                           style={{color: skin.content_tier?.color || 'white'}}>{skin.nombre}</p>
+                        <p className="text-[10px] text-slate-400 group-hover:text-slate-300 truncate w-full">{skin.content_tier?.nombre}</p>
+                        
+                        {/* Indicador de rareza */}
+                        <div className="absolute bottom-0 left-0 w-full h-1" 
+                             style={{backgroundColor: skin.content_tier?.color || 'rgba(255,255,255,0.1)'}}></div>
                       </div>
                     ))}
                     {cajaSkins.length > 12 && (
-                       <div className="p-2 rounded-lg bg-black/30 border border-slate-700/70 aspect-square flex flex-col items-center justify-center text-center">
-                         <p className="text-2xl text-primary">+{cajaSkins.length - 12}</p>
+                       <div className="p-2 rounded-lg bg-black/40 border border-slate-700/70 hover:border-primary/50 aspect-square flex flex-col items-center justify-center text-center transition-all hover:bg-black/60">
+                         <p className="text-2xl text-primary font-bold">+{cajaSkins.length - 12}</p>
                          <p className="text-xs text-white/70">más</p>
                        </div>
                     )}
@@ -732,8 +830,8 @@ export default function BoxComponent({
                 </div>
               )}
 
-              {/* Botones principales - Modificado para quitar el botón de probabilidades */}
-              <div className="flex flex-wrap gap-4 mb-8 justify-center">
+              {/* Botones principales */}
+              <div className="flex flex-wrap gap-4 mt-8 mb-8 justify-center">
                 <Button
                   className={`px-8 py-3 relative shadow-lg bg-gradient-to-r from-primary to-primary 
                     ${(!isOpening && !isSpinning && (!caja.es_diaria || !dailyOpened) && caja.esta_disponible) 
@@ -769,13 +867,18 @@ export default function BoxComponent({
                       : caja.esta_disponible
                         ? `Abrir por ${caja.precio} VP`
                         : "Próximamente"}
+                  
+                  {/* Efecto visual en el botón */}
+                  {(!isOpening && !isSpinning && (!caja.es_diaria || !dailyOpened) && caja.esta_disponible) && (
+                    <span className="absolute -z-10 top-0 left-0 right-0 bottom-0 bg-primary opacity-30 blur-md rounded-lg transform scale-110 animate-pulse"></span>
+                  )}
                 </Button>
               </div>
 
-              {/* Sección de Probabilidades - Siempre visible en la vista inicial */}
+              {/* Sección de Probabilidades mejorada */}
               {!isSpinning && !resultSkin && probabilidades && (
-                <div className="w-full bg-gradient-to-br from-slate-800/80 to-black/80 backdrop-blur-md rounded-xl p-6 border border-slate-700/50 max-w-md mx-auto mt-0 mb-8 shadow-xl transform transition-all">
-                  <h4 className="text-xl font-semibold text-white mb-4 flex items-center gap-2 justify-center">
+                <div className="w-full bg-gradient-to-br from-slate-800/80 to-black/80 backdrop-blur-md rounded-xl p-6 border border-slate-700/50 max-w-md mx-auto mt-0 mb-10 shadow-xl transform transition-all">
+                  <h4 className="text-xl font-semibold text-white mb-6 flex items-center gap-2 justify-center">
                     <span className="w-2 h-2 rounded-full bg-primary"></span>
                     Probabilidades de Obtención
                     <span className="w-2 h-2 rounded-full bg-primary"></span>
@@ -784,7 +887,7 @@ export default function BoxComponent({
                       {probabilidades
                         .sort((a, b) => b.probabilidad - a.probabilidad)
                         .map((prob) => (
-                          <div key={prob.id} className="bg-black/20 p-3 rounded-lg border border-white/5 hover:border-white/10 transition-all">
+                          <div key={prob.id} className="bg-black/30 p-4 rounded-lg border border-white/5 hover:border-white/10 transition-all hover:shadow-md hover:shadow-primary/5">
                             <div className="flex justify-between items-center mb-2">
                               <span className="text-white/90 flex items-center">
                                 {prob.content_tier?.color && (
@@ -808,13 +911,14 @@ export default function BoxComponent({
                                 {(prob.probabilidad * 100).toFixed(1)}%
                               </span>
                             </div>
-                            {/* Enhanced progress bar */}
-                            <div className="w-full h-2 bg-black/40 rounded-full mt-1 overflow-hidden">
+                            {/* Barra de progreso mejorada */}
+                            <div className="w-full h-3 bg-black/60 rounded-full mt-1 overflow-hidden p-0.5">
                               <div
                                 className="h-full rounded-full transition-all duration-1000 relative"
                                 style={{
                                   backgroundColor: prob.content_tier?.color || "#fff",
                                   width: `${Math.max(prob.probabilidad * 100, 0.5)}%`,
+                                  boxShadow: prob.content_tier?.color ? `0 0 8px ${prob.content_tier.color}` : 'none'
                                 }}
                               >
                               </div>

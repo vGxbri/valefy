@@ -5,11 +5,12 @@ import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
+import StripeCard from "@/components/StripeCard";
 import {
   getWeaponSkins,
-  filterQualitySkins,
   filterSkinsByIds,
   Skin as ValorantSkin,
 } from "@/lib/valorantApi";
@@ -110,6 +111,9 @@ export default function CajaPage() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+
+  // Estado para navegación entre cajas
+  const [cajasRelacionadas, setCajasRelacionadas] = useState<BoxCaja[]>([]);
 
   // Obtener el cliente de Supabase
   const supabase = getSupabaseClient();
@@ -269,10 +273,26 @@ export default function CajaPage() {
         setIsLoading(true);
         setError(null);
 
-        // Crear un AbortController para manejar timeout
         const controller = new AbortController();
-        // Timeout de 5 segundos
         const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        // 0. Cargar todos los content_tiers de Supabase para mapeo por ID de Supabase
+        let tiersMapBySupabaseId = new Map();
+        try {
+          const { data: allTiersFromSupabase, error: allTiersError } = await supabase
+            .from("content_tiers")
+            .select("id, uuid_api, nombre, color"); // Necesitamos id (PK), uuid_api, nombre, color
+
+          if (allTiersError) {
+            console.error("Error al cargar todos los tiers para mapeo por ID de Supabase:", allTiersError);
+          } else if (allTiersFromSupabase) {
+            tiersMapBySupabaseId = new Map(allTiersFromSupabase.map(t => 
+              [t.id, { uuid_api: t.uuid_api, nombre: t.nombre, color: t.color, supabase_pk_id: t.id }]
+            ));
+          }
+        } catch (e) {
+            console.error("Excepción al cargar todos los tiers para mapeo por ID de Supabase:", e);
+        }
 
         // Normalizar el tipo para búsqueda (reemplazar guiones por espacios)
         const tipoNormalizado = tipoValidado.replace(/-/g, " ");
@@ -351,6 +371,37 @@ export default function CajaPage() {
           }
         }
 
+        // Cargar cajas relacionadas de la misma categoría
+        if (cajaData && cajaData.categoria) {
+          try {
+            const { data: relacionadas } = await supabase
+              .from("cajas")
+              .select("id, nombre, precio, imagen_url, ruta, esta_disponible, es_diaria, fecha_actualizacion, categoria")
+              .eq("categoria", cajaData.categoria)
+              .neq("id", cajaData.id)
+              .eq("esta_disponible", true)
+              .limit(4);
+              
+            if (relacionadas && relacionadas.length > 0) {
+              // Convertir explícitamente cada elemento al tipo BoxCaja
+              const cajasConvertidas: BoxCaja[] = relacionadas.map(caja => ({
+                id: String(caja.id || ''),
+                nombre: String(caja.nombre || ''),
+                precio: Number(caja.precio || 0),
+                imagen_url: String(caja.imagen_url || ''),
+                ruta: String(caja.ruta || ''),
+                esta_disponible: Boolean(caja.esta_disponible !== undefined ? caja.esta_disponible : true),
+                es_diaria: Boolean(caja.es_diaria),
+                categoria: caja.categoria ? String(caja.categoria) : undefined,
+                fecha_actualizacion: caja.fecha_actualizacion ? String(caja.fecha_actualizacion) : undefined
+              }));
+              setCajasRelacionadas(cajasConvertidas);
+            }
+          } catch (err) {
+            console.error("Error al cargar cajas relacionadas:", err);
+          }
+        }
+
         // Si encontramos la caja
         if (cajaData) {
           // Obtener las skins asociadas a esta caja
@@ -393,40 +444,38 @@ export default function CajaPage() {
                   `
                   id,
                   caja_id,
-                  content_tier_id,
+                  content_tier_id, // Este es el id (PK de Supabase) del tier
                   probabilidad,
-                  cantidad_skins,
-                  content_tier:content_tier_id (
-                    id,
-                    nombre,
-                    color,
-                    uuid
-                  )
-                `,
+                  cantidad_skins
+                  `
                 )
                 .eq("caja_id", cajaData.id);
 
               if (probData) {
-                // Mapeo seguro para las probabilidades
-                const mappedProbs = probData.map((item: any) => ({
-                  id: String(item.id),
-                  caja_id: String(item.caja_id),
-                  content_tier_id: String(item.content_tier_id),
-                  probabilidad: Number(item.probabilidad),
-                  cantidad_skins: Number(item.cantidad_skins),
-                  content_tier:
-                    item.content_tier &&
-                    typeof item.content_tier === "object" &&
-                    !("code" in item.content_tier)
-                      ? {
-                          id: String(item.content_tier.id),
-                          nombre: String(item.content_tier.nombre),
-                          color: String(item.content_tier.color),
-                          uuid: String(item.content_tier.uuid),
-                        }
-                      : undefined,
-                }));
-
+                const mappedProbs = probData.map((item: any) => {
+                  // item.content_tier_id es el id (PK de Supabase) del tier
+                  const tierInfoFromMap = tiersMapBySupabaseId.get(item.content_tier_id); 
+                  return {
+                    id: String(item.id),
+                    caja_id: String(item.caja_id),
+                    content_tier_id: String(item.content_tier_id), // id (PK de Supabase) del tier
+                    probabilidad: Number(item.probabilidad),
+                    cantidad_skins: Number(item.cantidad_skins),
+                    content_tier: tierInfoFromMap ? {
+                      id: tierInfoFromMap.uuid_api,       // Para la UI, usamos uuid_api como id
+                      nombre: tierInfoFromMap.nombre,
+                      color: tierInfoFromMap.color,
+                      uuid: tierInfoFromMap.uuid_api,      // Para la UI, usamos uuid_api como uuid
+                      supabase_pk_id: tierInfoFromMap.supabase_pk_id // Guardamos el PK por si acaso
+                    } : { 
+                      id: "unknown-tier-" + String(item.content_tier_id),
+                      nombre: "Desconocido",
+                      color: "#FFFFFF",
+                      uuid: "unknown-tier-" + String(item.content_tier_id),
+                      supabase_pk_id: String(item.content_tier_id)
+                    },
+                  };
+                });
                 setProbabilidades(mappedProbs);
               }
             }
@@ -496,174 +545,173 @@ export default function CajaPage() {
 
       if (!caja?.id) throw new Error("No se encontró la caja diaria");
 
-      // Obtener todas las skins disponibles
-      const allSkins = await getWeaponSkins();
-
-      // Importar y usar la función centralizada de filtrado de skins
-      // Esta función garantiza que solo se incluyan skins que pertenecen a bundles con imagen
+      const allSkinsFromValorantApi = await getWeaponSkins();
       const { filterSkinsByBundleWithIcon } = await import("@/lib/valorantApi");
-      // Esperar a que se resuelva la promesa de filterSkinsByBundleWithIcon
-      const filteredSkins = await filterSkinsByBundleWithIcon(allSkins);
+      const filteredSkinsForSelection = await filterSkinsByBundleWithIcon(allSkinsFromValorantApi);
 
-      // Obtener las probabilidades de la caja diaria
-      const { data: probabilidades, error: probError } = await supabase
+      // Obtener las probabilidades de la caja. prob.content_tier_id es el ID (PK de Supabase) del tier.
+      const { data: probabilidadesData, error: probError } = await supabase
         .from("tier_probabilidades")
-        .select("content_tier_id, cantidad_skins")
+        .select("content_tier_id, cantidad_skins") 
         .eq("caja_id", caja.id);
 
       if (probError) throw probError;
-      if (!probabilidades)
-        throw new Error("No se encontraron probabilidades para la caja");
+      if (!probabilidadesData) throw new Error("No se encontraron probabilidades para la caja");
 
-      // Obtener la relación entre content_tier_id y uuid de la API de Valorant
-      const { data: contentTiers, error: contentTiersError } = await supabase
+      // Obtener todos los content_tiers de Supabase para mapear id (PK) a uuid_api y nombre.
+      let supabaseIdToTierDataMap = new Map<string, { uuid_api: string; nombre: string }>();
+      const { data: allTiersFromSupabase } = await supabase
         .from("content_tiers")
-        .select("id, uuid");
-
-      if (contentTiersError) throw contentTiersError;
-      if (!contentTiers) throw new Error("No se encontraron los content tiers");
-
-      // Crear un mapa para relacionar los IDs internos con los UUIDs de la API
-      const tierIdToUuid = new Map<string, string>();
-
-      // Usar una interfaz para tipar correctamente los datos
-      interface ContentTier {
-        id: string;
-        uuid: string;
-      }
-
-      // Convertir los datos a un tipo seguro
-      const typedContentTiers = contentTiers as ContentTier[];
-
-      typedContentTiers.forEach((tier) => {
-        tierIdToUuid.set(tier.id, tier.uuid);
-      });
-
-      interface TierProbabilidad {
-        content_tier_id: string;
-        cantidad_skins: number;
-      }
-
-      // Preparar las skins por tier usando las skins filtradas
-      const skinsByTier = new Map<string, { skins: any[]; cantidad: number }>();
-
-      (probabilidades as TierProbabilidad[]).forEach((prob) => {
-        // Obtener el UUID correspondiente al ID interno
-        const tierUuid = tierIdToUuid.get(prob.content_tier_id);
-
-        if (tierUuid) {
-          // Filtrar las skins por el UUID de la API
-          const tierSkins = filteredSkins.filter(
-            (skin) => skin.contentTierUuid === tierUuid,
-          );
-
-          console.log(
-            `Tier ${prob.content_tier_id} (UUID: ${tierUuid}): ${tierSkins.length} skins encontradas`,
-          );
-
-          skinsByTier.set(prob.content_tier_id, {
-            skins: tierSkins,
-            cantidad: prob.cantidad_skins,
-          });
-        }
-      });
-
-      // Seleccionar skins aleatorias por cada tier
-      interface SelectedSkin {
-        skin_id: string;
-        content_tier_id: string;
-        skin_nombre: string;
-      }
-
-      const selectedSkins: SelectedSkin[] = [];
-
-      // Obtener los nombres de los tiers para los logs
-      const tierNames = new Map<string, string>();
-
-      // Obtener todos los nombres de tiers de una sola vez
-      const { data: allTiers } = await supabase
-        .from("content_tiers")
-        .select("id, nombre");
-
-      if (allTiers) {
-        allTiers.forEach((tier: any) => {
-          tierNames.set(tier.id, tier.nombre);
+        .select("id, uuid_api, nombre");
+      
+      if (allTiersFromSupabase) {
+        allTiersFromSupabase.forEach((tier: any) => {
+          if (tier && tier.id && tier.uuid_api && tier.nombre) {
+            supabaseIdToTierDataMap.set(tier.id, { uuid_api: tier.uuid_api, nombre: tier.nombre });
+          }
         });
       }
 
-      console.log("=== SELECCIONANDO SKINS POR TIER ===");
+      const skinsBySupabaseTierId = new Map<string, { skins: ValorantSkin[]; cantidad: number }>();
 
-      skinsByTier.forEach(({ skins, cantidad }, tierId) => {
-        const tierName = tierNames.get(tierId) || "Desconocido";
+      probabilidadesData.forEach((prob: any) => {
+        const supabaseTierId = String(prob.content_tier_id); // Este es el ID (PK de Supabase)
+        if (!supabaseTierId) {
+            console.warn("Probabilidad con content_tier_id (PK) vacío.", prob);
+            return;
+        }
 
-        console.log(`Tier: ${tierName} (ID: ${tierId})`);
-        console.log(`  - Skins disponibles: ${skins.length}`);
+        const tierData = supabaseIdToTierDataMap.get(supabaseTierId);
+        if (!tierData || !tierData.uuid_api) {
+          console.warn(`No se encontró uuid_api para el tier con ID (PK) de Supabase: ${supabaseTierId}`);
+          skinsBySupabaseTierId.set(supabaseTierId, { skins: [], cantidad: prob.cantidad_skins });
+          return;
+        }
+        
+        const valorantApiTierUuid = tierData.uuid_api;
+        const tierSkins = filteredSkinsForSelection.filter(
+          (skin) => skin.contentTierUuid === valorantApiTierUuid 
+        );
+
+        console.log(
+          `Tier (Supabase PK: ${supabaseTierId}, API UUID: ${valorantApiTierUuid}): ${tierSkins.length} skins encontradas en pool.`
+        );
+        skinsBySupabaseTierId.set(supabaseTierId, { skins: tierSkins, cantidad: prob.cantidad_skins });
+      });
+
+      interface SelectedSkinForUpdate { 
+        skin_id: string; 
+        content_tier_id: string; // Este será el ID (PK de Supabase) del tier
+        skin_nombre: string;
+      }
+      const newSelectedSkinsForBox: SelectedSkinForUpdate[] = [];
+
+      console.log("=== SELECCIONANDO SKINS POR TIER (forceUpdateDailyBox) ===");
+
+      skinsBySupabaseTierId.forEach(({ skins, cantidad }, supabaseTierId_key) => {
+        const supabaseTierId = String(supabaseTierId_key);
+        const tierData = supabaseIdToTierDataMap.get(supabaseTierId);
+        const tierName = tierData?.nombre || `Desconocido (ID: ${supabaseTierId})`;
+
+        console.log(`Tier: ${tierName}`);
+        console.log(`  - Skins disponibles en pool: ${skins.length}`);
         console.log(`  - Cantidad requerida: ${cantidad}`);
 
         if (skins.length === 0) {
-          console.warn(
-            `  - ADVERTENCIA: No hay skins disponibles para el tier ${tierName}`,
-          );
-
+          console.warn(`  - ADVERTENCIA: No hay skins disponibles para el tier ${tierName}`);
           return;
         }
 
         if (skins.length < cantidad) {
           console.warn(
-            `  - ADVERTENCIA: No hay suficientes skins para el tier ${tierName}. Disponibles: ${skins.length}, Requeridas: ${cantidad}`,
+            `  - ADVERTENCIA: No hay suficientes skins para el tier ${tierName}. Disponibles: ${skins.length}, Requeridas: ${cantidad}. Se seleccionarán todas las disponibles.`
           );
         }
 
-        const shuffled = [...skins].sort(() => Math.random() - 0.5);
-        const selected = shuffled.slice(0, Math.min(cantidad, shuffled.length));
+        const shuffledSkins = [...skins].sort(() => Math.random() - 0.5);
+        const skinsToPush = shuffledSkins.slice(0, Math.min(cantidad, shuffledSkins.length));
 
-        console.log(`  - Skins seleccionadas: ${selected.length}`);
+        console.log(`  - Skins seleccionadas para este tier: ${skinsToPush.length}`);
 
-        selected.forEach((skin) => {
-          selectedSkins.push({
-            skin_id: skin.uuid,
-            content_tier_id: tierId,
+        skinsToPush.forEach((skin) => {
+          newSelectedSkinsForBox.push({
+            skin_id: skin.uuid,             
+            content_tier_id: supabaseTierId,   // Usar el ID (PK de Supabase) del tier
             skin_nombre: skin.displayName,
           });
           console.log(`    * ${skin.displayName}`);
         });
       });
 
-      // Actualizar la caja con las nuevas skins
       const { error: updateError } = await supabase.rpc(
         "actualizar_skins_caja_diaria",
-        { skins_json: selectedSkins },
+        { skins_json: newSelectedSkinsForBox } 
       );
 
       if (updateError) throw updateError;
 
       setUpdateMessage("¡Caja diaria actualizada con éxito! Recargando...");
 
-      // Recargar la página después de 2 segundos
       setTimeout(() => {
         window.location.reload();
       }, 2000);
     } catch (error: any) {
       console.error("Error al actualizar la caja diaria:", error);
       setUpdateMessage(
-        `Error: ${error.message || "No se pudo actualizar la caja diaria"}`,
+        `Error: ${error.message || "No se pudo actualizar la caja diaria"}`
       );
     } finally {
       setIsUpdating(false);
     }
   };
 
+  // Animaciones de entrada
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { 
+        when: "beforeChildren",
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1,
+      transition: { duration: 0.5 }
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-8 pl-16 md:pr-12 lg:pr-16 pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1">
-      <div className="w-full">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold text-foreground flex items-center font-[Raleway] font-semibold italic tracking-widest">
-            {isLoading
-              ? "/ CARGANDO..."
-              : error
-                ? "/ ERROR"
-                : `/ ${caja?.nombre?.toUpperCase() || `CAJA ${tipoValidado.toUpperCase()}`}`}
-          </h2>
+    <motion.div 
+      className="flex flex-col gap-8 pl-16 md:pr-12 lg:pr-16 pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      <motion.div className="w-full" variants={itemVariants}>
+        {/* Navegación superior con breadcrumbs y botones */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
+              <Link href="/main" className="hover:text-primary transition-colors">Inicio</Link>
+              <span>•</span>
+              <Link href="/main" className="hover:text-primary transition-colors">Cajas</Link>
+              <span>•</span>
+              <span className="text-primary">{isLoading ? "Cargando..." : caja?.nombre || tipoValidado}</span>
+            </div>
+            <h2 className="text-3xl font-bold text-foreground flex items-center font-[Raleway] font-semibold italic tracking-widest">
+              {isLoading
+                ? "/ CARGANDO..."
+                : error
+                  ? "/ ERROR"
+                  : `/ ${caja?.nombre?.toUpperCase() || `CAJA ${tipoValidado.toUpperCase()}`}`}
+            </h2>
+          </div>
 
           <div className="flex items-center gap-2">
             {tipoValidado.includes("diaria") && (
@@ -691,7 +739,13 @@ export default function CajaPage() {
 
         {/* Panel de administración para la caja diaria */}
         {tipoValidado.includes("diaria") && showAdminPanel && (
-          <div className="w-full bg-black/30 backdrop-blur-sm border border-white/10 rounded-lg p-4 mb-4">
+          <motion.div 
+            className="w-full bg-black/30 backdrop-blur-sm border border-white/10 rounded-lg p-4 mb-4"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             <h3 className="text-lg font-medium text-white mb-3">
               Panel de Administración - Caja Diaria
             </h3>
@@ -728,53 +782,104 @@ export default function CajaPage() {
               Nota: Esta función es solo para pruebas. En producción, la caja se
               actualizará automáticamente a las 9:00 AM.
             </p>
-          </div>
+          </motion.div>
         )}
 
-        <div className="w-full rounded-3xl bg-gradient-to-br from-primary/10 via-backgroundAlt/30 to-secondary/5 backdrop-blur-sm border border-border/30 p-6 shadow-xl overflow-hidden relative">
-          {/* Efecto de fondo */}
+        {/* Contenedor principal con efecto de fondo mejorado */}
+        <motion.div 
+          className="w-full rounded-3xl bg-gradient-to-br from-primary/10 via-backgroundAlt/30 to-secondary/5 backdrop-blur-sm border border-border/30 p-6 shadow-xl overflow-hidden relative"
+          variants={itemVariants}
+        >
+          {/* Efectos de fondo mejorados */}
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-30" />
           <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary/10 rounded-full blur-3xl opacity-30" />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-radial from-primary/5 to-transparent opacity-50" />
 
           {/* Contenido de la caja */}
           <div className="relative z-10 flex flex-col items-center justify-center min-h-[400px] w-full">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4" />
+                <p className="text-white/70 animate-pulse">Cargando información de la caja...</p>
               </div>
             ) : error ? (
-              <div className="flex flex-col items-center justify-center">
-                <p className="text-red-500">{error}</p>
+              <div className="flex flex-col items-center justify-center p-8 bg-black/40 rounded-xl border border-red-500/20 max-w-lg mx-auto">
+                <div className="w-16 h-16 flex items-center justify-center bg-red-500/10 rounded-full mb-4">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-red-500">
+                    <path d="M12 8V12M12 16H12.01M21.0001 12C21.0001 16.9706 16.9707 21 12.0001 21C7.02949 21 3.00012 16.9706 3.00012 12C3.00012 7.02944 7.02949 3 12.0001 3C16.9707 3 21.0001 7.02944 21.0001 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <p className="text-red-500 mb-4">{error}</p>
                 <Button
-                  className="mt-4"
+                  className="bg-slate-800 hover:bg-slate-700 text-white px-6"
                   onClick={() => window.location.reload()}
                 >
                   Reintentar
                 </Button>
               </div>
             ) : (
-              <BoxComponent
-                caja={caja}
-                cajaSkins={cajaSkins}
-                error={null}
-                isAdmin={tipoValidado.includes("diaria")}
-                isLoading={false}
-                isUpdating={isUpdating}
-                probabilidades={probabilidades}
-                setShowAdminPanel={setShowAdminPanel}
-                showAdminPanel={showAdminPanel}
-                supabase={supabase}
-                updateMessage={updateMessage}
-                onAdminAction={
-                  tipoValidado.includes("diaria")
-                    ? forceUpdateDailyBox
-                    : undefined
-                }
-              />
+              <div className="w-full">
+                <BoxComponent
+                  caja={caja}
+                  cajaSkins={cajaSkins}
+                  error={null}
+                  isAdmin={tipoValidado.includes("diaria")}
+                  isLoading={false}
+                  isUpdating={isUpdating}
+                  probabilidades={probabilidades}
+                  setShowAdminPanel={setShowAdminPanel}
+                  showAdminPanel={showAdminPanel}
+                  supabase={supabase}
+                  updateMessage={updateMessage}
+                  onAdminAction={
+                    tipoValidado.includes("diaria")
+                      ? forceUpdateDailyBox
+                      : undefined
+                  }
+                />
+              </div>
             )}
           </div>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+
+        {/* Sección de cajas relacionadas */}
+        {cajasRelacionadas.length > 0 && (
+          <motion.div 
+            className="mt-8" 
+            variants={itemVariants}
+          >
+            <h3 className="text-2xl font-bold text-foreground mb-4 font-[Raleway] italic tracking-wide">
+              / CAJAS RELACIONADAS
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {cajasRelacionadas.map((cajaRelacionada) => {
+                const tipoCajaRel = extraerTipoCaja(cajaRelacionada.nombre, cajaRelacionada.es_diaria);
+                const rutaCajaRel = `/main/${tipoCajaRel}`;
+                
+                return (
+                  <Link
+                    key={cajaRelacionada.id}
+                    className="block transform transition-all duration-200 hover:scale-[1.02]"
+                    href={rutaCajaRel}
+                  >
+                    <StripeCard
+                      badge={cajaRelacionada.es_diaria ? "Diaria" : undefined}
+                      btnText={
+                        cajaRelacionada.precio === 0
+                          ? "Abrir gratis"
+                          : `${cajaRelacionada.precio} VP`
+                      }
+                      disabled={!cajaRelacionada.esta_disponible}
+                      imageUrl={cajaRelacionada.imagen_url}
+                      title={cajaRelacionada.nombre}
+                    />
+                  </Link>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
+    </motion.div>
   );
 }

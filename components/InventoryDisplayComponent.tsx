@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { RiSearch2Line } from "react-icons/ri";
 import { X, Filter, Trash2, ChevronDown, RefreshCw, XCircle, AlertTriangle } from 'lucide-react';
-import { Pagination } from "@heroui/pagination";
 import { 
   Modal, 
   ModalContent, 
@@ -15,7 +14,6 @@ import {
   useDisclosure,
   Button as HerouiButton
 } from "@heroui/react";
-import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, DropdownSection } from "@nextui-org/dropdown";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added
 import { getWeaponSkins as fetchAllWeaponSkinsFromApi, getBestDisplayIcon, getContentTiers as fetchAllContentTiersFromApi, Skin as ValorantApiSkin, ContentTier as ValorantApiContentTier } from "@/lib/valorantApi";
@@ -48,7 +46,7 @@ export interface InventorySkin {
   bundleName: string;
   skinIcon: string;
   contentTier: {
-    id: string; // Tier UUID
+    id: string; // Tier ID, debe ser 'id'
     nombre: string;
     color: string;
   };
@@ -138,15 +136,21 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
       }
       if (!currentApiContentTiers) {
         currentApiContentTiers = await fetchAllContentTiersFromApi();
+        console.warn("[InventoryDebug] currentApiContentTiers from API:", currentApiContentTiers); // Log después de fetch
         if (isMounted) setAllApiContentTiersState(currentApiContentTiers);
+      } else {
+        console.warn("[InventoryDebug] currentApiContentTiers from state:", currentApiContentTiers); // Log si ya estaba en estado
       }
 
-      if (!currentApiSkins || !currentApiContentTiers) {
-        throw new Error("Failed to load essential Valorant API data.");
+      if (!currentApiSkins || !currentApiContentTiers || currentApiContentTiers.length === 0) { // Añadida comprobación de longitud
+        console.error("[InventoryDebug] Essential API data missing or empty. Skins:", currentApiSkins, "Tiers:", currentApiContentTiers);
+        throw new Error("Failed to load essential Valorant API data or data is empty.");
       }
 
       const skinsMap = new Map(currentApiSkins.map(s => [s.uuid, s]));
-      const tiersMap = new Map(currentApiContentTiers.map(t => [t.uuid, t]));
+      const tiersMap = new Map(currentApiContentTiers.map(t => [t.uuid, t])); // Usar t.uuid como clave
+      console.warn("[InventoryDebug] tiersMap created:", tiersMap); 
+      console.warn("[InventoryDebug] tiersMap keys:", Array.from(tiersMap.keys()));
 
       const { data: inventoryData, error: inventoryError } = await supabase
         .from('inventario_usuario')
@@ -167,19 +171,26 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
         let skinIcon = apiSkin ? getBestDisplayIcon(apiSkin) : '/images/placeholder_icon.webp';
         let apiTier = apiSkin?.contentTierUuid ? tiersMap.get(apiSkin.contentTierUuid) : null;
         
+        if (!apiTier && apiSkin?.contentTierUuid) {
+          console.warn(`[InventoryDebug] Tier no encontrado en tiersMap: Skin '${apiSkin.displayName}' tiene contentTierUuid '${apiSkin.contentTierUuid}'. Este UUID no está en tu tabla content_tiers. Keys en tiersMap:`, Array.from(tiersMap.keys()));
+        }
+        if (!apiSkin?.contentTierUuid) {
+          console.warn(`[InventoryDebug] Skin sin contentTierUuid: '${apiSkin?.displayName}'`);
+        }
+
         return {
-          id: item.id, // Supabase row ID
+          id: item.id, 
           skin_id: item.skin_id,
           skinName: skinName,
           bundleName: apiSkin ? extractBundleName(apiSkin.displayName) : "Unknown Bundle",
           skinIcon: skinIcon,
           contentTier: {
-            id: apiTier?.uuid || 'default',
+            id: apiTier?.uuid || 'default', // Usar apiTier.uuid
             nombre: apiTier?.displayName || 'Standard',
             color: (apiTier && apiTier.highlightColor) ? `#${apiTier.highlightColor.substring(0, 6)}` : '#FFFFFF',
           },
           dateAcquired: new Date(item.fecha_obtencion),
-          cantidad: item.cantidad || 1, // Added cantidad, default to 1 if null/undefined
+          cantidad: item.cantidad || 1, 
         };
       });
 
@@ -348,7 +359,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
       const searchTermLower = searchTerm.toLowerCase();
       const nameMatch = skin.skinName.toLowerCase().includes(searchTermLower);
       const bundleMatch = skin.bundleName?.toLowerCase().includes(searchTermLower);
-      const tierMatch = filterTier ? skin.contentTier.id === filterTier : true;
+      const tierMatch = filterTier ? skin.contentTier.id === filterTier : true; // Usar skin.contentTier.id
       return (nameMatch || bundleMatch) && tierMatch;
     })
     .sort((a, b) => {
@@ -441,8 +452,8 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                     <SelectItem value="all" className="hover:bg-slate-700 rounded-md">Todas las Rarezas</SelectItem>
                     {allApiContentTiersState.map(tier => (
                       <SelectItem 
-                        key={tier.uuid} 
-                        value={tier.uuid} 
+                        key={tier.uuid}
+                        value={tier.uuid}
                         className="hover:bg-slate-700 rounded-md active:bg-slate-700"
                         style={{ color: (tier.highlightColor && tier.highlightColor.length >= 6) ? `#${tier.highlightColor.substring(0, 6)}` : 'white' }}
                       >
@@ -564,12 +575,32 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                     ${isSelectionMode ? 'cursor-pointer' : 'cursor-default'}`}
                   style={cardStyle}
                 >
+                  {/* Imagen de fondo dinámica basada en contentTier.id */}
+                  {skin.contentTier.id && skin.contentTier.id !== 'default' && (
+                    <Image 
+                      src={`/skins-bg/${skin.contentTier.id}.png`} // Usar skin.contentTier.id
+                      // src={`/skins-bg/prueba-bg.png`}
+                      alt={`Fondo para ${skin.contentTier.nombre}`}
+                      layout="fill"
+                      objectFit="contain" // O "cover" si prefieres que llene y recorte
+                      className="absolute inset-0 z-0 p-4 opacity-20 transform scale-125 rotate-12"
+                      priority={index < 10} // Priorizar las primeras imágenes
+                      // onError para manejar casos donde la imagen no exista
+                      onError={(e) => {
+                        // Opcional: Cambiar a una imagen de fallback o aplicar un estilo
+                        // e.currentTarget.src = '/skins-bg/default-bg.png';
+                        // O simplemente ocultarla si no hay fallback
+                        e.currentTarget.style.display = 'none';
+                        console.warn(`No se encontró la imagen de fondo para el tier: /skins-bg/${skin.contentTier.id}.png`); // Usar skin.contentTier.id
+                      }}
+                    />
+                  )}
                   <Image
                     src={skin.skinIcon || '/images/placeholder_icon.webp'}
                     alt={skin.skinName}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    className="object-contain p-4 group-hover:scale-105 transition-transform duration-300 z-10"
+                    className="object-contain p-4 group-hover:scale-105 rotate-12	 transition-transform duration-300 z-10"
                     priority={index < 12} // Prioritize loading first 12 images
                   />
                   <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-10">

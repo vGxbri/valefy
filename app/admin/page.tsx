@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getWeaponSkins, filterSkinsByBundleWithIcon } from "@/lib/valorantApi";
+import { getWeaponSkins, filterSkinsByBundleWithIcon, Skin as ValorantApiSkin, ContentTier as ValorantApiContentTier } from "@/lib/valorantApi";
 import { formatSkinForApp } from "@/lib/skinUtils";
 import { Skin, getTierData, extraerTipoCaja } from "@/lib/boxUtils";
 
@@ -141,29 +141,30 @@ export default function AdminPage() {
       // 2. Cargar tiers para las probabilidades
       const { data: tiersData, error: tiersError } = await supabase
         .from("content_tiers")
-        .select("*")
-        .order("id");
+        .select("*"); // Contendrá id (PK) y uuid_api
 
       if (tiersError) {
         console.error("Error al cargar tiers:", tiersError);
         throw new Error(`Error al cargar tiers: ${tiersError.message}`);
       }
 
-      setTiers(tiersData || []);
+      setTiers(tiersData || []); // tiersData aquí tiene objetos con .id (PK) y .uuid_api
 
       // 3. Inicializar probabilidades con los tiers
       if (tiersData && tiersData.length > 0) {
         try {
           const initialProbs = tiersData.map((tier) => ({
-            caja_id: "",
-            content_tier_id: String(tier.id),
+            caja_id: "", 
+            content_tier_id: String(tier.id), // Usar tier.id (PK de Supabase) como referencia principal
             probabilidad: 0,
-            cantidad_skins: 0,
-            content_tier: {
-              id: String(tier.id),
+            cantidad_skins: 0, 
+            content_tier: { // Para visualización, podemos usar uuid_api o lo que se necesite
+              id: String(tier.uuid_api), // ID para la UI, puede ser uuid_api
               nombre: String(tier.nombre || "Sin nombre"),
-              uuid: String(tier.uuid || ""),
+              uuid: String(tier.uuid_api), // UUID para la UI, es uuid_api
               color: String(tier.color || "#FFFFFF"),
+              // Guardamos el PK de supabase por si es útil para alguna lógica de UI directa
+              supabase_pk_id: String(tier.id) 
             },
           }));
 
@@ -288,80 +289,58 @@ export default function AdminPage() {
         throw new Error("No se pudo conectar a la base de datos");
       }
 
-      // Definir el tipo para los content tiers
-      interface ContentTierData {
-        id: string;
-        uuid: string;
-      }
-
       // Obtener todos los content_tiers disponibles para validación
-      const { data: contentTiers, error: contentTiersError } = await supabase
+      const { data: allSupabaseTiersData, error: contentTiersError } = await supabase
         .from("content_tiers")
-        .select("id, uuid")
-        .returns<ContentTierData[]>();
+        .select("uuid_api"); // Seleccionar uuid_api para verificar existencia
 
       if (contentTiersError) {
         console.error("Error al cargar content_tiers:", contentTiersError);
         throw new Error("Error al cargar content_tiers");
       }
 
-      // Crear un mapa de UUID a ID para validación rápida
-      const tierUuidToId: Record<string, string> = {};
-
-      contentTiers?.forEach((tier) => {
-        tierUuidToId[tier.uuid] = tier.id;
-      });
+      // Crear un conjunto de UUIDs de tiers válidos desde Supabase, usando uuid_api
+      const validTierUuidsFromSupabase = new Set(allSupabaseTiersData?.map(t => t.uuid_api) || []);
 
       const formattedSkins: Skin[] = [];
 
       for (const skin of bundleSkins) {
-        // Si la skin ya está formateada (tiene content_tier_id), usarla directamente
-        if ("content_tier_id" in skin) {
-          // Verificar que el content_tier_id exista en la base de datos
-          const tierExists = contentTiers?.some(
-            (tier) => tier.id === skin.content_tier_id,
-          );
-
-          if (tierExists) {
+        // Si la skin ya está formateada (tiene content_tier_id, que debería ser el uuid)
+        if ("content_tier_id" in skin && skin.content_tier_id) {
+          // Verificar que el content_tier_id (uuid) exista en nuestra tabla de Supabase
+          if (validTierUuidsFromSupabase.has(skin.content_tier_id)) { 
             formattedSkins.push(skin as Skin);
           } else {
-            console.warn(`Skin con content_tier_id inválido: ${skin.nombre}`);
+            console.warn(`Skin PREVIAMENTE FORMATEADA con content_tier_id (debería ser uuid_api) inválido o no encontrado en Supabase: ${skin.nombre}, UUID: ${skin.content_tier_id}`);
           }
           continue;
         }
 
-        // Si no está formateada, obtener la información del tier
-        // Aquí asumimos que es una skin de la API de Valorant
-        const valorantSkin = skin as unknown as {
-          contentTierUuid: string;
-          displayName: string;
-          displayIcon: string;
-        };
+        // Si no está formateada, es una skin cruda de la API de Valorant.
+        const valorantApiSkin = skin as unknown as ValorantApiSkin; 
 
-        // Verificar si el UUID del tier existe en nuestra base de datos
-        if (
-          valorantSkin.contentTierUuid &&
-          tierUuidToId[valorantSkin.contentTierUuid]
-        ) {
-          const tierData = await getTierData(
+        // Verificar si el valorantApiSkin.contentTierUuid (que es el UUID de la API) 
+        // existe en nuestro conjunto de validTierUuidsFromSupabase (que contiene los uuid_api de nuestra BD)
+        if (valorantApiSkin.contentTierUuid && validTierUuidsFromSupabase.has(valorantApiSkin.contentTierUuid)) {
+          const tierDataForFormatting = await getTierData(
             supabase,
-            valorantSkin.contentTierUuid,
+            valorantApiSkin.contentTierUuid, // getTierData busca por uuid_api
           );
 
-          if (tierData) {
+          if (tierDataForFormatting) { 
             const formattedSkin = formatSkinForApp(
-              valorantSkin as any,
-              tierData,
+              valorantApiSkin, // Pasamos la skin de la API
+              tierDataForFormatting
             );
-
-            // Asegurarse de que el content_tier_id sea el correcto de nuestra base de datos
-            formattedSkin.content_tier_id =
-              tierUuidToId[valorantSkin.contentTierUuid];
+            // formatSkinForApp ya asigna valorantApiSkin.contentTierUuid a formattedSkin.content_tier_id
+            // y también a formattedSkin.content_tier.id y formattedSkin.content_tier.uuid
             formattedSkins.push(formattedSkin);
+          } else {
+             console.warn(`No se pudieron obtener datos del tier (nombre/color) para ${valorantApiSkin.displayName} con UUID ${valorantApiSkin.contentTierUuid} desde getTierData.`);
           }
         } else {
           console.warn(
-            `Skin con contentTierUuid no encontrado en la base de datos: ${valorantSkin.displayName}`,
+            `Skin ${valorantApiSkin.displayName} tiene contentTierUuid ${valorantApiSkin.contentTierUuid}, pero no se encontró en la tabla content_tiers de Supabase.`,
           );
         }
       }
@@ -481,17 +460,27 @@ export default function AdminPage() {
     );
   };
 
-  // Sincronizar automáticamente cantidad_skins según las skins seleccionadas (forzando string en los IDs)
+  // Sincronizar automáticamente cantidad_skins según las skins seleccionadas
   useEffect(() => {
-    setProbabilidades((prev) =>
-      prev.map((prob) => ({
-        ...prob,
-        cantidad_skins: selectedSkins.filter(
-          (skin) =>
-            String(skin.content_tier_id) === String(prob.content_tier_id),
-        ).length,
-      })),
+    setProbabilidades((prevProbs) =>
+      prevProbs.map((prob) => {
+        const skinsCount = selectedSkins.filter(
+          (skin) => {
+            // skin.content_tier_id es el uuid_api de la skin (viene de formatSkinForApp -> Valorant API skin.contentTierUuid)
+            // prob.content_tier.uuid es también el uuid_api del tier (establecido en loadInitialData)
+            return String(skin.content_tier_id) === String(prob.content_tier?.uuid);
+          }
+        ).length;
+        return { ...prob, cantidad_skins: skinsCount };
+      })
     );
+  // Dependemos de selectedSkins. El estado `tiers` (que se usa para inicializar `probabilidades`)
+  // es importante para la estructura inicial, pero la actualización de `cantidad_skins` 
+  // depende directamente de `selectedSkins` y la estructura existente de `probabilidades`.
+  // Si la estructura de `probabilidades` (qué tiers existen) cambia, `loadInitialData` debería 
+  // re-inicializar `probabilidades`, lo cual a su vez dispararía este efecto si `selectedSkins` ya tiene items.
+  // Para evitar posibles bucles con `probabilidades` en la dependencia, 
+  // y dado que `tiers` define la lista de `prob` objetos, `[selectedSkins, tiers]` es más seguro.
   }, [selectedSkins, tiers]);
 
   // Toggle selección de skin
@@ -542,104 +531,102 @@ export default function AdminPage() {
     setIsLoading(true);
     setError(null);
 
-    // Generar la ruta para la caja
     const rutaCaja = `/main/${extraerTipoCaja(nuevaCaja.nombre, nuevaCaja.es_diaria)}`;
-
-    console.log(`Ruta generada para la caja: ${rutaCaja}`);
 
     try {
       const supabase = getSupabaseClient();
+      if (!supabase) throw new Error("No se pudo conectar a la base de datos");
 
-      if (!supabase) {
-        throw new Error("No se pudo conectar a la base de datos");
-      }
-
-      // Obtener los content_tiers disponibles para validación
-      const { data: contentTiers, error: contentTiersError } = await supabase
+      // Obtener todos los content_tiers de Supabase para crear un mapa de uuid_api a id (PK)
+      const { data: allTiersData, error: allTiersError } = await supabase
         .from("content_tiers")
-        .select("id");
+        .select("id, uuid_api"); // Necesitamos el id (PK) y uuid_api
 
-      if (contentTiersError) {
-        throw new Error(
-          `Error al obtener content_tiers: ${contentTiersError.message}`,
-        );
+      if (allTiersError) {
+        throw new Error(`Error al obtener todos los tiers: ${allTiersError.message}`);
       }
+      const uuidApiToSupabaseIdMap = new Map(allTiersData?.map(tier => [tier.uuid_api, tier.id]) || []);
+      const validSupabaseTierIds = new Set(allTiersData?.map(tier => tier.id) || []);
 
-      // Crear un conjunto de IDs válidos para verificación rápida
-      const validTierIds = new Set(contentTiers?.map((tier) => tier.id) || []);
-
-      // Verificar que todas las skins seleccionadas tengan un content_tier_id válido
+      // Validar selectedSkins: Su content_tier_id (que es uuid_api) debe existir en nuestro mapa
       const invalidSkins = selectedSkins.filter(
-        (skin) => !validTierIds.has(skin.content_tier_id),
+        (skin) => !uuidApiToSupabaseIdMap.has(skin.content_tier_id) // skin.content_tier_id es uuid_api
       );
 
       if (invalidSkins.length > 0) {
         setError(
-          `Hay ${invalidSkins.length} skins con content_tier_id inválido. Por favor, recarga la página y vuelve a intentarlo.`,
+          `Hay ${invalidSkins.length} skins cuyo tier (uuid_api: ${invalidSkins.map(s=>s.content_tier_id).join(', ')}) no se encontró en la tabla content_tiers. Sincroniza tiers.`
         );
         setIsLoading(false);
-
         return;
       }
 
-      // 1. Insertar la caja con la ruta generada
-      const { data: newCaja, error: insertError } = await supabase
+      // 1. Insertar la caja (sin cambios)
+      const { data: newCajaData, error: insertError } = await supabase
         .from("cajas")
-        .insert([
-          {
+        .insert([{
             nombre: nuevaCaja.nombre,
             precio: nuevaCaja.precio,
             imagen_url: nuevaCaja.imagen_url,
             esta_disponible: nuevaCaja.esta_disponible,
             es_diaria: nuevaCaja.es_diaria,
-            ruta: rutaCaja, // Guardar la ruta generada en la base de datos
-          },
-        ])
+            ruta: rutaCaja,
+        }])
         .select()
         .single();
 
       if (insertError) throw insertError;
-      if (!newCaja) throw new Error("No se pudo crear la caja");
-
-      const cajaId = newCaja.id;
+      if (!newCajaData) throw new Error("No se pudo crear la caja");
+      const cajaId = newCajaData.id;
 
       // 2. Insertar las probabilidades
+      // prob.content_tier_id ya es el id (PK de Supabase) gracias a loadInitialData
       const probsToInsert = probabilidades
-        .filter((prob) => prob.probabilidad > 0) // Solo insertar las que tienen probabilidad
+        .filter((prob) => prob.probabilidad > 0)
         .map((prob) => ({
           caja_id: cajaId,
-          content_tier_id: prob.content_tier_id,
+          content_tier_id: prob.content_tier_id, // Este es el ID (PK de Supabase) del tier
           probabilidad: prob.probabilidad,
           cantidad_skins: prob.cantidad_skins,
         }));
 
-      const { error: probsError } = await supabase
-        .from("tier_probabilidades")
-        .insert(probsToInsert);
-
-      if (probsError) throw probsError;
-
-      // 3. Insertar las skins (solo las que tienen content_tier_id válido)
-      const skinsToInsert = selectedSkins
-        .filter((skin) => validTierIds.has(skin.content_tier_id))
-        .map((skin) => ({
-          caja_id: cajaId,
-          skin_id: skin.id,
-          content_tier_id: skin.content_tier_id,
-          skin_nombre: skin.nombre,
-        }));
-
-      if (skinsToInsert.length === 0) {
-        throw new Error(
-          "No hay skins válidas para insertar. Todas las skins seleccionadas tienen content_tier_id inválido.",
-        );
+      if (probsToInsert.length > 0) {
+          const { error: probsError } = await supabase
+            .from("tier_probabilidades")
+            .insert(probsToInsert);
+          if (probsError) throw probsError;
       }
 
-      const { error: skinsError } = await supabase
-        .from("cajas_skins")
-        .insert(skinsToInsert);
+      // 3. Insertar las skins en cajas_skins
+      // Aquí necesitamos convertir el skin.content_tier_id (que es uuid_api) al id (PK de Supabase) del tier
+      const skinsToInsert = selectedSkins
+        .map((skin) => {
+          const supabaseTierId = uuidApiToSupabaseIdMap.get(skin.content_tier_id); // skin.content_tier_id es uuid_api
+          if (!supabaseTierId) {
+            // Esto no debería ocurrir si la validación anterior pasó, pero es una salvaguarda
+            console.error(`Error crítico: No se encontró el ID de Supabase para el tier con uuid_api ${skin.content_tier_id} de la skin ${skin.nombre}`);
+            return null; 
+          }
+          return {
+            caja_id: cajaId,
+            skin_id: skin.id, // Este es el UUID de la skin (de la API de Valorant)
+            content_tier_id: supabaseTierId, // Guardar el ID (PK de Supabase) del tier
+            skin_nombre: skin.nombre,
+          };
+        })
+        .filter(Boolean); // Eliminar nulos si alguna conversión falló
 
-      if (skinsError) throw skinsError;
+      if (skinsToInsert.length === 0 && selectedSkins.length > 0) {
+         // Esto implicaría que todas las skins validadas no pudieron mapear su uuid_api a un id de supabase, muy raro.
+         throw new Error("No hay skins válidas para insertar en cajas_skins después del mapeo de ID de tier.");
+      } 
+      
+      if (skinsToInsert.length > 0) {
+          const { error: skinsError } = await supabase
+            .from("cajas_skins")
+            .insert(skinsToInsert as any); // Usar 'as any' temporalmente si hay problemas de tipo estricto
+          if (skinsError) throw skinsError;
+      }
 
       // Éxito
       setSuccess(`Caja "${nuevaCaja.nombre}" creada correctamente`);

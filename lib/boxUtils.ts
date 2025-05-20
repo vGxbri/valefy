@@ -39,7 +39,7 @@ export type ContentTier = {
   id: string;
   nombre: string;
   color: string;
-  uuid: string;
+  uuid_api: string;
 };
 
 export type Skin = {
@@ -293,7 +293,7 @@ export async function processBoxOpening(
     const skinApiRepresentation = {
         uuid: selectedSkinFromPool.id, 
         displayName: selectedSkinFromPool.nombre,
-        contentTierUuid: selectedSkinFromPool.content_tier?.uuid 
+        contentTierUuid: selectedSkinFromPool.content_tier?.uuid_api
     };
 
     // Registrar la transacción (usa selectedSkinFromPool.id, que es el API UUID)
@@ -325,30 +325,35 @@ export async function processBoxOpening(
 /**
  * Obtiene los datos de tier para una skin desde la base de datos
  * @param supabase Cliente de Supabase
- * @param tierUuid UUID del tier
+ * @param tierApiUuid UUID del tier
  * @returns Objeto con nombre y color del tier
  */
 export async function getTierData(
   supabase: SupabaseClient,
-  tierUuid: string | null,
-): Promise<{ nombre: string; color: string }> {
-  if (!tierUuid) return { nombre: "Select Edition", color: "#5a9fe2" };
+  tierApiUuid: string | null,
+): Promise<{ nombre: string; color: string } | null> {
+  if (!tierApiUuid) return null;
 
   try {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("content_tiers")
       .select("nombre, color")
-      .eq("uuid", tierUuid)
+      .eq("uuid_api", tierApiUuid)
       .maybeSingle();
 
+    if (error) {
+      console.warn("Error al obtener datos del tier por uuid_api:", error);
+      return null;
+    }
+    
     if (data) {
       return { nombre: data.nombre, color: data.color };
     }
-  } catch (error) {
-    // Silenciar error
-    console.warn("Error al obtener datos del tier:", error);
-  }
+    console.warn(`No se encontraron datos del tier para uuid_api: ${tierApiUuid}`);
+    return null;
 
-  // Valores por defecto si no se encuentra en la base de datos
-  return { nombre: "Select Edition", color: "#5a9fe2" };
+  } catch (error) {
+    console.error("Excepción al obtener datos del tier:", error);
+    return null;
+  }
 }

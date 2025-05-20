@@ -31,7 +31,7 @@ export const formatSkinForApp = (
       id: skin.contentTierUuid || "",
       nombre: tierData ? tierData.nombre : defaultTierName,
       color: tierData ? tierData.color : defaultTierColor,
-      uuid: skin.contentTierUuid || "",
+      uuid_api: skin.contentTierUuid || "",
     },
   };
 };
