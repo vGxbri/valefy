@@ -100,6 +100,8 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   // Cargar datos iniciales al montar el componente
+  const [pendingSkinLoads, setPendingSkinLoads] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     loadInitialData();
   }, []);
@@ -376,6 +378,11 @@ export default function AdminPage() {
       setError("Error al cargar skins del bundle");
     } finally {
       setLoadingBundleUuid(null);
+      setPendingSkinLoads(prev => {
+        const next = new Set(prev);
+        next.delete(bundle.uuid);
+        return next;
+      });
     }
   };
 
@@ -383,6 +390,28 @@ export default function AdminPage() {
   useEffect(() => {
     loadBundles();
   }, []);
+
+  // useEffect para cargar skins de bundles recién expandidos
+  useEffect(() => {
+    expandedBundles.forEach(bundleUuid => {
+      const bundle = bundles.find(b => b.uuid === bundleUuid);
+      if (bundle) {
+        const hasFormattedSkins = skinsByBundle[bundle.uuid] && 
+                                skinsByBundle[bundle.uuid].length > 0 && 
+                                skinsByBundle[bundle.uuid][0].content_tier_id;
+        const isAlreadyPending = pendingSkinLoads.has(bundle.uuid);
+        const isLoadingThisSpecificBundle = loadingBundleUuid === bundle.uuid; // Para evitar re-llamar si ya se está procesando por un click individual
+
+        if (!hasFormattedSkins && !isAlreadyPending && !isLoadingThisSpecificBundle) {
+          setPendingSkinLoads(prev => new Set(prev).add(bundle.uuid));
+          loadSkinsForBundle(bundle);
+        }
+      }
+    });
+    // Queremos re-evaluar esto si cambia la lista de bundles expandidos o la lista general de bundles (menos frecuente)
+    // No incluimos skinsByBundle, pendingSkinLoads, o loadingBundleUuid directamente para evitar bucles si loadSkinsForBundle los modifica y re-dispara este efecto inmediatamente.
+    // El control se hace verificando !hasFormattedSkins, !isAlreadyPending y !isLoadingThisSpecificBundle.
+  }, [expandedBundles, bundles, loadSkinsForBundle]); // `loadSkinsForBundle` debe estar memoizada con useCallback si no lo está ya.
 
   // Filtrado solo por nombre
   const filteredBundles = bundles.filter((bundle) =>
@@ -847,7 +876,7 @@ export default function AdminPage() {
             <div className="mb-4 flex gap-4 items-center">
               <Input
                 className="max-w-md"
-                placeholder="Buscar skins..."
+                placeholder="Buscar skins por nombre de bundle..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -856,8 +885,31 @@ export default function AdminPage() {
                 variant="secondary"
                 onClick={loadBundles}
               >
-                {isLoadingBundles ? "Cargando..." : "Recargar Bundles"}
+                {isLoadingBundles ? "Cargando Bundles..." : "Recargar Bundles"}
               </Button>
+              {bundles.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const allFilteredBundleIds = filteredBundles.map(b => b.uuid);
+                    const areAllCurrentlyVisibleExpanded = allFilteredBundleIds.length > 0 && allFilteredBundleIds.every(id => expandedBundles.includes(id));
+
+                    if (areAllCurrentlyVisibleExpanded) {
+                      setExpandedBundles(prev => prev.filter(id => !allFilteredBundleIds.includes(id)));
+                    } else {
+                      const bundlesToExpandIds = filteredBundles
+                        .filter(b => !expandedBundles.includes(b.uuid))
+                        .map(b => b.uuid);
+                      setExpandedBundles(prev => Array.from(new Set([...prev, ...bundlesToExpandIds])));
+                      // La carga de skins se manejará en un useEffect
+                    }
+                  }}
+                >
+                  { filteredBundles.length > 0 && filteredBundles.every(b => expandedBundles.includes(b.uuid)) 
+                    ? "Contraer Todos Visibles" 
+                    : "Expandir Todos Visibles" }
+                </Button>
+              )}
               <div className="ml-auto text-white/70">
                 {selectedSkins.length} skins seleccionadas
               </div>
