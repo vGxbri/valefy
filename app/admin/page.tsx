@@ -40,6 +40,7 @@ interface Caja {
   esta_disponible: boolean;
   es_diaria: boolean;
   ruta?: string; // Ruta normalizada para acceder a la caja
+  categoria?: string;
 }
 
 // Interfaz para las probabilidades de tiers

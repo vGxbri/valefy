@@ -16,6 +16,7 @@ interface Caja {
   esta_disponible: boolean;
   es_diaria?: boolean;
   fecha_actualizacion?: string;
+  categoria?: string;
 }
 
 // Cliente de Supabase singleton

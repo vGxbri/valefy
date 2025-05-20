@@ -4,8 +4,17 @@ import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { RiSearch2Line } from "react-icons/ri";
-import { X, Filter, Trash2, ChevronDown, RefreshCw, Search, XCircle } from 'lucide-react';
+import { X, Filter, Trash2, ChevronDown, RefreshCw, XCircle, AlertTriangle } from 'lucide-react';
 import { Pagination } from "@heroui/pagination";
+import { 
+  Modal, 
+  ModalContent, 
+  ModalHeader, 
+  ModalBody, 
+  ModalFooter, 
+  useDisclosure,
+  Button as HerouiButton
+} from "@heroui/react";
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, DropdownSection } from "@nextui-org/dropdown";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added
@@ -16,7 +25,6 @@ import { motion } from "framer-motion";
 const InventoryLoading = ({ className = "" }: { className?: string }) => (
   <div className={`w-full flex flex-col items-center justify-center py-12 ${className}`}>
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4" />
-    <p className="text-muted-foreground">Cargando tu inventario...</p>
   </div>
 );
 
@@ -69,18 +77,18 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [currentPage, setCurrentPage] = useState<number>(1);
   const [filterTier, setFilterTier] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState<string>("newest");
-  const skinsPerPage = 12;
 
   const [showWelcome, setShowWelcome] = useState<boolean>(true); // Assuming welcome message is part of display
-  const [isSelectionMode, setIsSelectionMode] = useState<boolean>(false);
+  const [isSelectionMode, setIsSelectionMode] = useState<boolean>(true);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isInitialLoadAnimationPending, setIsInitialLoadAnimationPending] = useState(true);
+  const { isOpen: isDeleteModalOpen, onOpen: onDeleteModalOpen, onOpenChange: onDeleteModalOpenChange, onClose: onDeleteModalClose } = useDisclosure(); // Para el modal de eliminación
 
   // Resetear la página cuando cambia el término de búsqueda o filtros
   useEffect(() => {
-    setCurrentPage(1);
+    // setCurrentPage(1); // Eliminado - ya no hay paginación
   }, [searchTerm, filterTier, sortOption]);
 
   const extractBundleName = (skinName: string): string => {
@@ -168,7 +176,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
           contentTier: {
             id: apiTier?.uuid || 'default',
             nombre: apiTier?.displayName || 'Standard',
-            color: apiTier ? `#${apiTier.highlightColor}` : '#FFFFFF',
+            color: (apiTier && apiTier.highlightColor) ? `#${apiTier.highlightColor.substring(0, 6)}` : '#FFFFFF',
           },
           dateAcquired: new Date(item.fecha_obtencion),
           cantidad: item.cantidad || 1, // Added cantidad, default to 1 if null/undefined
@@ -192,7 +200,11 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
         return skin.skinIcon && !skin.skinIcon.includes('StandardAnimation'); 
       });
       
-      if (isMounted) setUserSkins(mappedSkins);
+      if (isMounted) {
+        setUserSkins(mappedSkins);
+        setLoading(false);
+        setIsInitialLoadAnimationPending(false);
+      }
 
     } catch (err: unknown) {
       let message = 'Intenta de nuevo más tarde';
@@ -203,13 +215,24 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
     } finally {
       if (isMounted) setLoading(false);
     }
-  }, [userId, supabase, allApiSkinsState, allApiContentTiersState]); // Added dependencies
+  }, [userId, supabase, allApiSkinsState, allApiContentTiersState]); // Quitado isInitialLoadAnimationPending de aquí
 
   useEffect(() => {
     if (userId && supabase) {
       fetchUserInventory();
     }
-  }, [userId, supabase, fetchUserInventory]); // fetchUserInventory is now a dependency
+  }, [userId, supabase, fetchUserInventory]);
+
+  useEffect(() => {
+    // Manejar la lógica de isInitialLoadAnimationPending aquí, después de que los datos se cargan y el estado se actualiza.
+    if (!loading && userSkins.length > 0 && isInitialLoadAnimationPending) {
+      const animationTime = (Math.min(userSkins.length, 18) * 50) + 500; // Tiempo estimado para la animación
+      const timer = setTimeout(() => {
+        setIsInitialLoadAnimationPending(false);
+      }, animationTime);
+      return () => clearTimeout(timer); // Limpiar el timer si el componente se desmonta o las dependencias cambian
+    }
+  }, [loading, userSkins, isInitialLoadAnimationPending]);
 
   const toggleSelectionMode = () => {
     setIsSelectionMode(!isSelectionMode);
@@ -228,28 +251,31 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
     });
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => { // No necesita ser async ya que solo abre el modal
     if (selectedItems.size === 0) return;
+    onDeleteModalOpen();
+  };
+
+  const confirmDeleteSelected = async () => {
+    if (selectedItems.size === 0) {
+      onDeleteModalClose();
+      return;
+    }
     console.log("Deleting items with uniqueCardIds:", Array.from(selectedItems));
 
-    const itemsToUpdate = new Map<string, number>(); // original_inventory_id -> count to decrement
+    const itemsToUpdate = new Map<string, number>();
 
     selectedItems.forEach(uniqueCardId => {
       const originalId = uniqueCardId.substring(0, uniqueCardId.lastIndexOf('-'));
       itemsToUpdate.set(originalId, (itemsToUpdate.get(originalId) || 0) + 1);
     });
 
-    const dbPromises: Promise<any>[] = []; // Initialize with type
+    const dbPromises: Promise<any>[] = [];
     let anyError = false;
 
-    // itemsToUpdate.forEach(async (countToDelete, originalId) => { // This would make the loop body async, promises might not be pushed correctly before Promise.all
-    // Instead, build an array of arguments for async operations first, then loop through them
     const updateOperations = Array.from(itemsToUpdate.entries());
 
     for (const [originalId, countToDelete] of updateOperations) {
-      // The following is an async operation, so it needs to be handled carefully in a loop if we intend to run them in parallel with Promise.all later
-      // However, the current logic fetches one by one, then pushes a promise to dbPromises.
-      // This part is kept sequential to fetch currentQuantity before deciding to update or delete.
       const { data: currentSkinData, error: fetchError } = await supabase
         .from('inventario_usuario')
         .select('cantidad')
@@ -260,7 +286,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
         console.error(`Error fetching skin ${originalId} for deletion:`, fetchError);
         setError(`Error al obtener datos de la skin ${originalId} para eliminar.`);
         anyError = true;
-        continue; // Skip to next item in itemsToUpdate if fetch fails
+        continue;
       }
 
       const currentQuantity = currentSkinData.cantidad;
@@ -272,31 +298,28 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
         );
       } else {
         dbPromises.push(
-          supabase.from('inventario_usuario').update({ cantidad: newQuantity, fecha_modificacion: new Date().toISOString() }).eq('id', originalId)
+          supabase.from('inventario_usuario').update({ cantidad: newQuantity }).eq('id', originalId)
         );
       }
     }
-    // }); // End of forEach attempt, replaced by for...of Array.from()
 
     try {
-      const results = await Promise.all(dbPromises.map(p => p.then((res: { error: any; data?: any }) => { // Explicit type for res
+      const results = await Promise.all(dbPromises.map(p => p.then((res: { error: any; data?: any }) => {
         if (res.error) throw res.error;
         return res;
       })));
       console.log("DB operations results:", results);
-      // Refresh data only if no errors during DB ops and no prior errors
       if (!anyError) {
-        await fetchUserInventory(); // Re-fetch the updated inventory
+        await fetchUserInventory();
         setSelectedItems(new Set());
-        setIsSelectionMode(false);
-        setError(null); // Clear any previous general error
+        // setIsSelectionMode(false); // Opcional: decidir si salir del modo selección
+        setError(null);
       }
     } catch (deleteError: any) {
       console.error("Error during bulk delete/update operation:", deleteError);
       setError("Error al eliminar/actualizar skins: " + (deleteError.message || 'Error desconocido'));
-      // Optionally, re-fetch even on error to reflect partial success, though this can be complex
-      // await fetchUserInventory(); 
     }
+    onDeleteModalClose();
   };
 
   const calculateTierStats = () => {
@@ -352,14 +375,14 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
     }))
   );
 
-  const paginatedSkins = expandedSkins.slice(
-    (currentPage - 1) * skinsPerPage,
-    currentPage * skinsPerPage
-  );
-  const totalPages = Math.ceil(expandedSkins.length / skinsPerPage);
-
   const tierStats = calculateTierStats();
 
+  const sortOptionsConfig = [
+    { value: "newest", label: "Más Recientes" },
+    { value: "oldest", label: "Más Antiguos" },
+    { value: "name_asc", label: "Nombre (A-Z)" },
+    { value: "name_desc", label: "Nombre (Z-A)" },
+  ];
 
   if (loading && userSkins.length === 0) {
     return <InventoryLoading className="min-h-screen" />;
@@ -369,18 +392,18 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
     <div className="px-4 sm:px-6 lg:px-8 pt-12 pb-12 min-h-screen bg-background text-white">
       
       {/* Header and Filters */}
-      <div className="mb-8 sticky top-0 z-10 bg-background/80 backdrop-blur-md py-4 rounded-b-xl shadow-lg">
+      <div className="mb-8 sticky top-0 z-30 bg-background/80 backdrop-blur-md py-4 rounded-b-xl shadow-lg">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <h1 className="text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
             / INVENTARIO
           </h1>
             <div className="flex items-center gap-2">
-              <Button onClick={fetchUserInventory} variant="outline" size="sm" className="border-slate-700 hover:bg-slate-700">
+              <Button onClick={fetchUserInventory} variant="outline" size="sm" className="border-slate-700 hover:bg-slate-700 rounded-xl">
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
-              <Button onClick={toggleSelectionMode} variant={isSelectionMode ? "default" : "outline"} size="sm" className={`${isSelectionMode ? 'bg-primary hover:bg-primary/90' : 'border-slate-700 hover:bg-slate-700'}`}>
-                {isSelectionMode ? "Cancelar Selección" : "Seleccionar Items"}
+              <Button onClick={toggleSelectionMode} variant={isSelectionMode ? "default" : "outline"} size="sm" className={`${isSelectionMode ? 'rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r' : 'border-slate-700 hover:bg-slate-700 rounded-xl hover:bg-white/5 hover:text-white'}`}>
+                {isSelectionMode ? "Cancelar Selección" : "Seleccionar Skins"}
               </Button>
             </div>
           </div>
@@ -410,107 +433,221 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
             <div className="flex gap-4 w-full md:w-auto">
               {allApiContentTiersState && (
                 <Select value={filterTier || ''} onValueChange={(value: string) => setFilterTier(value === 'all' ? null : value)}>
-                  <SelectTrigger className="w-full md:w-[180px] bg-slate-800 border-slate-700 text-white rounded-lg focus:ring-1 focus:ring-primary">
+                  <SelectTrigger className="w-full md:w-[180px] bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150">
                     <Filter className="h-4 w-4 mr-2 inline-block opacity-70" />
                     <SelectValue placeholder="Filtrar Rareza" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                    <SelectItem value="all" className="hover:bg-slate-700">Todas las Rarezas</SelectItem>
+                  <SelectContent className="bg-slate-800 text-white rounded-md shadow-lg border-slate-700">
+                    <SelectItem value="all" className="hover:bg-slate-700 rounded-md">Todas las Rarezas</SelectItem>
                     {allApiContentTiersState.map(tier => (
-                      <SelectItem key={tier.uuid} value={tier.uuid} className="hover:bg-slate-700" style={{ color: `#${tier.highlightColor}` || 'white' }}>
+                      <SelectItem 
+                        key={tier.uuid} 
+                        value={tier.uuid} 
+                        className="hover:bg-slate-700 rounded-md active:bg-slate-700"
+                        style={{ color: (tier.highlightColor && tier.highlightColor.length >= 6) ? `#${tier.highlightColor.substring(0, 6)}` : 'white' }}
+                      >
                         {tier.displayName}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               )}
-              <Dropdown>
-                <DropdownTrigger>
-                  <Button variant="outline" className="w-full md:w-auto border-slate-700 hover:bg-slate-700">
-                    Ordenar por: {sortOption}
-                    <ChevronDown className="h-4 w-4 ml-2 opacity-70" />
-                  </Button>
-                </DropdownTrigger>
-                <DropdownMenu aria-label="Sort options" onAction={(key) => setSortOption(key as string)} className="bg-slate-800 border-slate-700 text-white">
-                  <DropdownItem key="newest">Más Recientes</DropdownItem>
-                  <DropdownItem key="oldest">Más Antiguos</DropdownItem>
-                  <DropdownItem key="name_asc">Nombre (A-Z)</DropdownItem>
-                  <DropdownItem key="name_desc">Nombre (Z-A)</DropdownItem>
-                </DropdownMenu>
-              </Dropdown>
+              <Select value={sortOption} onValueChange={(value: string) => setSortOption(value)}>
+                <SelectTrigger className="w-full md:w-auto bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150">
+                  <SelectValue placeholder="Ordenar por:">
+                    {sortOptionsConfig.find(opt => opt.value === sortOption)?.label || "Ordenar por..."}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 text-white rounded-md shadow-lg border-slate-700">
+                  {sortOptionsConfig.map(option => (
+                    <SelectItem 
+                      key={option.value} 
+                      value={option.value} 
+                      className="hover:bg-slate-700 rounded-md"
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
       </div>
 
       {isSelectionMode && selectedItems.size > 0 && (
-        <div className="mb-6 p-4 bg-slate-800 rounded-lg shadow-md flex justify-between items-center sticky top-32 z-10">
-          <p className="text-white">{selectedItems.size} items seleccionados</p>
-          <Button onClick={handleDeleteSelected} variant="destructive" size="sm">
-            <Trash2 className="h-4 w-4 mr-2" /> Eliminar Seleccionados
-          </Button>
+        <div className="sticky top-36 z-20 mb-6">
+          <div className="container mx-auto px-4">
+            <div className="bg-slate-800/80 backdrop-blur-md p-4 rounded-lg shadow-md flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
+              <p className="text-white text-sm sm:text-base">{selectedItems.size} skin(s) seleccionada(s)</p>
+              <div className="flex gap-2 sm:gap-3">
+                <Button 
+                  onClick={() => {
+                    const allVisibleCardIds = new Set(expandedSkins.map(s => s.uniqueCardId!));
+                    const currentSelectedArray = Array.from(selectedItems);
+                    let allCurrentlyVisibleAreSelected = expandedSkins.length > 0 && expandedSkins.every(s => selectedItems.has(s.uniqueCardId!));
+
+                    if (allCurrentlyVisibleAreSelected) {
+                      // Deseleccionar todas las visibles
+                      setSelectedItems(prevSelected => {
+                        const newSelected = new Set(prevSelected);
+                        allVisibleCardIds.forEach(id => newSelected.delete(id));
+                        return newSelected;
+                      });
+                    } else {
+                      // Seleccionar todas las visibles
+                      setSelectedItems(prevSelected => new Set([...Array.from(prevSelected), ...Array.from(allVisibleCardIds)]));
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl border-slate-600 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 h-auto"
+                >
+                  { expandedSkins.length > 0 && expandedSkins.every(s => selectedItems.has(s.uniqueCardId!)) ? "Deseleccionar Todas" : "Seleccionar Todas" }
+                </Button>
+                <Button 
+                  onClick={handleDeleteSelected} 
+                  variant="destructive" 
+                  size="sm" 
+                  className='rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r active:scale-95 active:shadow-inner text-xs px-3 py-1.5 h-auto'
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Eliminar {selectedItems.size > 0 ? selectedItems.size : ''} skin(s)
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       {loading && userSkins.length === 0 && <InventoryLoading className="mt-10" />}
       {!loading && error && <p className="text-red-400 text-center mt-10"><XCircle className="inline mr-2" />{error}</p>}
-      {!loading && !error && paginatedSkins.length === 0 && userSkins.length > 0 && (
-         <p className="text-center text-slate-400 mt-10">No se encontraron skins con los filtros actuales.</p>
-      )}
       {!loading && !error && userSkins.length === 0 && <EmptyInventory className="mt-10"/>}
 
-      {paginatedSkins.length > 0 && (
-        <motion.div 
-          layout 
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6 pb-10"
-        >
-          {paginatedSkins.map((skin, index) => (
-            <motion.div
-              key={skin.uniqueCardId}
-              layoutId={skin.uniqueCardId}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.2, delay: index * 0.05 }}
-              onClick={() => { if (isSelectionMode && skin.uniqueCardId) { toggleItemSelection(skin.uniqueCardId); } }}
-              className={`group relative flex flex-col aspect-[3/4] overflow-hidden rounded-xl border bg-gradient-to-b from-gray-900 to-black transition-all duration-300
-                ${selectedItems.has(skin.uniqueCardId!) 
-                  ? 'border-primary scale-105 shadow-lg shadow-primary/40' 
-                  : 'border-gray-800/70 hover:shadow-[0px_2px_46px_-4px_rgba(255,_255,_255,_0.15)]'}`}
-              style={{ '--tier-color': skin.contentTier.color || '#FFFFFF' } as React.CSSProperties}
-            >
-              <Image
-                src={skin.skinIcon || '/images/placeholder_icon.webp'}
-                alt={skin.skinName}
-                fill
-                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                className="object-contain p-4 group-hover:scale-105 transition-transform duration-300 z-10"
-                priority={index < skinsPerPage / 2} // Prioritize loading images visible on initial load
-              />
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-20">
-                <h3 className="font-semibold text-primary" title={skin.skinName}>{skin.skinName}</h3>
-                {skin.bundleName && <p className="text-sm text-slate-300 truncate" title={skin.bundleName}>{skin.bundleName}</p>}
-              </div>
-              {isSelectionMode && (
-                <div className={`absolute top-2 left-2 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${selectedItems.has(skin.uniqueCardId!) ? 'bg-primary border-white' : 'bg-slate-700/80 border-slate-600 hover:bg-slate-600/80'}`}>
-                  {selectedItems.has(skin.uniqueCardId!) && <X className="h-3 w-3 text-white stroke-2" />}
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </motion.div>
-      )}
+      {expandedSkins.length > 0 && (
+        <div className="container mx-auto px-4">
+          <motion.div 
+            key={`${searchTerm}-${filterTier || 'all'}`}
+            layout 
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 pb-10"
+          >
+            {expandedSkins.map((skin, index) => {
+              let cardStyle: React.CSSProperties = {}; // Estilo por defecto
 
-      {totalPages > 1 && (
-        <div className="mt-8 flex justify-center">
-          <Pagination
-            showControls
-            initialPage={currentPage}
-            total={totalPages}
-            onChange={(page) => setCurrentPage(page)}
-          />
+              if (!selectedItems.has(skin.uniqueCardId!) && skin.contentTier.color && skin.contentTier.color !== '#FFFFFF') {
+                const tierColorHex = skin.contentTier.color; // Formato #RRGGBB
+                const r = parseInt(tierColorHex.slice(1, 3), 16);
+                const g = parseInt(tierColorHex.slice(3, 5), 16);
+                const b = parseInt(tierColorHex.slice(5, 7), 16);
+                
+                cardStyle = {
+                  backgroundImage: `linear-gradient(to top, rgba(${r},${g},${b},0.10) 0%, rgba(${r},${g},${b},0.15) 35%, rgba(17, 24, 39, 0.85) 80%, #0A0E16 100%)`,
+                };
+              }
+
+              return (
+                <motion.div
+                  key={skin.uniqueCardId}
+                  layoutId={skin.uniqueCardId}
+                  layout
+                  initial={isInitialLoadAnimationPending ? { opacity: 0, y: 20 } : { opacity: 0 }}
+                  animate={isInitialLoadAnimationPending ? { opacity: 1, y: 0 } : { opacity: 1 }}
+                  exit={isInitialLoadAnimationPending ? { opacity: 0, y: -20 } : { opacity: 0 }}
+                  transition={{ 
+                    duration: isInitialLoadAnimationPending ? 0.2 : 0.15, 
+                    delay: isInitialLoadAnimationPending && index < 18 ? index * 0.05 : 0 
+                  }}
+                  onClick={() => { if (isSelectionMode && skin.uniqueCardId) { toggleItemSelection(skin.uniqueCardId); } }}
+                  className={`group relative flex flex-col aspect-[3/4] overflow-hidden rounded-xl border bg-gradient-to-b from-gray-900 to-black transition-all duration-300
+                    ${selectedItems.has(skin.uniqueCardId!) 
+                      ? 'border-primary scale-105 shadow-lg shadow-primary/40' 
+                      : 'border-gray-800/70 hover:shadow-[0px_2px_46px_-4px_rgba(255,_255,_255,_0.15)]'}
+                    ${isSelectionMode ? 'cursor-pointer' : 'cursor-default'}`}
+                  style={cardStyle}
+                >
+                  <Image
+                    src={skin.skinIcon || '/images/placeholder_icon.webp'}
+                    alt={skin.skinName}
+                    fill
+                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                    className="object-contain p-4 group-hover:scale-105 transition-transform duration-300 z-10"
+                    priority={index < 12} // Prioritize loading first 12 images
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-10">
+                    <h3 className="font-semibold text-primary" title={skin.skinName}>{skin.skinName}</h3>
+                    {skin.contentTier.nombre && 
+                      <p 
+                        className="text-sm text-slate-300 truncate" 
+                        title={skin.contentTier.nombre} 
+                      >
+                        {skin.contentTier.nombre}
+                      </p>
+                    }
+                  </div>
+                  {isSelectionMode && (
+                    <div className={`absolute top-2 left-2 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${selectedItems.has(skin.uniqueCardId!) ? 'bg-primary border-white' : 'bg-slate-700/80 border-slate-600 hover:bg-slate-600/80'}`}>
+                      {selectedItems.has(skin.uniqueCardId!)}
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </motion.div>
         </div>
       )}
+
+      {/* Modal de Confirmación de Eliminación */}
+      <Modal
+        hideCloseButton
+        backdrop="blur"
+        isOpen={isDeleteModalOpen}
+        onOpenChange={onDeleteModalOpenChange} // Este se encarga de cerrar con ESC o click fuera
+        classNames={{
+          body: "py-6 px-8 flex flex-col items-center gap-5",
+          backdrop: "bg-black/70 backdrop-blur-md",
+          base: "border border-white/10 bg-gradient-to-b from-backgroundAlt to-background text-white rounded-2xl shadow-[0_10px_50px_-12px_rgba(0,0,0,0.4)] overflow-hidden",
+          header:
+            "w-full border-b border-white/10 pb-4 flex flex-col items-center gap-3",
+          footer:
+            "w-full border-t border-white/10 pt-4 flex justify-end gap-3",
+        }}
+        radius="lg"
+      >
+        <ModalContent>
+          {/* El (onClose) de ModalContent es para el botón X interno si se habilita, pero usamos onDeleteModalClose del hook useDisclosure para el botón Cancelar */}
+          <>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-red-500/50 to-transparent" />
+            <ModalHeader className="flex flex-col items-center gap-2 relative z-10">
+              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-red-500/20 to-red-600/30 border border-red-500/30 mt-2 shadow-lg shadow-red-900/10 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20 opacity-50" />
+                <AlertTriangle className="h-8 w-8 text-red-400 drop-shadow-md relative z-10" />
+              </div>
+              <span className="text-2xl font-bold text-white drop-shadow-sm">
+                ¿Eliminar Skins?
+              </span>
+            </ModalHeader>
+            <ModalBody className="relative z-10">
+              <p className="text-white/80 text-center text-base">
+                ¿Estás seguro de que deseas eliminar {selectedItems.size} skin(s) seleccionada(s)?
+              </p>
+            </ModalBody>
+            <ModalFooter className="relative z-10">
+              <HerouiButton
+                className="!text-white/70 hover:!bg-white/10 active:!bg-white/20 transition-all duration-200 rounded-xl border border-transparent hover:border-white/10 active:scale-95"
+                variant="light"
+                onPress={onDeleteModalClose}
+              >
+                Cancelar
+              </HerouiButton>
+              <HerouiButton
+                className="bg-red-600/20 hover:bg-red-600/30 text-white border border-red-500/20 hover:border-red-500/30 font-semibold px-6 rounded-xl transition-colors duration-300 shadow-lg shadow-red-900/20 active:scale-95 active:shadow-inner"
+                onPress={confirmDeleteSelected}
+              >
+                Eliminar
+              </HerouiButton>
+            </ModalFooter>
+          </>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
