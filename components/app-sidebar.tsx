@@ -3,7 +3,7 @@
 import {
   LayoutGrid,
   Boxes,
-  ArrowLeftRight,
+  CircleFadingArrowUp,
   LogOut,
   Bell,
   Wallet,
@@ -51,9 +51,9 @@ const items = [
     icon: Boxes,
   },
   {
-    title: "Trade",
-    url: "/main/trade",
-    icon: ArrowLeftRight,
+    title: "Mejorar",
+    url: "/main/mejoras",
+    icon: CircleFadingArrowUp,
   },
   {
     title: "Catálogo",
