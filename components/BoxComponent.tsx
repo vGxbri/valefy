@@ -125,6 +125,9 @@ export default function BoxComponent({
   // Referencias
   const spinnerRef = useRef<HTMLDivElement>(null);
 
+  // Constante para el ancho de los ítems del carrusel
+  const ITEM_WIDTH_CAROUSEL = 260; // Aumentado de 180 a 280
+
   // Efecto para cargar los skins de la caja si no se proporcionaron inicialmente
   useEffect(() => {
     if (caja?.id && initialCajaSkins.length === 0) {
@@ -490,7 +493,7 @@ export default function BoxComponent({
       const viewportElement = spinnerRef.current.parentElement;
       const viewportWidth = viewportElement.offsetWidth;
       const winningItemIndexInSpinItems = Math.floor(spinItems.length / 2);
-      const itemWidth = 150;
+      const itemWidth = ITEM_WIDTH_CAROUSEL; // Usar la constante
       const offsetToCenterItemInViewport = (viewportWidth - itemWidth) / 2;
       const finalPosition = winningItemIndexInSpinItems * itemWidth - offsetToCenterItemInViewport;
 
@@ -579,24 +582,41 @@ export default function BoxComponent({
       {resultSkin ? (
         // Resultado de apertura de caja mejorado
         <div className="p-8 md:p-10 rounded-xl max-w-md w-full text-center bg-gradient-to-br from-slate-800/80 via-slate-900/90 to-black/80 shadow-2xl border border-slate-700/50 backdrop-blur-md flex flex-col items-center">
-          <h3 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-amber-300 mb-4">
-            ¡Recompensa Obtenida!
-          </h3>
           {resultSkin.imagen_url && (
-            <div className="my-6 p-3 bg-gradient-to-br from-slate-800/80 to-black/80 rounded-lg shadow-lg w-56 h-56 flex items-center justify-center relative">
-              <div className="absolute inset-0 rounded-lg" style={{
-                background: `radial-gradient(circle, ${resultSkin.content_tier?.color}20 0%, transparent 70%)`,
-                animation: 'glow 3s infinite ease-in-out'
-              }}></div>
-              <div className="relative animate-float" style={{animation: 'float 3s infinite ease-in-out'}}>
-                <Image
-                  src={resultSkin.imagen_url}
-                  alt={resultSkin.nombre}
-                  width={200}
-                  height={200}
-                  className="object-contain drop-shadow-[0_5px_15px_rgba(0,0,0,0.7)] hover:scale-105 transition-transform duration-300"
-                />
+            <div className="mt-12 mb-20 flex items-center justify-center relative">
+              <div 
+                className="relative w-[240px] h-[240px] rounded-xl overflow-hidden flex items-center justify-center group"
+                // style={itemCardStyle}
+              >
+                {resultSkin.content_tier?.id && resultSkin.content_tier.id !== 'standard' && (
+                  <Image
+                    src={`/skins-bg/${resultSkin.content_tier.id}.png`}
+                    alt="" // Decorative
+                    layout="fill"
+                    objectFit="contain"
+                    className="absolute inset-0 z-10 p-2 opacity-40 transform scale-150 rotate-12"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                )}
+                {resultSkin.imagen_url && (
+                  <Image
+                    alt={resultSkin.nombre}
+                    className="object-contain drop-shadow-lg p-2 relative z-10" 
+                    style={{animation: 'float 3s infinite ease-in-out', rotate: '12deg'}}
+                    height={250}
+                    src={resultSkin.imagen_url}
+                    width={250}
+                  />
+                )}
+                
               </div>
+              <Image
+                  alt={resultSkin.nombre}
+                  src={`/skins-bg-result/${resultSkin.content_tier?.id}.png`}
+                  className="object-contain drop-shadow-lg relative mt-10 ml-2 scale-[2] opacity-80"
+                  layout="fill"
+                  objectFit="contain"
+                />
             </div>
           )}
           <p className="text-2xl font-semibold text-white mb-3 capitalize tracking-wide">
@@ -605,7 +625,7 @@ export default function BoxComponent({
           {resultSkin.content_tier && (
             <div className="mb-6">
               <div
-                className="px-5 py-2 rounded-full text-sm font-medium shadow-md border border-opacity-50 transform transition-all hover:scale-105"
+                className="px-5 py-2 rounded-full text-sm font-medium shadow-md border border-opacity-50"
                 style={{
                   backgroundColor: `${resultSkin.content_tier.color}20`, // Lighter background with opacity
                   color: resultSkin.content_tier.color,
@@ -678,63 +698,95 @@ export default function BoxComponent({
                     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5/6 h-2 bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
                     
                     <div
-                      className="mx-auto overflow-hidden relative rounded-lg bg-black/50 backdrop-blur-lg border border-white/20 shadow-2xl"
+                      className="mx-auto overflow-hidden relative rounded-lg bg-black/50 backdrop-blur-lg shadow-2xl"
                       style={{
-                        width: "clamp(300px, 85vw, 800px)",
-                        height: "200px",
+                        width: "clamp(400px, 90vw, 900px)",
+                        height: "320px",
                       }}
                     >
-                      {/* Efecto de resplandor en los bordes */}
+                      {/* Efecto de resplandor en los bordes (solo superior e inferior) */}
                       <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/80 to-transparent"></div>
                         <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/80 to-transparent"></div>
-                        <div className="absolute left-0 top-0 w-[2px] h-full bg-gradient-to-b from-transparent via-primary/40 to-transparent"></div>
-                        <div className="absolute right-0 top-0 w-[2px] h-full bg-gradient-to-b from-transparent via-primary/40 to-transparent"></div>
                       </div>
                       
                       <div
                         ref={spinnerRef}
                         className="flex items-center"
                         style={{
-                          width: `${spinItems.length * 150}px`,
+                          width: `${spinItems.length * ITEM_WIDTH_CAROUSEL}px`, // Usar la constante
                           height: "100%",
                         }}
                       >
-                        {spinItems.map((skin, index) => (
-                          <div
-                            key={`${skin.id}-${index}`}
-                            className="p-2 flex-shrink-0 w-[150px] h-full flex flex-col justify-center items-center text-center transition-all"
-                          >
-                            <div className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-lg overflow-hidden bg-gradient-to-b from-slate-800/80 to-black border border-slate-700/50 shadow-lg flex items-center justify-center">
-                              {skin.imagen_url && (
-                                <Image
-                                  alt={skin.nombre}
-                                  className="object-contain p-1 drop-shadow-md"
-                                  height={130}
-                                  src={skin.imagen_url}
-                                  width={130}
-                                />
-                              )}
-                              
-                              {/* Efecto de resplandor sutil basado en el color del tier */}
+                        {spinItems.map((skin, index) => {
+                          /** 
+                          let itemCardStyle: React.CSSProperties = {
+                            borderWidth: '1px',
+                            borderColor: 'rgba(55, 65, 81, 0.5)' // slate-700/50
+                          };
+
+                          if (skin.content_tier?.color && skin.content_tier.color !== '#FFFFFF' && skin.content_tier.color.startsWith('#')) {
+                            const tierColorHex = skin.content_tier.color;
+                            if (/^#([0-9A-F]{3}){1,2}([0-9A-F]{2})?$/i.test(tierColorHex)) {
+                              let r, g, b;
+                              if (tierColorHex.length === 4 || tierColorHex.length === 5) {
+                                r = parseInt(tierColorHex[1] + tierColorHex[1], 16);
+                                g = parseInt(tierColorHex[2] + tierColorHex[2], 16);
+                                b = parseInt(tierColorHex[3] + tierColorHex[3], 16);
+                              } else {
+                                r = parseInt(tierColorHex.slice(1, 3), 16);
+                                g = parseInt(tierColorHex.slice(3, 5), 16);
+                                b = parseInt(tierColorHex.slice(5, 7), 16);
+                              }
+                              itemCardStyle.backgroundImage = `linear-gradient(to top, rgba(${r},${g},${b},0.12) 0%, rgba(${r},${g},${b},0.18) 35%, rgba(10, 14, 22, 0.88) 70%, #0A0E16 100%)`;
+                            } else {
+                              itemCardStyle.backgroundImage = `linear-gradient(to bottom, rgba(20, 28, 42, 0.85), rgba(10, 14, 22, 0.92))`;
+                            }
+                          } else {
+                            itemCardStyle.backgroundImage = `linear-gradient(to bottom, rgba(20, 28, 42, 0.85), rgba(10, 14, 22, 0.92))`;
+                          }
+                          */
+
+                          return (
+                            <div
+                              key={`${skin.id}-${index}`}
+                              className="p-2 flex-shrink-0 h-full flex flex-col justify-center items-center text-center transition-all"
+                              style={{ width: `${ITEM_WIDTH_CAROUSEL}px` }}
+                            >
                               <div 
-                                className="absolute inset-0 opacity-40 pointer-events-none"
-                                style={{
-                                  boxShadow: skin.content_tier?.color 
-                                    ? `inset 0 0 15px ${skin.content_tier.color}` 
-                                    : 'none',
-                                }}
-                              ></div>
+                                className="relative w-[240px] h-[240px] rounded-xl overflow-hidden flex items-center justify-center group"
+                                // style={itemCardStyle}
+                              >
+                                {skin.content_tier?.id && skin.content_tier.id !== 'standard' && (
+                                  <Image
+                                    src={`/skins-bg/${skin.content_tier.id}.png`}
+                                    alt="" // Decorative
+                                    layout="fill"
+                                    objectFit="contain"
+                                    className="absolute inset-0 z-0 p-2 opacity-40 transform scale-125 rotate-12"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    priority={index < 10} // Prioritize first few images
+                                  />
+                                )}
+                                {skin.imagen_url && (
+                                  <Image
+                                    alt={skin.nombre}
+                                    className="object-contain drop-shadow-lg p-2 relative z-10 transform transition-transform duration-300 group-hover:scale-105 rotate-12"
+                                    height={220}
+                                    src={skin.imagen_url}
+                                    width={220}
+                                    priority={index < 10}
+                                  />
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                       
                       {/* Marcador central mejorado */}
                       <div className="absolute top-0 left-1/2 h-full transform -translate-x-1/2 pointer-events-none z-10 flex items-center justify-center">
-                        <div className="w-[3px] h-full bg-gradient-to-b from-transparent via-primary to-transparent"></div>
-                        <div className="absolute top-0 w-1 h-5 bg-primary"></div>
-                        <div className="absolute bottom-0 w-1 h-5 bg-primary"></div>
+                        <div className="w-[3px] h-full bg-gradient-to-b from-transparent via-primary to-transparent opacity-75"></div>
                       </div>
                     </div>
                   </div>

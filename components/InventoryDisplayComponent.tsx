@@ -28,11 +28,11 @@ const InventoryLoading = ({ className = "" }: { className?: string }) => (
 
 // Componente para mostrar cuando el inventario está vacío
 const EmptyInventory = ({ className = "" }: { className?: string }) => (
-  <div className={`w-full text-center p-8 bg-card/10 backdrop-blur-sm rounded-lg border border-border/30 ${className}`}>
+  <div className={`w-full text-center p-8 bg-card/10 backdrop-blur-sm rounded-lg ${className}`}>
     <h3 className="text-xl font-semibold mb-2">Tu inventario está vacío</h3>
     <p className="text-muted-foreground mb-6">Aún no tienes skins en tu inventario. Abre cajas para conseguir skins.</p>
     <Link href="/main">
-      <Button variant="default" className="bg-primary text-primary-foreground hover:bg-primary/90">
+      <Button variant="default" className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200">
         Ir a las cajas
       </Button>
     </Link>

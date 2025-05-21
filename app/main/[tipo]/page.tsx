@@ -800,7 +800,6 @@ export default function CajaPage() {
             {isLoading ? (
               <div className="flex flex-col items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4" />
-                <p className="text-white/70 animate-pulse">Cargando información de la caja...</p>
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center p-8 bg-black/40 rounded-xl border border-red-500/20 max-w-lg mx-auto">

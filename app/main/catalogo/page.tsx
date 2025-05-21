@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Pagination } from "@heroui/pagination";
-import { Plus, X } from "lucide-react";
+import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { RiSearch2Line } from "react-icons/ri";
 
 import BundleModal from "@/components/BundleModal";
+import CustomPagination from "@/components/CustomPagination";
 import {
   getWeaponSkins,
   getBestDisplayIcon,
@@ -246,11 +246,10 @@ export default function Page() {
 
             {totalPages > 1 && (
               <div className="flex justify-center mt-4">
-                <Pagination
-                  showControls
-                  initialPage={currentPage}
-                  total={totalPages}
-                  onChange={(page) => setCurrentPage(page)}
+                <CustomPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={(page) => setCurrentPage(page)}
                 />
               </div>
             )}

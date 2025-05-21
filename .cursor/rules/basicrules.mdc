@@ -17,4 +17,5 @@ Follow Next.js project-structure and performance guidelines (component colocatio
 Remove unused code, dead branches, and obsolete configs promptly to keep the repository lean.
 
 Si tienes alguna duda de cómo funciona mi base de datos, usa el mcp de supabase para revisarlo.
+
 Háblame siempre en español.
