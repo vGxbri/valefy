@@ -2,63 +2,65 @@
 
 import React from "react";
 import Image from "next/image";
-import { Button } from "@heroui/react";
 
 // Define the props interface
 interface StripeCardProps {
   imageUrl: string;
   title: string;
-  link?: string; // Optional link
-  btnText?: string; // Optional text for the link
-  disabled?: boolean; // Optional disabled state for Herou
-  badge?: string; // Optional badge text (e.g. "Diaria")
+  disabled?: boolean;
 }
 
 // Update the component to accept props
 function StripeCard({
   imageUrl,
   title,
-  link = "#",
-  btnText = "Learn more",
   disabled = false,
-  badge,
 }: StripeCardProps) {
   return (
     <>
-      <div className="w-full h-76 group bg-backgroundAlt/10 backdrop-blur-sm p-4 border border-border/50 overflow-hidden rounded-2xl shadow-xl hover:shadow-primary/5 transition-all duration-300">
-        <figure className="w-full h-40 group-hover:h-36 transition-all duration-300 bg-muted/30 rounded-xl relative overflow-hidden">
-          {badge && (
-            <div className="absolute top-2 right-2 z-10 bg-primary/80 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">
-              {badge}
-            </div>
-          )}
-          <div
-            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-500"
-            style={{
-              background:
-                "linear-gradient(135deg, hsla(var(--primary)/0.3) 0%, transparent 70%)",
-            }}
-          />
+      <style jsx global>{`
+        .image-hover-white-glow {
+          transition: filter 0.25s ease-in-out, scale 0.25s ease-in-out;
+        }
+        .group:hover .image-hover-white-glow {
+          scale: 1.03;
+          /**
+          filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.1))
+                  drop-shadow(0 0 20px rgba(255, 255, 255, 0.1))
+                  drop-shadow(0 0 20px rgba(255, 255, 255, 0.1));
+          */
+        }
+
+        .div-general-stripecard {
+          border-color: transparent;
+          border-top-width: 1px;
+          border-bottom-width: 1px;
+          border-left-width: 0px;
+          border-right-width: 0px;
+          transition: border-color 0.25s ease-in-out;
+        }
+        
+        .div-general-stripecard:hover {
+          border-color: rgb(255, 255, 255);
+        }
+      `}</style>
+      <div className="div-general-stripecard w-full h-auto group p-4 rounded-2xl transition-all duration-300">
+        <figure className="w-full h-auto aspect-[4/3] transition-all duration-300 rounded-xl relative">
           <Image
             alt={title}
-            className="absolute -bottom-1 group-hover:-bottom-5 right-0 h-full w-full rounded-lg object-cover transition-all duration-300 hover:scale-105"
-            height={400}
+            className="image-hover-white-glow absolute -bottom-1 right-0 h-full w-full rounded-lg object-cover transition-all 
+                       duration-300"
+            height={500}
+            width={500}
             quality={100}
             src={imageUrl}
-            width={400}
           />
         </figure>
-        <article className="p-4 space-y-3">
-          <div className="h-1 w-16 bg-primary/60 rounded-full" />
-          <h1 className="text-xl font-semibold capitalize text-foreground">
+        <article className="p-4 space-y-3 flex flex-col justify-between">
+          <div className="h-1 w-3/4 bg-gradient-to-r from-primary/60 to-secondary/60 rounded-full mx-auto" />
+          <h1 className="text-lg sm:text-xl font-semibold capitalize text-foreground text-center">
             {title}
           </h1>
-          <Button
-            className="bg-red-600/20 hover:bg-red-600/30 text-white border border-red-500/20 hover:border-red-500/30 font-semibold px-6 rounded-xl transition-colors duration-300 shadow-lg shadow-red-900/20 active:scale-95 active:shadow-inner opacity-50 group-hover:opacity-100 translate-y-2 transition-all duration-300"
-            isDisabled={disabled}
-          >
-            {btnText}
-          </Button>
         </article>
       </div>
     </>

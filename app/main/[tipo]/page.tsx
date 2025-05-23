@@ -4,8 +4,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import StripeCard from "@/components/StripeCard";
@@ -429,7 +430,7 @@ export default function CajaPage() {
               const formattedSkins: Skin[] = [];
               if (supabase) {
                 for (const rawSkin of rawSkinsForBox) { // rawSkin is ValorantSkin
-                  const tierData = await getTierData(supabase as SupabaseClient, rawSkin.contentTierUuid);
+                  const tierData = await getTierData(supabase, rawSkin.contentTierUuid);
                   formattedSkins.push(formatSkinForApp(rawSkin, tierData));
                 }
               }
@@ -438,46 +439,72 @@ export default function CajaPage() {
 
             // Obtener las probabilidades de la caja
             if (cajaData.id) {
-              const { data: probData } = await supabase
+              console.log(`[Prob Dbg] Fetching probabilities for caja_id: ${cajaData.id}, Caja Nombre: ${cajaData.nombre}`);
+              const { data: probData, error: probQueryError } = await supabase
                 .from("tier_probabilidades")
                 .select(
                   `
                   id,
                   caja_id,
-                  content_tier_id, // Este es el id (PK de Supabase) del tier
                   probabilidad,
-                  cantidad_skins
+                  cantidad_skins,
+                  content_tier:content_tier_id (
+                    id, 
+                    nombre,
+                    color,
+                    uuid_api,
+                    grado
+                  )
                   `
                 )
                 .eq("caja_id", cajaData.id);
 
-              if (probData) {
-                const mappedProbs = probData.map((item: any) => {
-                  // item.content_tier_id es el id (PK de Supabase) del tier
-                  const tierInfoFromMap = tiersMapBySupabaseId.get(item.content_tier_id); 
+              if (probQueryError) {
+                console.error(`[Prob Dbg] Error fetching probabilities for caja_id ${cajaData.id}:`, probQueryError);
+                setProbabilidades([]); // Set empty on error
+              } else if (probData) {
+                console.log(`[Prob Dbg] Received probData for ${cajaData.nombre}:`, JSON.parse(JSON.stringify(probData)));
+                const mappedProbs = probData.map((item: any, index: number) => {
+                  console.log(`[Prob Dbg] Mapping item ${index} for ${cajaData.nombre}:`, JSON.parse(JSON.stringify(item)));
+                  const hasContentTierData = item.content_tier && item.content_tier.uuid_api && item.content_tier.nombre && item.content_tier.color;
+                  
+                  const tierInfo = hasContentTierData ? {
+                    id: item.content_tier.uuid_api,       
+                    nombre: item.content_tier.nombre,
+                    color: item.content_tier.color,
+                    uuid_api: item.content_tier.uuid_api,  
+                    supabase_pk_id: item.content_tier.id,
+                    grado: item.content_tier.grado
+                  } : { 
+                    id: "unknown-tier-" + String(item.id || index), // Use item.id as part of fallback id
+                    nombre: "Desconocido",
+                    color: "#FFFFFF",
+                    uuid_api: "unknown-tier-" + String(item.id || index),
+                    supabase_pk_id: String(item.content_tier_id || item.id || index), // Fallback if content_tier_id is also missing
+                    grado: 0
+                  };
+
+                  if (!hasContentTierData) {
+                    console.warn(`[Prob Dbg] Tier details missing or incomplete for item ${index} in ${cajaData.nombre}. Fallback used. Original item.content_tier:`, item.content_tier);
+                  }
+
                   return {
                     id: String(item.id),
                     caja_id: String(item.caja_id),
-                    content_tier_id: String(item.content_tier_id), // id (PK de Supabase) del tier
                     probabilidad: Number(item.probabilidad),
                     cantidad_skins: Number(item.cantidad_skins),
-                    content_tier: tierInfoFromMap ? {
-                      id: tierInfoFromMap.uuid_api,       // Para la UI, usamos uuid_api como id
-                      nombre: tierInfoFromMap.nombre,
-                      color: tierInfoFromMap.color,
-                      uuid: tierInfoFromMap.uuid_api,      // Para la UI, usamos uuid_api como uuid
-                      supabase_pk_id: tierInfoFromMap.supabase_pk_id // Guardamos el PK por si acaso
-                    } : { 
-                      id: "unknown-tier-" + String(item.content_tier_id),
-                      nombre: "Desconocido",
-                      color: "#FFFFFF",
-                      uuid: "unknown-tier-" + String(item.content_tier_id),
-                      supabase_pk_id: String(item.content_tier_id)
-                    },
+                    content_tier: tierInfo,
                   };
                 });
+                console.log(`[Prob Dbg] Mapped probabilities for ${cajaData.nombre}:`, JSON.parse(JSON.stringify(mappedProbs)));
                 setProbabilidades(mappedProbs);
+              } else {
+                console.log(`[Prob Dbg] No probData (null or empty array) received for ${cajaData.nombre}. Setting empty probabilities.`);
+                setProbabilidades([]); 
               }
+            } else {
+                console.warn(`[Prob Dbg] No cajaData.id found when trying to fetch probabilities. Current tipoValidado: ${tipoValidado}`);
+                setProbabilidades([]); 
             }
           } catch (skinError) {
             console.error("Error al cargar skins o probabilidades:", skinError);
@@ -835,10 +862,123 @@ export default function CajaPage() {
                       ? forceUpdateDailyBox
                       : undefined
                   }
+                  renderInfoSections={false}
                 />
               </div>
             )}
           </div>
+
+          {/* New Section for Probabilities and All Skins (Side-by-Side) */}
+          {!isLoading && !error && caja && (
+            <motion.div 
+              className="w-full"
+              variants={itemVariants}
+            >
+              <div className="relative mb-12 mt-8">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
+              </div>
+              {/* Probabilities section will be removed */}
+
+              {/* Right Column: All Skins in the Box - Now takes full width and is centered */}
+              {cajaSkins && cajaSkins.length > 0 && (
+                <div className="w-full max-w-4xl mx-auto mb-12">
+                  <div className={`mb-6 pt-2 text-center`}>
+                    <h3 className="font-bold inline-block mt-10
+                                  text-3xl font-bold text-foreground font-[Raleway] font-semibold italic tracking-widest
+                                  [text-shadow:_0px_0px_20px_rgba(255,255,255,0.35)] bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                      · CONTENIDO DE LA CAJA ·
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+                    {(() => {
+                      // Ordenar las skins usando los grados de la base de datos
+                      const sortedSkins = [...cajaSkins].sort((a, b) => {
+                        // Usar el grado numérico del content_tier para ordenar
+                        const gradeA = a.content_tier?.grado || 0;
+                        const gradeB = b.content_tier?.grado || 0;
+                        
+                        // Ordenar de mayor a menor grado (más raro primero)
+                        return Number(gradeB) - Number(gradeA);
+                      });
+
+                      return sortedSkins.map((skin) => {
+                        // Calcular el estilo de la card basado en el tier
+                        let cardStyle: React.CSSProperties = {};
+                        
+                        if (skin.content_tier?.color && skin.content_tier.color !== '#FFFFFF') {
+                          const tierColorHex = skin.content_tier.color;
+                          if (/^#([0-9A-F]{3}){1,2}$/i.test(tierColorHex)) {
+                            let r, g, b;
+                            if (tierColorHex.length === 4) {
+                              r = parseInt(tierColorHex[1] + tierColorHex[1], 16);
+                              g = parseInt(tierColorHex[2] + tierColorHex[2], 16);
+                              b = parseInt(tierColorHex[3] + tierColorHex[3], 16);
+                            } else {
+                              r = parseInt(tierColorHex.slice(1, 3), 16);
+                              g = parseInt(tierColorHex.slice(3, 5), 16);
+                              b = parseInt(tierColorHex.slice(5, 7), 16);
+                            }
+                            cardStyle.backgroundImage = `linear-gradient(to top, rgba(${r},${g},${b},0.12) 0%, rgba(${r},${g},${b},0.18) 35%, rgba(17, 24, 39, 0.85) 80%, #0A0E16 100%)`;
+                          }
+                        }
+
+                        return (
+                          <div 
+                            key={skin.id} 
+                            className="group relative flex flex-col aspect-[4/5] overflow-hidden rounded-lg border bg-gradient-to-b from-gray-900 to-black transition-all duration-300 border-gray-800/70 hover:shadow-[0px_2px_46px_-4px_rgba(255,_255,_255,_0.15)] hover:scale-[1.02]"
+                            style={cardStyle}
+                          >
+                            {/* Imagen de fondo dinámica basada en content_tier.uuid_api */}
+                            {skin.content_tier?.uuid_api && skin.content_tier.uuid_api !== 'default' && (
+                              <Image 
+                                src={`/skins-bg/${skin.content_tier.uuid_api}.png`}
+                                alt={`Fondo para ${skin.content_tier.nombre}`}
+                                fill
+                                className="absolute inset-0 z-0 p-3 opacity-20 transform scale-125 rotate-12 object-contain"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            )}
+                            
+                            {/* Imagen principal de la skin */}
+                            {skin.imagen_url && (
+                              <Image 
+                                src={skin.imagen_url} 
+                                alt={skin.nombre} 
+                                fill
+                                className="object-contain p-3 group-hover:scale-105 rotate-12 transition-transform duration-300 z-10"
+                              />
+                            )}
+                            
+                            {/* Información de la skin en la parte inferior */}
+                            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent z-10">
+                              <h4 
+                                className="text-xs font-semibold text-white truncate" 
+                                style={{color: skin.content_tier?.color || 'white'}}
+                                title={skin.nombre}
+                              >
+                                {skin.nombre}
+                              </h4>
+                              {skin.content_tier?.nombre && (
+                                <p className="text-[10px] text-slate-400 truncate" title={skin.content_tier.nombre}>
+                                  {skin.content_tier.nombre}
+                                </p>
+                              )}
+                            </div>
+                            
+                            {/* Barra de color del tier en la parte inferior */}
+                            <div 
+                              className="absolute bottom-0 left-0 w-full h-1 z-20" 
+                              style={{backgroundColor: skin.content_tier?.color || 'rgba(255,255,255,0.1)'}}
+                            />
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
         </motion.div>
 
         {/* Sección de cajas relacionadas */}
@@ -862,12 +1002,6 @@ export default function CajaPage() {
                     href={rutaCajaRel}
                   >
                     <StripeCard
-                      badge={cajaRelacionada.es_diaria ? "Diaria" : undefined}
-                      btnText={
-                        cajaRelacionada.precio === 0
-                          ? "Abrir gratis"
-                          : `${cajaRelacionada.precio} VP`
-                      }
                       disabled={!cajaRelacionada.esta_disponible}
                       imageUrl={cajaRelacionada.imagen_url}
                       title={cajaRelacionada.nombre}

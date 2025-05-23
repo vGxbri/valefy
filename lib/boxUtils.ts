@@ -40,6 +40,7 @@ export type ContentTier = {
   nombre: string;
   color: string;
   uuid_api: string;
+  grado?: number;
 };
 
 export type Skin = {
@@ -326,18 +327,18 @@ export async function processBoxOpening(
  * Obtiene los datos de tier para una skin desde la base de datos
  * @param supabase Cliente de Supabase
  * @param tierApiUuid UUID del tier
- * @returns Objeto con nombre y color del tier
+ * @returns Objeto con nombre, color y grado del tier
  */
 export async function getTierData(
   supabase: SupabaseClient,
   tierApiUuid: string | null,
-): Promise<{ nombre: string; color: string } | null> {
+): Promise<{ nombre: string; color: string; grado?: number } | null> {
   if (!tierApiUuid) return null;
 
   try {
     const { data, error } = await supabase
       .from("content_tiers")
-      .select("nombre, color")
+      .select("nombre, color, grado")
       .eq("uuid_api", tierApiUuid)
       .maybeSingle();
 
@@ -347,7 +348,11 @@ export async function getTierData(
     }
     
     if (data) {
-      return { nombre: data.nombre, color: data.color };
+      return { 
+        nombre: data.nombre, 
+        color: data.color,
+        grado: data.grado
+      };
     }
     console.warn(`No se encontraron datos del tier para uuid_api: ${tierApiUuid}`);
     return null;

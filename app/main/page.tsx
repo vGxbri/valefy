@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import { motion } from "framer-motion";
-
+import Image from "next/image";
 import StripeCard from "@/components/StripeCard";
 import { extraerTipoCaja } from "@/lib/boxUtils";
 
@@ -18,6 +18,7 @@ interface Caja {
   es_diaria?: boolean;
   fecha_actualizacion?: string;
   categoria?: string;
+  categoria_titulo?: string;
 }
 
 // Cliente de Supabase singleton
@@ -109,7 +110,7 @@ export default function MainPage() {
             // Procesar cada caja
             cajasData.forEach(caja => {
               // Determinar categoría para la caja
-              const categoria = caja.categoria?.toLowerCase() || 
+              const categoria = caja.categoria_titulo?.toUpperCase() || 
                                 (caja.es_diaria ? "diaria" : 
                                  caja.precio === 0 ? "gratis" : "premium");
               
@@ -124,11 +125,27 @@ export default function MainPage() {
             });
             
             // Ordenar las categorías para mostrarlas en un orden predeterminado
-            const ordenCategorias = ["diaria", "gratis", "premium", "ultra", "especial"];
+            const ordenCategorias = ["principal", "alumno"];
             const categoriasOrdenadas = Array.from(categoriasEncontradas).sort((a, b) => {
-              const indexA = ordenCategorias.indexOf(a);
-              const indexB = ordenCategorias.indexOf(b);
-              return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+              const lowerA = a.toLowerCase();
+              const lowerB = b.toLowerCase();
+              const indexA = ordenCategorias.indexOf(lowerA);
+              const indexB = ordenCategorias.indexOf(lowerB);
+              
+              // Si ambas están en ordenCategorias, usar ese orden
+              if (indexA !== -1 && indexB !== -1) {
+                return indexA - indexB;
+              }
+              // Si solo A está, A va primero
+              if (indexA !== -1) {
+                return -1;
+              }
+              // Si solo B está, B va primero
+              if (indexB !== -1) {
+                return 1;
+              }
+              // Si ninguna está, orden alfabético como fallback (o mantener orden original)
+              return lowerA.localeCompare(lowerB);
             });
             
             setCajas(cajasData);
@@ -214,143 +231,143 @@ export default function MainPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8 pl-16 md:pr-12 lg:pr-16 pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1">
-      {/* Sección de Cajas */}
-      <div className="w-full">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold text-foreground flex items-center font-[Raleway] font-semibold italic tracking-widest">
-            / CAJAS
-          </h2>
+    <>      
+      <div className="body-main-page flex flex-col gap-8 px-4 sm:px-8 md:px-12 lg:px-16 pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1">        {/* Sección de Cajas */}
+        <div className="w-full">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-3xl font-bold text-foreground flex items-center font-[Raleway] font-semibold italic tracking-widest">
+              / CAJAS
+            </h2>
 
-          <div className="flex items-center gap-4">
-            {nextUpdate && (
-              <div className="hidden md:flex items-center px-4 py-2 bg-primary/10 rounded-lg border border-primary/20">
-                <span className="text-xs text-white/70 mr-2">Próxima actualización:</span>
-                <span className="text-sm font-medium text-primary">{formatNextUpdate()}</span>
-              </div>
-            )}
-            <button
-              className="px-3 py-1 text-sm bg-background/40 hover:bg-background/60 text-white/70 hover:text-white border border-white/10 rounded-md transition-colors"
-              title="Panel de administración para pruebas"
-              onClick={() => (window.location.href = "/admin")}
-            >
-              Admin
-            </button>
-          </div>
-        </div>
-
-        <div className="w-full rounded-3xl bg-gradient-to-br from-primary/10 via-backgroundAlt/30 to-secondary/5 backdrop-blur-sm border border-border/30 p-6 shadow-xl overflow-hidden relative">
-          {/* Efecto de fondo */}
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-30" />
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary/10 rounded-full blur-3xl opacity-30" />
-
-          {/* Contenedor de tarjetas de cajas */}
-          <div className="relative z-10">
-            {isLoading ? (
-              <div className="flex justify-center items-center py-20">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
-              </div>
-            ) : error ? (
-              <div className="text-center py-12">
-                <p className="text-red-400 mb-4">{error}</p>
-                <button
-                  className="px-4 py-2 bg-primary/20 hover:bg-primary/30 rounded-md transition-colors"
-                  onClick={() => window.location.reload()}
-                >
-                  Reintentar
-                </button>
-              </div>
-            ) : (
-              <motion.div 
-                className="space-y-12"
-                initial="hidden"
-                animate="show"
-                variants={containerVariants}
+            <div className="flex items-center gap-4">
+              <button
+                className="px-3 py-1 text-sm bg-background/40 hover:bg-background/60 text-white/70 hover:text-white border border-white/10 rounded-md transition-colors"
+                title="Panel de administración para pruebas"
+                onClick={() => (window.location.href = "/admin")}
               >
-                {categorias.map((categoria, index) => {
-                  const categoriaInfo = getCategoriaInfo(categoria);
+                Admin
+              </button>
+            </div>
+          </div>
+
+          <div className="w-full overflow-hidden relative p-8">
+            {/* Contenedor de tarjetas de cajas */}
+            <div className="relative z-10">
+              {isLoading ? (
+                <div className="flex justify-center items-center py-20">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
+                </div>
+              ) : error ? (
+                <div className="text-center py-12">
+                  <p className="text-red-400 mb-4">{error}</p>
+                  <button
+                    className="px-4 py-2 bg-primary/20 hover:bg-primary/30 rounded-md transition-colors"
+                    onClick={() => window.location.reload()}
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              ) : (
+                <motion.div 
+                  className="space-y-12"
+                  initial="hidden"
+                  animate="show"
+                  variants={containerVariants}
+                >
+                  {categorias.map((categoria, index) => {
+                    const categoriaInfo = getCategoriaInfo(categoria);
+                    
+                    return (
+                      <motion.div 
+                        key={categoria} 
+                        className="mb-10 rounded-2xl"
+                        variants={itemVariants}
+                      >
+                        
+                        <div className="relative">
+                          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
+                        </div>
+                        <div className={`mb-6 pt-10 text-center`}>
+                          <h3 className="font-bold inline-block
+                                        text-3xl font-bold text-foreground font-[Raleway] font-semibold italic tracking-widest
+                                        [text-shadow:_0px_0px_20px_rgba(255,255,255,0.35)] bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                            · {categoriaInfo.nombre} ·
+                          </h3>
+                        </div>
+
+                        {/* Banner para la categoría "alumno" - Condición mejorada */}
+                        {(categoria.toLowerCase().includes('alumno') || categoriaInfo.nombre.toLowerCase().includes('alumno')) && (
+                          <div className="flex flex-row justify-between items-center my-8 mx-auto w-5/6 p-6 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 shadow-2xl border border-primary/40 backdrop-blur-sm">
+                            <div className="flex flex-col items-start w-1/2">
+                              <h4 className="font-[Raleway] text-2xl font-semibold text-white mb-2 tracking-wide [text-shadow:_0px_0px_18px_rgba(255,255,255,0.5)]">
+                                ¡NOVEDAD EXCLUSIVA!
+                              </h4>
+                              <p className="text-foreground/90 text-lg leading-relaxed font-light text-pretty">
+                                Descubre nuestras cajas <span className="font-semibold bg-gradient-to-r from-primary/100 to-primary/80 bg-clip-text text-transparent">especialmente seleccionadas</span> por nuestros alumnos.
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-end w-1/2 absolute bottom-0 right-10">
+                              <Image src="/jett_1.png" alt="Alumno" objectFit="contain" width={300} height={300} />
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="flex flex-wrap gap-4 justify-center items-center w-full">
+                          {cajasPorCategoria[categoria]?.map((caja) => {
+                            // Usar la función centralizada para extraer el tipo de caja
+                            const tipoCaja = extraerTipoCaja(caja.nombre, caja.es_diaria);
+
+                            // Casos especiales para rutas
+                            let rutaEspecial = null;
+
+                            // Construir la ruta dinámica (usar ruta especial si existe)
+                            const rutaDinamica = rutaEspecial || `/main/${tipoCaja}`;
+
+                            // Guardar la ruta en la base de datos para futuras referencias
+                            if (caja.ruta !== rutaDinamica) {
+                              console.log(
+                                `Actualizando ruta para ${caja.nombre}: ${rutaDinamica}`,
+                              );
+                              // No bloqueamos la renderización con await
+                              updateCajaRuta(caja.id, rutaDinamica);
+                            }
+
+                            return (
+                              <>
+                                <Link
+                                  key={caja.id}
+                                  className="block w-full sm:w-1/2 md:w-1/3 lg:w-1/4"
+                                  href={rutaDinamica}
+                                >
+                                  <StripeCard
+                                    disabled={!caja.esta_disponible}
+                                    imageUrl={caja.imagen_url}
+                                    title={caja.nombre}
+                                  />
+                                </Link>
+                                
+                              </>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                   
-                  return (
-                    <motion.div 
-                      key={categoria} 
-                      className="mb-10"
-                      variants={itemVariants}
-                    >
-                      <div className={`p-4 rounded-xl mb-4 bg-gradient-to-r ${categoriaInfo.color} border-l-4 border-primary/50`}>
-                        <h3 className="text-xl font-bold text-white flex items-center">
-                          <span className="mr-2">{categoriaInfo.nombre}</span>
-                          {categoria.toLowerCase() === 'diaria' && (
-                            <span className="text-xs bg-primary/80 text-white px-2 py-0.5 rounded-full">
-                              ¡Actualiza cada día!
-                            </span>
-                          )}
-                        </h3>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {cajasPorCategoria[categoria]?.map((caja) => {
-                          // Usar la función centralizada para extraer el tipo de caja
-                          const tipoCaja = extraerTipoCaja(caja.nombre, caja.es_diaria);
-
-                          // Casos especiales para rutas
-                          let rutaEspecial = null;
-
-                          // Caso especial para Caja de Darío
-                          if (caja.nombre === "Caja de Darío") {
-                            rutaEspecial = "/main/dario";
-                            console.log(
-                              "Ruta especial para Caja de Darío:",
-                              rutaEspecial,
-                            );
-                          }
-
-                          // Construir la ruta dinámica (usar ruta especial si existe)
-                          const rutaDinamica = rutaEspecial || `/main/${tipoCaja}`;
-
-                          // Guardar la ruta en la base de datos para futuras referencias
-                          if (caja.ruta !== rutaDinamica) {
-                            console.log(
-                              `Actualizando ruta para ${caja.nombre}: ${rutaDinamica}`,
-                            );
-                            // No bloqueamos la renderización con await
-                            updateCajaRuta(caja.id, rutaDinamica);
-                          }
-
-                          return (
-                            <Link
-                              key={caja.id}
-                              className="block transform transition-all duration-200 hover:scale-[1.02]"
-                              href={rutaDinamica}
-                            >
-                              <StripeCard
-                                badge={caja.es_diaria ? "Diaria" : undefined}
-                                btnText={
-                                  caja.precio === 0
-                                    ? "Abrir gratis"
-                                    : `${caja.precio} VP`
-                                }
-                                disabled={!caja.esta_disponible}
-                                imageUrl={caja.imagen_url}
-                                title={caja.nombre}
-                              />
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-                
-                {categorias.length === 0 && (
-                  <div className="text-center py-12">
-                    <p className="text-white/50">No hay cajas disponibles</p>
-                  </div>
-                )}
-              </motion.div>
-            )}
+                  {categorias.length === 0 && (
+                    <div className="text-center py-12">
+                      <p className="text-white/50">No hay cajas disponibles</p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+              <div className="relative mb-6 mt-10">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

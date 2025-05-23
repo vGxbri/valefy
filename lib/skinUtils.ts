@@ -6,12 +6,12 @@ import { Skin as ValorantSkin, getBestDisplayIcon } from "./valorantApi";
 /**
  * Formatea una skin de Valorant al formato usado en la aplicación
  * @param skin Skin de Valorant a formatear
- * @param tierData Datos del tier (nombre y color), puede ser null
+ * @param tierData Datos del tier (nombre, color y grado), puede ser null
  * @returns Skin formateada para la aplicación
  */
 export const formatSkinForApp = (
   skin: ValorantSkin,
-  tierData: { nombre: string; color: string } | null,
+  tierData: { nombre: string; color: string; grado?: number } | null,
 ) => {
   // Obtener el mejor icono disponible (primero del nivel 1, luego el principal)
   const bestIcon = getBestDisplayIcon(skin);
@@ -19,6 +19,7 @@ export const formatSkinForApp = (
   // Valores predeterminados para tier si no se proporciona
   const defaultTierName = "Desconocido";
   const defaultTierColor = "#5a9fe2"; // Azul por defecto
+  const defaultTierGrade = 0;
 
   return {
     id: skin.uuid,
@@ -32,6 +33,7 @@ export const formatSkinForApp = (
       nombre: tierData ? tierData.nombre : defaultTierName,
       color: tierData ? tierData.color : defaultTierColor,
       uuid_api: skin.contentTierUuid || "",
+      grado: tierData ? tierData.grado : defaultTierGrade,
     },
   };
 };

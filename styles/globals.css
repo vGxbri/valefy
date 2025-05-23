@@ -173,4 +173,8 @@
   .drop-shadow-custom {
     filter: drop-shadow(0 0 18px #ffffff33);
   }
+
+  .body-main-page {
+    
+  }
 }

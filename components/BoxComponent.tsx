@@ -14,6 +14,7 @@ import {
   selectRandomSkinByProbability,
   getTierData,
 } from "@/lib/boxUtils";
+import { Shadow } from "ogl";
 
 // Estilos globales para animaciones
 const globalStyles = `
@@ -62,6 +63,7 @@ interface ContentTier {
   nombre: string;
   color: string;
   uuid_api: string;
+  grado?: number;
 }
 
 export interface BoxCaja {
@@ -89,6 +91,7 @@ interface BoxComponentProps {
   cajaSkins?: Skin[];
   probabilidades?: TierProbabilidad[];
   supabase: any | null;
+  renderInfoSections?: boolean;
 }
 
 export default function BoxComponent({
@@ -104,6 +107,7 @@ export default function BoxComponent({
   cajaSkins: initialCajaSkins = [],
   probabilidades: initialProbabilidades = [],
   supabase,
+  renderInfoSections = true,
 }: BoxComponentProps) {
   // Sesión del usuario
   const { data: session, status } = useSession();
@@ -154,13 +158,6 @@ export default function BoxComponent({
       return () => clearInterval(intervalId);
     }
   }, [caja]);
-
-  // Efecto para verificar si el usuario ya abrió la caja diaria hoy
-  useEffect(() => {
-    if (caja?.es_diaria && isAuthenticated && session?.user?.id) {
-      checkDailyOpened();
-    }
-  }, [caja, isAuthenticated, session]);
 
   // Inyectar estilos globales para animaciones
   useEffect(() => {
@@ -298,38 +295,6 @@ export default function BoxComponent({
       setProbabilidades(mapped);
     } catch (err) {
       console.error("Error inesperado al obtener probabilidades:", err);
-    }
-  };
-
-  // Verificar si el usuario ya abrió la caja diaria hoy
-  const checkDailyOpened = async () => {
-    if (!caja?.es_diaria || !isAuthenticated || !session?.user?.id || !supabase)
-      return;
-
-    try {
-      const { data, error } = await supabase
-        .from("transacciones")
-        .select("id")
-        .eq("user_id", session.user.id)
-        .eq("caja_id", caja.id)
-        .gte(
-          "created_at",
-          new Date(new Date().setHours(0, 0, 0, 0)).toISOString(),
-        )
-        .limit(1);
-
-      if (error) {
-        console.error("Error al verificar transacciones diarias:", error);
-
-        return;
-      }
-
-      setDailyOpened(data && data.length > 0);
-    } catch (error) {
-      console.error(
-        "Error al verificar si la caja diaria ya fue abierta:",
-        error,
-      );
     }
   };
 
@@ -642,68 +607,36 @@ export default function BoxComponent({
               setResultSkin(null);
               setIsOpening(false); // Ensure isOpening is reset when going back
             }}
-            className="mt-4 px-8 py-3 text-lg bg-gradient-to-r from-primary to-primary hover:from-primary/90 hover:to-primary text-white rounded-lg shadow-lg hover:shadow-primary/30 transition-all transform hover:scale-105 active:scale-95"
+            className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
           >
-            Abrir Otra Caja
+            Abrir de nuevo
           </Button>
         </div>
       ) : (
         // Vista principal de la caja mejorada
-        <div className="flex flex-col items-center w-full max-w-4xl mx-auto">
+        <div className="flex flex-col items-center w-full max-w-6xl mx-auto">
           {caja && (
             <div className="w-full text-center relative z-0">
               {/* Efectos de resplandor mejorados detrás de la caja */}
               <div className="absolute -z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full opacity-20 blur-3xl bg-gradient-radial from-primary/50 to-transparent"></div>
               <div className="absolute -z-10 left-1/3 top-1/3 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] rounded-full opacity-10 blur-2xl bg-gradient-radial from-amber-300/50 to-transparent"></div>
               
-              <h3 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-primary mb-6 tracking-tight">
+              <h1 className="text-4xl font-semibold capitalize text-foreground text-center">
                 {caja.nombre}
-              </h3>
-              
-              {/* Detalles de la caja */}
-              <div className="mb-6 mx-auto flex flex-wrap items-center justify-center gap-3">
-                <div className="px-4 py-2 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10 text-white/80 flex items-center gap-2">
-                  <svg width="16" height="16" viewBox="0 0 24 24" className="text-primary" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" 
-                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                  <span>{caja.es_diaria ? 'Caja Diaria' : 'Caja Permanente'}</span>
-                </div>
-                
-                <div className="px-4 py-2 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10 text-white/80 flex items-center gap-2">
-                  <svg width="16" height="16" viewBox="0 0 24 24" className="text-amber-400" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2v6m0 8v6M4.93 4.93l4.24 4.24m5.66 5.66 4.24 4.24M2 12h6m8 0h6M4.93 19.07l4.24-4.24m5.66-5.66 4.24-4.24" 
-                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                  <span>{caja.precio === 0 ? 'Gratis' : `${caja.precio} VP`}</span>
-                </div>
-                
-                {caja.categoria && (
-                  <div className="px-4 py-2 bg-black/20 backdrop-blur-sm rounded-lg border border-white/10 text-white/80 flex items-center gap-2">
-                    <svg width="16" height="16" viewBox="0 0 24 24" className="text-green-400" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="2" />
-                      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M8 18v2a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2" stroke="currentColor" strokeWidth="2" />
-                    </svg>
-                    <span className="capitalize">{caja.categoria}</span>
-                  </div>
-                )}
-              </div>
+              </h1>
+              <div className="h-1 w-1/4 bg-gradient-to-r from-primary/60 to-secondary/60 rounded-full mx-auto mt-4" />
 
               {isSpinning ? (
                 // Vista giratoria mejorada
                 <div className="w-full text-center mb-8 relative">
-                  <div className="w-full mx-auto py-6 relative">
-                    {/* Bordes superiores e inferiores para crear un marco */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-5/6 h-2 bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5/6 h-2 bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
-                    
+                  <div className="w-full py-6 relative">
                     <div
-                      className="mx-auto overflow-hidden relative rounded-lg bg-black/50 backdrop-blur-lg shadow-2xl"
+                      className="mx-auto overflow-hidden relative rounded-lg shadow-2xl backdrop-blur-lg bg-gradient-to-r from-transparent via-black/50 to-transparent w-full"
                       style={{
-                        width: "clamp(400px, 90vw, 900px)",
-                        height: "320px",
+                        height: "240px",
                       }}
                     >
+
                       {/* Efecto de resplandor en los bordes (solo superior e inferior) */}
                       <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/80 to-transparent"></div>
@@ -714,7 +647,7 @@ export default function BoxComponent({
                         ref={spinnerRef}
                         className="flex items-center"
                         style={{
-                          width: `${spinItems.length * ITEM_WIDTH_CAROUSEL}px`, // Usar la constante
+                          width: "`${spinItems.length * ITEM_WIDTH_CAROUSEL}px`", // Usar la constante
                           height: "100%",
                         }}
                       >
@@ -790,41 +723,38 @@ export default function BoxComponent({
                       </div>
                     </div>
                   </div>
-                  
-                  <p className="text-lg font-medium text-white mt-6 animate-pulse flex items-center justify-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-primary inline-block"></span>
-                    La caja está girando...
-                    <span className="w-2 h-2 rounded-full bg-primary inline-block"></span>
-                  </p>
                 </div>
               ) : (
                 // Vista inicial de la caja mejorada
-                <div className="my-8 flex flex-col items-center justify-center relative">
+                <div className="my-8 flex items-center justify-center relative">
+                  <div className="">
+                    <Image src="/cajas/left-arrow.png" alt="Caja" width={150} height={150} 
+                    style={{
+                      filter: 'drop-shadow(0 0 20px rgba(255, 255, 255, 0.2))',
+                    }}
+                    />
+                  </div>
                   {caja.imagen_url && (
                     <div className="relative group">
-                      <div className="absolute -inset-1 bg-gradient-to-r from-primary/40 to-amber-500/40 rounded-xl blur opacity-40 group-hover:opacity-70 transition duration-500"></div>
-                      <div className="relative bg-gradient-to-br from-slate-800/90 to-black/95 p-1 rounded-xl shadow-2xl border border-slate-700/60 overflow-hidden">
-                        <div className="absolute inset-0 bg-black/10 backdrop-blur-md z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                        <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500"
-                             style={{background: 'radial-gradient(circle at center, rgba(252, 78, 91, 0.3) 0%, transparent 70%)'}}></div>
+                      <div className="absolute -inset-1 rounded-xl blur opacity-40 transition duration-500"></div>
+                      <div className="relative  p-1 rounded-xl overflow-hidden">
                         <Image
                           alt={caja.nombre}
-                          className="relative z-20 object-contain p-2 transform group-hover:scale-105 transition-transform duration-700 w-[350px] h-[350px]"
+                          className="relative z-20 object-contain p-2 transform transition-transform duration-700"
                           height={350}
                           src={caja.imagen_url || "/free_cage.png"}
                           width={350}
                         />
-                        <div className="absolute inset-0 z-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                          <div className="px-6 py-3 bg-primary/80 text-white font-bold rounded-full shadow-lg transform group-hover:scale-105 transition-transform duration-500">
-                            ¡CLICK PARA ABRIR!
-                          </div>
-                        </div>
                       </div>
-                      
-                      {/* Animación de pulso sutil */}
-                      <div className="absolute -inset-1 rounded-xl blur opacity-20 animate-pulse group-hover:opacity-0 transition"></div>
                     </div>
                   )}
+                  <div className="">
+                    <Image src="/cajas/right-arrow.png" alt="Caja" width={150} height={150}
+                     style={{
+                      filter: 'drop-shadow(0 0 20px rgba(255, 255, 255, 0.2))',
+                    }}
+                    />
+                  </div>
                 </div>
               )}
               
@@ -841,145 +771,33 @@ export default function BoxComponent({
                 </div>
               )}
 
-              {/* Sección de Skins de la Caja - Siempre visible en la vista inicial */}
-              {!isSpinning && !resultSkin && cajaSkins && cajaSkins.length > 0 && (
-                <div className="w-full max-w-3xl mx-auto mt-10 p-6 bg-gradient-to-br from-slate-800/50 via-slate-900/60 to-black/40 border border-slate-700/50 rounded-xl shadow-xl backdrop-blur-sm">
-                  <h4 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white to-white/80 mb-4 text-center">
-                    Contenido Destacado de la Caja
-                  </h4>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-                    {cajaSkins.slice(0, 12).map((skin) => ( // Mostrar hasta 12 skins como preview
-                      <div 
-                        key={skin.id} 
-                        className="group p-2 rounded-lg bg-black/40 border border-slate-700/70 hover:border-primary/50 transition-all hover:shadow-md hover:shadow-primary/10 aspect-square flex flex-col items-center justify-center text-center relative overflow-hidden"
-                      >
-                        <div className="absolute inset-0 bg-gradient-radial from-transparent to-black opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-                        {skin.imagen_url && (
-                          <Image 
-                            src={skin.imagen_url} 
-                            alt={skin.nombre} 
-                            width={70} 
-                            height={70} 
-                            className="object-contain drop-shadow-md mb-1 transform group-hover:scale-110 transition-transform duration-300"
-                          />
-                        )}
-                        <p className="text-xs group-hover:text-white text-white/80 truncate w-full" 
-                           style={{color: skin.content_tier?.color || 'white'}}>{skin.nombre}</p>
-                        <p className="text-[10px] text-slate-400 group-hover:text-slate-300 truncate w-full">{skin.content_tier?.nombre}</p>
-                        
-                        {/* Indicador de rareza */}
-                        <div className="absolute bottom-0 left-0 w-full h-1" 
-                             style={{backgroundColor: skin.content_tier?.color || 'rgba(255,255,255,0.1)'}}></div>
-                      </div>
-                    ))}
-                    {cajaSkins.length > 12 && (
-                       <div className="p-2 rounded-lg bg-black/40 border border-slate-700/70 hover:border-primary/50 aspect-square flex flex-col items-center justify-center text-center transition-all hover:bg-black/60">
-                         <p className="text-2xl text-primary font-bold">+{cajaSkins.length - 12}</p>
-                         <p className="text-xs text-white/70">más</p>
-                       </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {/* Botones principales */}
               <div className="flex flex-wrap gap-4 mt-8 mb-8 justify-center">
                 <Button
-                  className={`px-8 py-3 relative shadow-lg bg-gradient-to-r from-primary to-primary 
+                  className={`px-6 py-5 text-lg rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 shadow-lg shadow-red-900/20
+                              text-white hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 
+                              active:scale-95 transition-all duration-300 min-w-[180px] border border-red-500/20 
+                              
                     ${(!isOpening && !isSpinning && (!caja.es_diaria || !dailyOpened) && caja.esta_disponible) 
-                      ? 'hover:shadow-primary/30 hover:scale-105' 
-                      : 'opacity-80 cursor-not-allowed'} 
-                    text-white rounded-lg transition-all duration-300 min-w-[180px]`}
-                  disabled={
-                    isOpening ||
-                    isSpinning ||
-                    (caja.es_diaria && dailyOpened) ||
-                    !caja.esta_disponible
-                  }
+                      ? 'hover:shadow-primary/30' 
+                      : 'opacity-80 cursor-not-allowed'}`}
+                  disabled={isOpening || isSpinning || (caja.es_diaria && dailyOpened) || !caja.esta_disponible}
                   onClick={openBox}
                 >
-                  {isOpening || isSpinning
-                    ? isSpinning
-                      ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <span className="animate-spin h-4 w-4 border-2 border-white/50 border-t-white rounded-full"></span>
-                          Girando...
-                        </span>
-                      )
-                      : (
-                        <span className="flex items-center justify-center gap-2">
-                          <span className="animate-spin h-4 w-4 border-2 border-white/50 border-t-white rounded-full"></span>
-                          Abriendo...
-                        </span>
-                      )
-                    : caja.es_diaria
-                      ? dailyOpened
-                        ? "Ya abierta hoy"
-                        : "Abrir Caja"
-                      : caja.esta_disponible
-                        ? `Abrir por ${caja.precio} VP`
-                        : "Próximamente"}
-                  
-                  {/* Efecto visual en el botón */}
-                  {(!isOpening && !isSpinning && (!caja.es_diaria || !dailyOpened) && caja.esta_disponible) && (
-                    <span className="absolute -z-10 top-0 left-0 right-0 bottom-0 bg-primary opacity-30 blur-md rounded-lg transform scale-110 animate-pulse"></span>
+                  {isOpening || isSpinning ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="animate-spin h-4 w-4 border-2 border-white/20 border-t-white rounded-full"></span>
+                      {isSpinning ? "Girando..." : "Abriendo..."}
+                    </span>
+                  ) : caja.es_diaria && dailyOpened ? (
+                    "Ya abierta hoy"
+                  ) : !caja.esta_disponible ? (
+                    "Próximamente"
+                  ) : (
+                    `Abrir por ${caja.precio} VP`
                   )}
                 </Button>
               </div>
-
-              {/* Sección de Probabilidades mejorada */}
-              {!isSpinning && !resultSkin && probabilidades && (
-                <div className="w-full bg-gradient-to-br from-slate-800/80 to-black/80 backdrop-blur-md rounded-xl p-6 border border-slate-700/50 max-w-md mx-auto mt-0 mb-10 shadow-xl transform transition-all">
-                  <h4 className="text-xl font-semibold text-white mb-6 flex items-center gap-2 justify-center">
-                    <span className="w-2 h-2 rounded-full bg-primary"></span>
-                    Probabilidades de Obtención
-                    <span className="w-2 h-2 rounded-full bg-primary"></span>
-                  </h4>
-                  <div className="space-y-4">
-                      {probabilidades
-                        .sort((a, b) => b.probabilidad - a.probabilidad)
-                        .map((prob) => (
-                          <div key={prob.id} className="bg-black/30 p-4 rounded-lg border border-white/5 hover:border-white/10 transition-all hover:shadow-md hover:shadow-primary/5">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-white/90 flex items-center">
-                                {prob.content_tier?.color && (
-                                  <div
-                                    className="w-4 h-4 rounded-md mr-2 shadow-sm"
-                                    style={{
-                                      backgroundColor: prob.content_tier.color,
-                                      boxShadow: `0 0 5px ${prob.content_tier.color}`
-                                    }}
-                                  />
-                                )}
-                                <span className="font-medium text-base">{prob.content_tier?.nombre || "Desconocido"}</span>
-                              </span>
-                              <span 
-                                className="text-white font-bold text-lg px-2 py-0.5 rounded"
-                                style={{
-                                  color: prob.content_tier?.color || 'white',
-                                  textShadow: prob.content_tier?.color ? `0 0 5px ${prob.content_tier.color}40` : 'none'
-                                }}
-                              >
-                                {(prob.probabilidad * 100).toFixed(1)}%
-                              </span>
-                            </div>
-                            {/* Barra de progreso mejorada */}
-                            <div className="w-full h-3 bg-black/60 rounded-full mt-1 overflow-hidden p-0.5">
-                              <div
-                                className="h-full rounded-full transition-all duration-1000 relative"
-                                style={{
-                                  backgroundColor: prob.content_tier?.color || "#fff",
-                                  width: `${Math.max(prob.probabilidad * 100, 0.5)}%`,
-                                  boxShadow: prob.content_tier?.color ? `0 0 8px ${prob.content_tier.color}` : 'none'
-                                }}
-                              >
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                </div>
-              )}
             </div>
           )}
           {!caja && <p>Cargando información de la caja...</p>}
