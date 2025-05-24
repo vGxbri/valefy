@@ -14,6 +14,8 @@ import {
   getWeaponSkins,
   filterSkinsByIds,
   Skin as ValorantSkin,
+  getWeaponType, 
+  getWeaponSpecificStyles
 } from "@/lib/valorantApi";
 import { extraerTipoCaja, getTierData, Skin } from "@/lib/boxUtils";
 import BoxComponent, { BoxCaja } from "@/components/BoxComponent";
@@ -922,6 +924,15 @@ export default function CajaPage() {
                           }
                         }
 
+                        // Determinar el tipo de arma y obtener los estilos específicos
+                        const weaponType = getWeaponType(skin.nombre);
+                        const weaponStyles = getWeaponSpecificStyles(weaponType);
+
+                        // Crear el estilo inline para las transformaciones
+                        const imageTransformStyle: React.CSSProperties = {
+                          transform: `scale(${weaponStyles.baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
+                        };
+
                         return (
                           <div 
                             key={skin.id} 
@@ -945,7 +956,8 @@ export default function CajaPage() {
                                 src={skin.imagen_url} 
                                 alt={skin.nombre} 
                                 fill
-                                className="object-contain p-3 group-hover:scale-105 rotate-12 transition-transform duration-300 z-10"
+                                className="object-contain p-3 group-hover:scale-105 transition-transform duration-300 z-10"
+                                style={imageTransformStyle}
                               />
                             )}
                             

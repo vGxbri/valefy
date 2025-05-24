@@ -16,7 +16,7 @@ import {
 } from "@heroui/react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added
-import { getWeaponSkins as fetchAllWeaponSkinsFromApi, getBestDisplayIcon, getContentTiers as fetchAllContentTiersFromApi, Skin as ValorantApiSkin, ContentTier as ValorantApiContentTier } from "@/lib/valorantApi";
+import { getWeaponSkins as fetchAllWeaponSkinsFromApi, getBestDisplayIcon, getContentTiers as fetchAllContentTiersFromApi, Skin as ValorantApiSkin, ContentTier as ValorantApiContentTier, getWeaponType, getWeaponSpecificStyles } from "@/lib/valorantApi";
 import { motion } from "framer-motion";
 
 // Componente de carga para el inventario
@@ -555,6 +555,15 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                 };
               }
 
+              // Determinar el tipo de arma y obtener los estilos específicos
+              const weaponType = getWeaponType(skin.skinName);
+              const weaponStyles = getWeaponSpecificStyles(weaponType);
+
+              // Crear el estilo inline para las transformaciones
+              const imageTransformStyle: React.CSSProperties = {
+                transform: `scale(${weaponStyles.baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
+              };
+
               return (
                 <motion.div
                   key={skin.uniqueCardId}
@@ -600,7 +609,8 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                     alt={skin.skinName}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    className="object-contain p-4 group-hover:scale-105 rotate-12	 transition-transform duration-300 z-10"
+                    className="object-contain p-4 group-hover:scale-105 transition-transform duration-300 z-10"
+                    style={imageTransformStyle}
                     priority={index < 12} // Prioritize loading first 12 images
                   />
                   <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-10">

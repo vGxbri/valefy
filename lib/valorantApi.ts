@@ -70,6 +70,69 @@ export const BANNED_WEAPON_NAMES = [
   "Melee",
 ];
 
+/**
+ * Determina el tipo de arma basándose en el nombre de la skin
+ * @param skinName El nombre de la skin
+ * @returns El tipo de arma detectado
+ */
+export const getWeaponType = (skinName: string): 'classic' | 'frenzy' | 'sheriff' | 'melee' | 'standard' => {
+  if (skinName.endsWith(' Classic')) {
+    return 'classic';
+  }
+  if (skinName.endsWith(' Frenzy')) {
+    return 'frenzy';
+  }
+  if (skinName.endsWith(' Sheriff')) {
+    return 'sheriff';
+  }
+  
+  // Para cuchillos: si NO termina con ninguno de los nombres de armas básicas, es un cuchillo/melee
+  const endsWithBannedWeapon = BANNED_WEAPON_NAMES.some(weaponName => 
+    skinName.endsWith(` ${weaponName}`)
+  );
+  
+  if (!endsWithBannedWeapon) {
+    return 'melee';
+  }
+  
+  return 'standard';
+};
+
+/**
+ * Obtiene las configuraciones específicas para cada tipo de arma
+ * @param weaponType El tipo de arma
+ * @returns Un objeto con la configuración de escala y rotación
+ */
+export const getWeaponSpecificStyles = (weaponType: ReturnType<typeof getWeaponType>) => {
+  switch (weaponType) {
+    case 'classic':
+      return {
+        baseScale: 0.7, // 30% más pequeña (100% - 30% = 70%)
+        hasRotation: true
+      };
+    case 'frenzy':
+      return {
+        baseScale: 0.65, // 40% más pequeña (100% - 40% = 60%)
+        hasRotation: true
+      };
+    case 'sheriff':
+      return {
+        baseScale: 0.85, // 25% más pequeña (100% - 25% = 75%)
+        hasRotation: true
+      };
+    case 'melee':
+      return {
+        baseScale: 1, // Sin escala adicional
+        hasRotation: false // Sin rotación para cuchillos
+      };
+    default:
+      return {
+        baseScale: 1,
+        hasRotation: true
+      };
+  }
+};
+
 export const getWeaponSkins = async (): Promise<Skin[]> => {
   const res = await fetch("https://valorant-api.com/v1/weapons/skins");
 

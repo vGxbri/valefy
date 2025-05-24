@@ -5,8 +5,9 @@ import Image from "next/image";
 import { useSession } from "next-auth/react";
 
 import { Button } from "@/components/ui/button";
-import { getWeaponSkins, filterSkinsByIds } from "@/lib/valorantApi";
+import { getWeaponSkins, filterSkinsByIds, getWeaponSpecificStyles, getWeaponType } from "@/lib/valorantApi";
 import { formatSkinForApp } from "@/lib/skinUtils";
+import SpinnerAnimation from "@/components/SpinnerAnimation";
 import {
   Skin,
   TierProbabilidad,
@@ -125,6 +126,14 @@ export default function BoxComponent({
   const [resultSkin, setResultSkin] = useState<Skin | null>(null);
   const [dailyOpened, setDailyOpened] = useState(false);
   const [resultSkinForSpin, setResultSkinForSpin] = useState<Skin | null>(null);
+
+  // Estados para múltiples cajas
+  const [isMultipleMode, setIsMultipleMode] = useState(false);
+  const [numberOfBoxes, setNumberOfBoxes] = useState(1);
+  const [multipleResults, setMultipleResults] = useState<Skin[]>([]);
+  const [multipleSpinItems, setMultipleSpinItems] = useState<Skin[][]>([]);
+  const [activeSpinners, setActiveSpinners] = useState<boolean[]>([]);
+  const [completedSpinners, setCompletedSpinners] = useState<boolean[]>([]);
 
   // Referencias
   const spinnerRef = useRef<HTMLDivElement>(null);
@@ -381,7 +390,7 @@ export default function BoxComponent({
     spinnerElement.style.transform = `translateX(-${finalPosition}px)`;
   };
 
-  // Función para abrir la caja con animación mejorada
+  // Función para abrir una o múltiples cajas
   const openBox = async () => {
     if (
       !caja ||
@@ -397,7 +406,6 @@ export default function BoxComponent({
 
     if (cajaSkins.length === 0) {
       console.error("No hay skins disponibles en esta caja");
-
       return;
     }
 
@@ -411,30 +419,62 @@ export default function BoxComponent({
       if (probabilidades.length === 0) {
         console.error("No se encontraron probabilidades para esta caja");
         setIsOpening(false);
-
         return;
       }
 
       if (isAuthenticated && session?.user?.id) {
         const userId = session.user.id;
 
-        const openingResult = await processBoxOpening(
-          userId,
-          caja.id,
-          cajaSkins as any,
-          probabilidades as any,
-          supabase,
-        );
+        if (isMultipleMode && numberOfBoxes > 1) {
+          // Modo múltiples cajas
+          const results: Skin[] = [];
+          const spinItemsArray: Skin[][] = [];
 
-        if (openingResult.selectedSkin) {
-          const items = generateSpinItems(openingResult.selectedSkin as Skin);
+          for (let i = 0; i < numberOfBoxes; i++) {
+            const openingResult = await processBoxOpening(
+              userId,
+              caja.id,
+              cajaSkins as any,
+              probabilidades as any,
+              supabase,
+            );
 
-          setResultSkinForSpin(openingResult.selectedSkin as Skin);
-          setSpinItems(items);
-          setIsSpinning(true);
+            if (openingResult.selectedSkin) {
+              results.push(openingResult.selectedSkin as Skin);
+              const items = generateSpinItems(openingResult.selectedSkin as Skin);
+              spinItemsArray.push(items);
+            }
+          }
+
+          if (results.length > 0) {
+            setMultipleResults(results);
+            setMultipleSpinItems(spinItemsArray);
+            setActiveSpinners(Array(numberOfBoxes).fill(true));
+            setCompletedSpinners(Array(numberOfBoxes).fill(false));
+            setIsSpinning(true);
+          } else {
+            console.error("Error al seleccionar skins");
+            setIsOpening(false);
+          }
         } else {
-          console.error("Error al seleccionar skin:", openingResult.error);
-          setIsOpening(false);
+          // Modo caja única
+          const openingResult = await processBoxOpening(
+            userId,
+            caja.id,
+            cajaSkins as any,
+            probabilidades as any,
+            supabase,
+          );
+
+          if (openingResult.selectedSkin) {
+            const items = generateSpinItems(openingResult.selectedSkin as Skin);
+            setResultSkinForSpin(openingResult.selectedSkin as Skin);
+            setSpinItems(items);
+            setIsSpinning(true);
+          } else {
+            console.error("Error al seleccionar skin:", openingResult.error);
+            setIsOpening(false);
+          }
         }
       } else {
         console.error("Error al abrir la caja, el usuario no está autenticado");
@@ -489,6 +529,49 @@ export default function BoxComponent({
     }
   }, [isSpinning, spinItems, resultSkinForSpin, caja]);
 
+  // Función para manejar la finalización de las animaciones del spinner
+  const handleSpinnerComplete = (spinnerIndex?: number) => {
+    if (isMultipleMode && numberOfBoxes > 1 && spinnerIndex !== undefined) {
+      // Modo múltiples cajas - marcar este spinner como completado
+      const newCompletedSpinners = [...completedSpinners];
+      const newActiveSpinners = [...activeSpinners];
+      
+      newCompletedSpinners[spinnerIndex] = true;
+      newActiveSpinners[spinnerIndex] = false;
+      
+      setCompletedSpinners(newCompletedSpinners);
+      setActiveSpinners(newActiveSpinners);
+      
+      // Verificar si todas las animaciones están completadas
+      if (newCompletedSpinners.every(completed => completed)) {
+        setIsSpinning(false);
+        setIsOpening(false);
+        if (caja && caja.es_diaria) {
+          setDailyOpened(true);
+        }
+      }
+    } else {
+      // Modo caja única
+      setResultSkin(resultSkinForSpin);
+      setIsSpinning(false);
+      setResultSkinForSpin(null);
+      if (caja && caja.es_diaria) {
+        setDailyOpened(true);
+      }
+      setIsOpening(false);
+    }
+  };
+
+  // Función para resetear todo cuando se cierra el resultado
+  const resetResults = () => {
+    setResultSkin(null);
+    setMultipleResults([]);
+    setMultipleSpinItems([]);
+    setActiveSpinners([]);
+    setCompletedSpinners([]);
+    setIsOpening(false);
+  };
+
   // Si está cargando, mostrar spinner de carga
   if (isLoading) {
     return (
@@ -542,9 +625,72 @@ export default function BoxComponent({
     );
   }
 
+  // Determinar el tipo de arma y obtener los estilos específicos
+  const weaponType = getWeaponType(resultSkin?.nombre || '');
+  const weaponStyles = getWeaponSpecificStyles(weaponType);
+
+  // Crear el estilo inline para las transformaciones
+  const imageTransformStyle: React.CSSProperties = {
+    transform: `scale(${weaponStyles.baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
+  };
+
   return (
     <div className="w-full flex flex-col items-center justify-center py-10">
-      {resultSkin ? (
+      {multipleResults.length > 0 && !isSpinning ? (
+        // Vista de resultados múltiples
+        <div className="w-full max-w-6xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-white mb-4">
+              ¡Resultados de las {numberOfBoxes} cajas!
+            </h2>
+            <div className="h-1 w-1/4 bg-gradient-to-r from-primary/60 to-secondary/60 rounded-full mx-auto" />
+          </div>
+          
+          <div className={`grid gap-6 ${numberOfBoxes <= 2 ? 'grid-cols-1 md:grid-cols-2' : numberOfBoxes <= 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-2 md:grid-cols-3'} mb-8`}>
+            {multipleResults.map((skin, index) => (
+              <div key={index} className="p-6 rounded-xl bg-gradient-to-br from-slate-800/80 via-slate-900/90 to-black/80 shadow-2xl border border-slate-700/50 backdrop-blur-md flex flex-col items-center">
+                <div className="relative w-[200px] h-[200px] mb-4">
+                  {skin.imagen_url && (
+                    <Image
+                      alt={skin.nombre}
+                      className="object-contain drop-shadow-lg p-2 rotate-12"
+                      fill
+                      src={skin.imagen_url}
+                      style={{animation: 'float 3s infinite ease-in-out'}}
+                    />
+                  )}
+                </div>
+                <p className="text-lg font-semibold text-white mb-2 capitalize tracking-wide text-center">
+                  {skin.nombre}
+                </p>
+                {skin.content_tier && (
+                  <div
+                    className="px-3 py-1 rounded-full text-xs font-medium shadow-md border border-opacity-50"
+                    style={{
+                      backgroundColor: `${skin.content_tier.color}20`,
+                      color: skin.content_tier.color,
+                      borderColor: skin.content_tier.color,
+                      boxShadow: `0 0 10px ${skin.content_tier.color}40`
+                    }}
+                  >
+                    {skin.content_tier.nombre}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          
+          <div className="text-center">
+            <Button
+              onClick={resetResults}
+              className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-8 py-3"
+            >
+              Abrir más cajas
+            </Button>
+          </div>
+        </div>
+      ) : resultSkin ? (
+        
         // Resultado de apertura de caja mejorado
         <div className="p-8 md:p-10 rounded-xl max-w-md w-full text-center bg-gradient-to-br from-slate-800/80 via-slate-900/90 to-black/80 shadow-2xl border border-slate-700/50 backdrop-blur-md flex flex-col items-center">
           {resultSkin.imagen_url && (
@@ -567,7 +713,7 @@ export default function BoxComponent({
                   <Image
                     alt={resultSkin.nombre}
                     className="object-contain drop-shadow-lg p-2 relative z-10" 
-                    style={{animation: 'float 3s infinite ease-in-out', rotate: '12deg'}}
+                    style={{animation: 'float 3s infinite ease-in-out', ...imageTransformStyle}}
                     height={250}
                     src={resultSkin.imagen_url}
                     width={250}
@@ -603,10 +749,7 @@ export default function BoxComponent({
             </div>
           )}
           <Button
-            onClick={() => {
-              setResultSkin(null);
-              setIsOpening(false); // Ensure isOpening is reset when going back
-            }}
+            onClick={resetResults}
             className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
           >
             Abrir de nuevo
@@ -627,103 +770,87 @@ export default function BoxComponent({
               <div className="h-1 w-1/4 bg-gradient-to-r from-primary/60 to-secondary/60 rounded-full mx-auto mt-4" />
 
               {isSpinning ? (
-                // Vista giratoria mejorada
-                <div className="w-full text-center mb-8 relative">
-                  <div className="w-full py-6 relative">
-                    <div
-                      className="mx-auto overflow-hidden relative rounded-lg shadow-2xl backdrop-blur-lg bg-gradient-to-r from-transparent via-black/50 to-transparent w-full"
-                      style={{
-                        height: "240px",
-                      }}
-                    >
-
-                      {/* Efecto de resplandor en los bordes (solo superior e inferior) */}
-                      <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/80 to-transparent"></div>
-                        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/80 to-transparent"></div>
+                isMultipleMode && numberOfBoxes > 1 ? (
+                  // Vista múltiples cajas - Layout en grid
+                  <div className="w-full mb-8">
+                    <div className="mb-6 text-center">
+                      <p className="text-lg text-white/80 mb-2">
+                        Abriendo {numberOfBoxes} cajas simultáneamente
+                      </p>
+                      <div className="w-full bg-gray-700 rounded-full h-2 max-w-md mx-auto">
+                        <div 
+                          className="bg-primary h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${(completedSpinners.filter(completed => completed).length / numberOfBoxes) * 100}%` }}
+                        ></div>
                       </div>
-                      
-                      <div
-                        ref={spinnerRef}
-                        className="flex items-center"
-                        style={{
-                          width: "`${spinItems.length * ITEM_WIDTH_CAROUSEL}px`", // Usar la constante
-                          height: "100%",
-                        }}
-                      >
-                        {spinItems.map((skin, index) => {
-                          /** 
-                          let itemCardStyle: React.CSSProperties = {
-                            borderWidth: '1px',
-                            borderColor: 'rgba(55, 65, 81, 0.5)' // slate-700/50
-                          };
-
-                          if (skin.content_tier?.color && skin.content_tier.color !== '#FFFFFF' && skin.content_tier.color.startsWith('#')) {
-                            const tierColorHex = skin.content_tier.color;
-                            if (/^#([0-9A-F]{3}){1,2}([0-9A-F]{2})?$/i.test(tierColorHex)) {
-                              let r, g, b;
-                              if (tierColorHex.length === 4 || tierColorHex.length === 5) {
-                                r = parseInt(tierColorHex[1] + tierColorHex[1], 16);
-                                g = parseInt(tierColorHex[2] + tierColorHex[2], 16);
-                                b = parseInt(tierColorHex[3] + tierColorHex[3], 16);
-                              } else {
-                                r = parseInt(tierColorHex.slice(1, 3), 16);
-                                g = parseInt(tierColorHex.slice(3, 5), 16);
-                                b = parseInt(tierColorHex.slice(5, 7), 16);
-                              }
-                              itemCardStyle.backgroundImage = `linear-gradient(to top, rgba(${r},${g},${b},0.12) 0%, rgba(${r},${g},${b},0.18) 35%, rgba(10, 14, 22, 0.88) 70%, #0A0E16 100%)`;
-                            } else {
-                              itemCardStyle.backgroundImage = `linear-gradient(to bottom, rgba(20, 28, 42, 0.85), rgba(10, 14, 22, 0.92))`;
-                            }
-                          } else {
-                            itemCardStyle.backgroundImage = `linear-gradient(to bottom, rgba(20, 28, 42, 0.85), rgba(10, 14, 22, 0.92))`;
-                          }
-                          */
-
-                          return (
-                            <div
-                              key={`${skin.id}-${index}`}
-                              className="p-2 flex-shrink-0 h-full flex flex-col justify-center items-center text-center transition-all"
-                              style={{ width: `${ITEM_WIDTH_CAROUSEL}px` }}
-                            >
-                              <div 
-                                className="relative w-[240px] h-[240px] rounded-xl overflow-hidden flex items-center justify-center group"
-                                // style={itemCardStyle}
-                              >
-                                {skin.content_tier?.id && skin.content_tier.id !== 'standard' && (
+                    </div>
+                    
+                    <div className={`grid gap-4 ${numberOfBoxes <= 2 ? 'grid-cols-1 md:grid-cols-2' : numberOfBoxes <= 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-2 md:grid-cols-3'} max-w-6xl mx-auto`}>
+                      {Array.from({ length: numberOfBoxes }).map((_, index) => (
+                        <div key={index} className="flex justify-center">
+                          {activeSpinners[index] && multipleSpinItems[index] ? (
+                            <SpinnerAnimation
+                              isSpinning={true}
+                              spinItems={multipleSpinItems[index]}
+                              onAnimationComplete={() => handleSpinnerComplete(index)}
+                              orientation="vertical"
+                              itemSize={140}
+                              animationDuration={10000}
+                            />
+                          ) : completedSpinners[index] && multipleResults[index] ? (
+                            // Resultado ya completado
+                            <div className="w-[240px] h-[300px] rounded-xl bg-gradient-to-br from-slate-800/80 via-slate-900/90 to-black/80 border border-slate-700/50 flex flex-col items-center justify-center p-4">
+                              <div className="relative w-[160px] h-[160px] mb-3">
+                                {multipleResults[index].imagen_url && (
                                   <Image
-                                    src={`/skins-bg/${skin.content_tier.id}.png`}
-                                    alt="" // Decorative
-                                    layout="fill"
-                                    objectFit="contain"
-                                    className="absolute inset-0 z-0 p-2 opacity-40 transform scale-125 rotate-12"
-                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                    priority={index < 10} // Prioritize first few images
-                                  />
-                                )}
-                                {skin.imagen_url && (
-                                  <Image
-                                    alt={skin.nombre}
-                                    className="object-contain drop-shadow-lg p-2 relative z-10 transform transition-transform duration-300 group-hover:scale-105 rotate-12"
-                                    height={220}
-                                    src={skin.imagen_url}
-                                    width={220}
-                                    priority={index < 10}
+                                    alt={multipleResults[index].nombre}
+                                    className="object-contain drop-shadow-lg p-2 rotate-12"
+                                    fill
+                                    src={multipleResults[index].imagen_url}
+                                    style={{animation: 'float 3s infinite ease-in-out'}}
                                   />
                                 )}
                               </div>
+                              <p className="text-sm font-semibold text-white mb-2 text-center leading-tight">
+                                {multipleResults[index].nombre}
+                              </p>
+                              {multipleResults[index].content_tier && (
+                                <div
+                                  className="px-2 py-1 rounded-full text-xs font-medium"
+                                  style={{
+                                    backgroundColor: `${multipleResults[index].content_tier?.color}20`,
+                                    color: multipleResults[index].content_tier?.color,
+                                    borderColor: multipleResults[index].content_tier?.color,
+                                  }}
+                                >
+                                  {multipleResults[index].content_tier?.nombre}
+                                </div>
+                              )}
                             </div>
-                          );
-                        })}
-                      </div>
-                      
-                      {/* Marcador central mejorado */}
-                      <div className="absolute top-0 left-1/2 h-full transform -translate-x-1/2 pointer-events-none z-10 flex items-center justify-center">
-                        <div className="w-[3px] h-full bg-gradient-to-b from-transparent via-primary to-transparent opacity-75"></div>
-                      </div>
+                          ) : (
+                            // Spinner aún no iniciado
+                            <div className="w-[240px] h-[300px] rounded-xl bg-slate-800/50 border border-slate-700/30 flex items-center justify-center opacity-50">
+                              <div className="text-white/60 text-center">
+                                <div className="w-16 h-16 border-2 border-white/20 rounded-xl mb-3 mx-auto flex items-center justify-center">
+                                  <span className="text-2xl">📦</span>
+                                </div>
+                                <p className="text-sm">Preparando...</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
+                ) : (
+                  // Vista caja única
+                  <SpinnerAnimation
+                    isSpinning={isSpinning}
+                    spinItems={spinItems}
+                    onAnimationComplete={handleSpinnerComplete}
+                    orientation="horizontal"
+                  />
+                )
               ) : (
                 // Vista inicial de la caja mejorada
                 <div className="my-8 flex items-center justify-center relative">
@@ -771,6 +898,45 @@ export default function BoxComponent({
                 </div>
               )}
 
+              {/* Selector de múltiples cajas */}
+              <div className="mb-6 flex flex-col items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isMultipleMode}
+                      onChange={(e) => setIsMultipleMode(e.target.checked)}
+                      className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
+                    />
+                    <span className="text-white/90 font-medium">Abrir múltiples cajas</span>
+                  </label>
+                </div>
+                
+                {isMultipleMode && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-white/80 text-sm">Cantidad:</span>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((num) => (
+                        <button
+                          key={num}
+                          onClick={() => setNumberOfBoxes(num)}
+                          className={`w-8 h-8 rounded-full border transition-all duration-200 text-sm font-medium ${
+                            numberOfBoxes === num
+                              ? 'bg-primary text-white border-primary shadow-lg'
+                              : 'bg-gray-700/50 text-white/70 border-gray-600 hover:bg-gray-600/50 hover:border-gray-500'
+                          }`}
+                        >
+                          {num}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-white/60 text-sm">
+                      Precio total: {caja ? caja.precio * numberOfBoxes : 0} VP
+                    </span>
+                  </div>
+                )}
+              </div>
+
               {/* Botones principales */}
               <div className="flex flex-wrap gap-4 mt-8 mb-8 justify-center">
                 <Button
@@ -793,6 +959,8 @@ export default function BoxComponent({
                     "Ya abierta hoy"
                   ) : !caja.esta_disponible ? (
                     "Próximamente"
+                  ) : isMultipleMode && numberOfBoxes > 1 ? (
+                    `Abrir ${numberOfBoxes} cajas por ${caja.precio * numberOfBoxes} VP`
                   ) : (
                     `Abrir por ${caja.precio} VP`
                   )}
