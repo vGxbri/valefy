@@ -151,21 +151,8 @@ export default function BoxComponent({
   const renderCountRef = useRef(0);
   renderCountRef.current += 1;
 
-  // Log para debuggear estados
-  console.log('🎮 BoxComponent render - Estados:', {
-    isOpening,
-    isSpinning,
-    isMultipleMode,
-    numberOfBoxes,
-    multipleResultsCount: multipleResults.length,
-    multipleSpinItemsCount: multipleSpinItems.length,
-    completedSpinners,
-    resultSkinExists: !!resultSkin
-  });
-
   // Log específico para monitorear cambios en multipleResults
   useEffect(() => {
-    console.log('📈 multipleResults cambió:', multipleResults.length, 'elementos');
     if (multipleResults.length === 0) {
       console.log('🚨 multipleResults fue limpiado! Stack trace:', new Error().stack);
     }
@@ -175,7 +162,7 @@ export default function BoxComponent({
   const spinnerRef = useRef<HTMLDivElement>(null);
 
   // Constante para el ancho de los ítems del carrusel
-  const ITEM_WIDTH_CAROUSEL = 260; // Aumentado de 180 a 280
+  const ITEM_WIDTH_CAROUSEL = 240; // Reducido de 260 a 180 para menos espacio
 
   // Efecto para cargar los skins de la caja si no se proporcionaron inicialmente
   useEffect(() => {
@@ -525,14 +512,6 @@ export default function BoxComponent({
 
   // useEffect for handling the animation logic
   useEffect(() => {
-    console.log('🔄 useEffect caja única - Condiciones:', {
-      isSpinning,
-      spinItemsLength: spinItems.length,
-      hasResultSkinForSpin: !!resultSkinForSpin,
-      hasSpinnerRef: !!spinnerRef.current,
-      hasParentElement: !!(spinnerRef.current?.parentElement)
-    });
-    
     if (
       isSpinning &&
       spinItems.length > 0 &&
@@ -540,7 +519,6 @@ export default function BoxComponent({
       spinnerRef.current &&
       spinnerRef.current.parentElement
     ) {
-      console.log('🚀 Iniciando animación de CAJA ÚNICA');
       const viewportElement = spinnerRef.current.parentElement;
       const viewportWidth = viewportElement.offsetWidth;
       const winningItemIndexInSpinItems = Math.floor(spinItems.length / 2);
@@ -555,7 +533,6 @@ export default function BoxComponent({
       const postSpinDelay = 1000;
 
       const timer = setTimeout(() => {
-        console.log('⏰ Timer de CAJA ÚNICA completado');
         setResultSkin(resultSkinForSpin);
         setIsSpinning(false);
         setResultSkinForSpin(null);
@@ -567,7 +544,6 @@ export default function BoxComponent({
       }, animationDuration + postSpinDelay);
 
       return () => {
-        console.log('🧹 Limpiando timer de CAJA ÚNICA');
         clearTimeout(timer);
         // It's also good practice to clean up the transition if the component unmounts or effect re-runs mid-animation
         if (spinnerRef.current) {
@@ -579,25 +555,18 @@ export default function BoxComponent({
 
   // Función para manejar la finalización de las animaciones del spinner
   const handleSpinnerComplete = (spinnerIndex?: number) => {
-    console.log('🎯 handleSpinnerComplete llamado con index:', spinnerIndex, 'isMultipleMode:', isMultipleMode, 'numberOfBoxes:', numberOfBoxes);
-    
     if (isMultipleMode && numberOfBoxes > 1 && spinnerIndex !== undefined) {
       // Modo múltiples cajas - escalonado
       setCompletedSpinners(prev => {
-        console.log('📊 Estado anterior completedSpinners:', prev);
         const newCompleted = [...prev];
         newCompleted[spinnerIndex] = true;
-        console.log('📊 Nuevo estado completedSpinners:', newCompleted);
         
         // Verificar si todas han terminado
         const allCompleted = newCompleted.every((completed, idx) => idx >= numberOfBoxes || completed);
-        console.log('✅ Verificación allCompleted:', allCompleted, 'numberOfBoxes:', numberOfBoxes);
         
         if (allCompleted) {
-          console.log('🎉 Todas las cajas han completado! Finalizando en 500ms...');
           // Todas han terminado, esperar un poco más para una transición suave
           setTimeout(() => {
-            console.log('🏁 Ejecutando finalización después de timeout');
             setIsSpinning(false);
             setIsOpening(false);
             if (caja && caja.es_diaria) {
@@ -609,7 +578,6 @@ export default function BoxComponent({
         return newCompleted;
       });
     } else {
-      console.log('📦 Modo caja única - finalizando inmediatamente');
       // Modo caja única
       setResultSkin(resultSkinForSpin);
       setIsSpinning(false);
@@ -623,7 +591,6 @@ export default function BoxComponent({
 
   // Función para resetear todo cuando se cierra el resultado
   const resetResults = () => {
-    console.log('🧹 resetResults llamado - limpiando todos los estados');
     setResultSkin(null);
     setMultipleResults([]);
     setMultipleSpinItems([]);
@@ -695,23 +662,6 @@ export default function BoxComponent({
   // Log de las condiciones de renderizado
   const showMultipleResults = multipleResults.length > 0 && !isSpinning;
   const showSingleResult = !!resultSkin;
-  console.log(`🎭 Render #${renderCountRef.current} - Condiciones de renderizado:`, {
-    multipleResultsLength: multipleResults.length,
-    isSpinning,
-    showMultipleResults,
-    showSingleResult,
-    resultSkinExists: !!resultSkin
-  });
-
-  let renderBranch = 'unknown';
-  if (showMultipleResults) {
-    renderBranch = 'multipleResults';
-  } else if (showSingleResult) {
-    renderBranch = 'singleResult';
-  } else {
-    renderBranch = 'mainView';
-  }
-  console.log(`🎯 Render #${renderCountRef.current} - Branch: ${renderBranch}`);
 
   return (
     <div className="w-full flex flex-col items-center justify-center py-10">

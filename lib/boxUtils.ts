@@ -215,7 +215,6 @@ export function selectRandomSkinByProbability(
   showLogs: boolean = false,
 ): Skin | null {
   if (!skins.length || !probabilidades.length) {
-    console.error('❌ Arrays vacíos:', { skinsLength: skins.length, probabilidadesLength: probabilidades.length });
     return null;
   }
 
@@ -229,18 +228,6 @@ export function selectRandomSkinByProbability(
       const skinsInTier = skins.filter(skin => 
         skin.content_tier_id === tierProb.content_tier?.uuid_api
       );
-      
-      if (showLogs) {
-        console.log(`🔎 Buscando skins para tier "${tierProb.content_tier?.nombre}"`);
-        console.log(`   Tier ID: ${tierProb.content_tier_id}`);
-        console.log(`   Tier UUID_API: ${tierProb.content_tier?.uuid_api}`);
-        console.log(`   Skins encontradas: ${skinsInTier.length}`);
-        if (skinsInTier.length > 0) {
-          skinsInTier.forEach(skin => {
-            console.log(`     - ${skin.nombre} (skin tier_id: ${skin.content_tier_id})`);
-          });
-        }
-      }
       
       if (skinsInTier.length > 0) {
         // Dividir la probabilidad del tier entre todas las skins de ese tier
@@ -258,67 +245,28 @@ export function selectRandomSkinByProbability(
     }
 
     if (skinProbabilities.length === 0) {
-      console.error('❌ No se encontraron skins con probabilidades válidas');
       return null;
     }
 
     // Calcular la suma total para normalización
     const totalProbability = skinProbabilities.reduce((sum, item) => sum + item.probability, 0);
 
-    if (showLogs) {
-      console.log('🎲 Probabilidades individuales por skin:');
-      
-      // Agrupar por tier para mostrar mejor
-      const tierGroups: { [tierName: string]: { count: number; totalProb: number; individual: number } } = {};
-      skinProbabilities.forEach(item => {
-        if (!tierGroups[item.tierName]) {
-          tierGroups[item.tierName] = { count: 0, totalProb: 0, individual: 0 };
-        }
-        tierGroups[item.tierName].count++;
-        tierGroups[item.tierName].totalProb += item.probability;
-        tierGroups[item.tierName].individual = item.probability;
-      });
-
-      Object.entries(tierGroups).forEach(([tierName, data]) => {
-        console.log(`📊 ${tierName}: ${data.count} skins, ${(data.individual * 100).toFixed(2)}% cada una, ${(data.totalProb * 100).toFixed(2)}% total del tier`);
-      });
-
-      console.log(`🎯 Total de skins: ${skinProbabilities.length}, Probabilidad total: ${(totalProbability * 100).toFixed(2)}%`);
-    }
-
     // Generar número aleatorio
     const randomNum = Math.random();
     let accumulatedProbability = 0;
-
-    if (showLogs) {
-      console.log('🎲 Número aleatorio generado:', randomNum.toFixed(4));
-    }
 
     // Seleccionar skin basada en probabilidades individuales
     for (const item of skinProbabilities) {
       const normalizedProbability = item.probability / totalProbability;
       accumulatedProbability += normalizedProbability;
       
-      if (showLogs) {
-        console.log(`🎨 ${item.skin.nombre} (${item.tierName}): ${(normalizedProbability * 100).toFixed(4)}% - Acumulada: ${(accumulatedProbability * 100).toFixed(4)}%`);
-      }
-      
       if (randomNum <= accumulatedProbability) {
-        if (showLogs) {
-          console.log(`✅ Skin seleccionada: ${item.skin.nombre} del tier ${item.tierName}`);
-          console.log(`🎉 Probabilidad individual: ${(normalizedProbability * 100).toFixed(4)}%`);
-        }
         return item.skin;
       }
     }
 
     // Fallback: devolver la última skin si algo salió mal
-    const fallbackSkin = skinProbabilities[skinProbabilities.length - 1]?.skin || null;
-    if (showLogs && fallbackSkin) {
-      console.log(`⚠️ Fallback: usando última skin ${fallbackSkin.nombre}`);
-    }
-    
-    return fallbackSkin;
+    return skinProbabilities[skinProbabilities.length - 1]?.skin || null;
   } catch (error) {
     console.error("Error al seleccionar skin aleatoria:", error);
     return null;
@@ -347,10 +295,8 @@ export async function processBoxOpening(
   error?: any;
 }> {
   try {
-    console.log("🎁 Iniciando apertura de caja con probabilidades:");
-    
-    // Seleccionar skin aleatoria según probabilidades (con logs detallados)
-    const selectedSkinFromPool = selectRandomSkinByProbability(skins, probabilidades, true);
+    // Seleccionar skin aleatoria según probabilidades
+    const selectedSkinFromPool = selectRandomSkinByProbability(skins, probabilidades);
 
     if (!selectedSkinFromPool) {
       return {
@@ -360,8 +306,6 @@ export async function processBoxOpening(
         error: "No se pudo seleccionar una skin del pool",
       };
     }
-
-    console.log(`✅ Skin seleccionada: ${selectedSkinFromPool.nombre} (${selectedSkinFromPool.content_tier?.nombre})`);
 
     // Asumimos que selectedSkinFromPool.id es el API UUID de la skin
     // y selectedSkinFromPool.nombre es el displayName.
@@ -376,14 +320,13 @@ export async function processBoxOpening(
       await recordTransaction(userId, cajaId, selectedSkinFromPool.id, supabase);
 
     // Añadir al inventario o actualizar cantidad
-    // La variable inventorySuccess ya no existe, usamos operationType para determinar éxito
     const { operationType, error: inventoryError } =
       await addSkinToInventory(userId, skinApiRepresentation, supabase);
 
     return {
       selectedSkin: selectedSkinFromPool,
       transactionSuccess,
-      inventoryOperationType: operationType, // operationType puede ser 'added', 'updated', o 'error'
+      inventoryOperationType: operationType,
       error: transactionError || inventoryError,
     };
   } catch (error) {
