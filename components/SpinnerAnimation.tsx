@@ -15,17 +15,30 @@ interface SpinnerAnimationProps {
 }
 
 const ITEM_WIDTH_CAROUSEL = 260;
-const ITEM_HEIGHT_CAROUSEL = 180;
+const ITEM_HEIGHT_CAROUSEL = 160;
 
 export default function SpinnerAnimation({
   isSpinning,
   spinItems,
   onAnimationComplete,
   orientation = "horizontal",
-  animationDuration = 100000000000, // 12000 por defecto
+  animationDuration = 12000, // 12000 por defecto
   itemSize = 240,
 }: SpinnerAnimationProps) {
   const spinnerRef = useRef<HTMLDivElement>(null);
+  const animationStartedRef = useRef(false); // Evitar que se reinicie la animación
+  const onAnimationCompleteRef = useRef(onAnimationComplete); // Almacenar la función callback
+  const timerRef = useRef<NodeJS.Timeout | null>(null); // Almacenar el timer
+
+  // Actualizar la referencia de la función callback cuando cambie
+  useEffect(() => {
+    onAnimationCompleteRef.current = onAnimationComplete;
+  }, [onAnimationComplete]);
+
+  // Resetear animationStarted al montar el componente
+  useEffect(() => {
+    animationStartedRef.current = false;
+  }, []); // Solo al montar
 
   // Función para animar la ruleta con un efecto de frenado más realista
   const animateSpinner = (finalPosition: number) => {
@@ -46,7 +59,7 @@ export default function SpinnerAnimation({
     void spinnerElement.offsetWidth;
 
     // Set up the transition with a cubic-bezier for a very long fast spin and quick stop
-    spinnerElement.style.transition = `transform ${animationDuration}ms cubic-bezier(0.12, 0.99, 0.62, 1.01)`;
+    spinnerElement.style.transition = `transform ${animationDuration}ms cubic-bezier(0.12, 0.99, 0.62, 1)`;
     
     // Apply the final transform that will be animated
     if (orientation === "horizontal") {
@@ -57,13 +70,16 @@ export default function SpinnerAnimation({
   };
 
   // useEffect for handling the animation logic
-  useEffect(() => {
-    if (
-      isSpinning &&
-      spinItems.length > 0 &&
-      spinnerRef.current &&
-      spinnerRef.current.parentElement
-    ) {
+  useEffect(() => {    
+    // Solo proceder si debe girar, no ha comenzado, y tiene items
+    if (isSpinning && !animationStartedRef.current && spinItems.length > 0) {
+      // Verificar que el elemento DOM esté disponible
+      if (!spinnerRef.current || !spinnerRef.current.parentElement) {
+        return;
+      }
+
+      animationStartedRef.current = true; // Marcar inmediatamente que ha comenzado
+      
       const viewportElement = spinnerRef.current.parentElement;
       const winningItemIndexInSpinItems = Math.floor(spinItems.length / 2);
       
@@ -87,18 +103,84 @@ export default function SpinnerAnimation({
       const postSpinDelay = 1000;
 
       const timer = setTimeout(() => {
-        onAnimationComplete();
+        onAnimationCompleteRef.current();
+        animationStartedRef.current = false; // Resetear para futuras animaciones
+        timerRef.current = null; // Limpiar la referencia del timer
       }, animationDuration + postSpinDelay);
 
-      return () => {
-        clearTimeout(timer);
-        // Clean up the transition if the component unmounts or effect re-runs mid-animation
-        if (spinnerRef.current) {
-          spinnerRef.current.style.transition = 'none';
-        }
-      };
+      timerRef.current = timer; // Almacenar la referencia del timer
+
+      // NO retornar función de cleanup aquí para evitar cancelaciones prematuras
+      // La limpieza se hará solo cuando el componente se desmonte o isSpinning cambie a false
     }
-  }, [isSpinning, spinItems, orientation, animationDuration, onAnimationComplete]);
+    
+    // Solo resetear si isSpinning se vuelve false
+    if (!isSpinning && animationStartedRef.current) {
+      animationStartedRef.current = false;
+      // Limpiar timer si existe
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  }, [isSpinning]); // Solo depender de isSpinning
+
+  // useEffect adicional para detectar cuando los spinItems están listos
+  useEffect(() => {
+    
+    // Si debe girar, no ha comenzado, y ahora tiene items, intentar iniciar
+    if (isSpinning && !animationStartedRef.current && spinItems.length > 0) {
+      // Verificar que el elemento DOM esté disponible
+      if (!spinnerRef.current || !spinnerRef.current.parentElement) {
+        return;
+      }
+
+      animationStartedRef.current = true;
+      
+      const viewportElement = spinnerRef.current.parentElement;
+      const winningItemIndexInSpinItems = Math.floor(spinItems.length / 2);
+      
+      let itemDimension, viewportDimension, offsetToCenter, finalPosition;
+      
+      if (orientation === "horizontal") {
+        itemDimension = ITEM_WIDTH_CAROUSEL;
+        viewportDimension = viewportElement.offsetWidth;
+        offsetToCenter = (viewportDimension - itemDimension) / 2;
+        finalPosition = winningItemIndexInSpinItems * itemDimension - offsetToCenter;
+      } else {
+        itemDimension = ITEM_HEIGHT_CAROUSEL;
+        viewportDimension = viewportElement.offsetHeight;
+        offsetToCenter = (viewportDimension - itemDimension) / 2;
+        finalPosition = winningItemIndexInSpinItems * itemDimension - offsetToCenter;
+      }
+
+      animateSpinner(finalPosition);
+
+      const postSpinDelay = 1000;
+      const timer = setTimeout(() => {
+        onAnimationCompleteRef.current();
+        animationStartedRef.current = false;
+        timerRef.current = null;
+      }, animationDuration + postSpinDelay);
+
+      timerRef.current = timer;
+    }
+  }, [spinItems.length, isSpinning, orientation, animationDuration]);
+
+  // useEffect separado para cleanup cuando el componente se desmonte
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      if (spinnerRef.current) {
+        spinnerRef.current.style.transition = 'none';
+      }
+      // Resetear animationStarted para el próximo montaje
+      animationStartedRef.current = false;
+    };
+  }, []); // Solo ejecutar al montar/desmontar
 
   const containerClass = orientation === "horizontal" 
     ? "mx-auto overflow-hidden relative rounded-lg shadow-2xl backdrop-blur-lg bg-gradient-to-r from-transparent via-black/50 to-transparent w-full"
@@ -110,7 +192,7 @@ export default function SpinnerAnimation({
 
   const containerStyle = orientation === "horizontal" 
     ? { height: "240px" }
-    : { width: "240px", height: "300px" };
+    : { width: "200px", height: "400px" };
 
   const spinnerStyle = orientation === "horizontal"
     ? {
@@ -124,10 +206,10 @@ export default function SpinnerAnimation({
 
   const itemStyle = orientation === "horizontal"
     ? { width: `${ITEM_WIDTH_CAROUSEL}px` }
-    : { height: `${ITEM_HEIGHT_CAROUSEL}px` };
+    : { height: `${ITEM_HEIGHT_CAROUSEL}px`, width: "100%" };
   return (
-    <div className="w-full text-center mb-8 relative">
-      <div className={orientation === "horizontal" ? "w-full py-6 relative" : "w-full py-4 relative flex justify-center"}>
+    <div className="text-center mb-8 relative max-w-6xl mx-auto">
+      <div className={orientation === "horizontal" ? "w-full py-6 relative" : "w-full relative flex justify-center h-full"}>
         <div
           className={containerClass}
           style={containerStyle}
@@ -157,10 +239,14 @@ export default function SpinnerAnimation({
               const weaponType = getWeaponType(skin.nombre);
               const weaponStyles = getWeaponSpecificStyles(weaponType);
 
-              // Crear el estilo inline para las transformaciones
+              // Ajustar el escalado basado en la orientación - aumentado para imágenes más grandes
+              const baseScale = orientation === "vertical" ? weaponStyles.baseScale * 1.0 : weaponStyles.baseScale;
               const imageTransformStyle: React.CSSProperties = {
-                transform: `scale(${weaponStyles.baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
+                transform: `scale(${baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
               };
+
+              // Ajustar el tamaño del item basado en la orientación
+              const adjustedItemSize = orientation === "vertical" ? Math.min(itemSize, 130) : itemSize;
 
               return (
                 <div
@@ -170,14 +256,17 @@ export default function SpinnerAnimation({
                 >
                   <div 
                     className={`relative rounded-xl overflow-hidden flex items-center justify-center group`}
-                    style={{ width: `${itemSize}px`, height: `${itemSize}px` }}
+                    style={{ 
+                      width: orientation === "vertical" ? "190px" : `${adjustedItemSize}px`, 
+                      height: orientation === "vertical" ? "120px" : `${adjustedItemSize}px` 
+                    }}
                   >
                     {skin.content_tier?.uuid_api && skin.content_tier.uuid_api !== 'default' && (
                       <Image
                         src={`/skins-bg/${skin.content_tier.uuid_api}.png`}
                         alt=""
                         fill
-                        className="absolute inset-0 z-0 p-1 opacity-30 transform scale-110 rotate-12 object-contain"
+                        className="absolute inset-0 z-0 p-2 opacity-30 transform scale-110 rotate-12 object-contain"
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         priority={index < 10}
                       />
@@ -185,11 +274,11 @@ export default function SpinnerAnimation({
                     {skin.imagen_url && (
                       <Image
                         alt={skin.nombre}
-                        className="object-contain drop-shadow-lg p-1 relative z-10 transform transition-transform duration-300"
+                        className="object-contain drop-shadow-lg p-2 relative z-10 transform transition-transform duration-300"
                         style={imageTransformStyle}
-                        height={itemSize - 20}
+                        height={orientation === "vertical" ? 110 : adjustedItemSize - 20}
                         src={skin.imagen_url}
-                        width={itemSize - 20}
+                        width={orientation === "vertical" ? 180 : adjustedItemSize - 20}
                         priority={index < 10}
                       />
                     )}

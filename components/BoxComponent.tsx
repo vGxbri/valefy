@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { getWeaponSkins, filterSkinsByIds, getWeaponSpecificStyles, getWeaponType } from "@/lib/valorantApi";
@@ -56,6 +57,17 @@ const globalStyles = `
   100% {
     transform: rotateY(360deg) scale(1);
   }
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
 }
 `;
 
@@ -130,10 +142,34 @@ export default function BoxComponent({
   // Estados para múltiples cajas
   const [isMultipleMode, setIsMultipleMode] = useState(false);
   const [numberOfBoxes, setNumberOfBoxes] = useState(1);
+  const [previousNumberOfBoxes, setPreviousNumberOfBoxes] = useState(1);
   const [multipleResults, setMultipleResults] = useState<Skin[]>([]);
   const [multipleSpinItems, setMultipleSpinItems] = useState<Skin[][]>([]);
-  const [activeSpinners, setActiveSpinners] = useState<boolean[]>([]);
   const [completedSpinners, setCompletedSpinners] = useState<boolean[]>([]);
+
+  // Contador de renders para debugging
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
+
+  // Log para debuggear estados
+  console.log('🎮 BoxComponent render - Estados:', {
+    isOpening,
+    isSpinning,
+    isMultipleMode,
+    numberOfBoxes,
+    multipleResultsCount: multipleResults.length,
+    multipleSpinItemsCount: multipleSpinItems.length,
+    completedSpinners,
+    resultSkinExists: !!resultSkin
+  });
+
+  // Log específico para monitorear cambios en multipleResults
+  useEffect(() => {
+    console.log('📈 multipleResults cambió:', multipleResults.length, 'elementos');
+    if (multipleResults.length === 0) {
+      console.log('🚨 multipleResults fue limpiado! Stack trace:', new Error().stack);
+    }
+  }, [multipleResults]);
 
   // Referencias
   const spinnerRef = useRef<HTMLDivElement>(null);
@@ -449,7 +485,6 @@ export default function BoxComponent({
           if (results.length > 0) {
             setMultipleResults(results);
             setMultipleSpinItems(spinItemsArray);
-            setActiveSpinners(Array(numberOfBoxes).fill(true));
             setCompletedSpinners(Array(numberOfBoxes).fill(false));
             setIsSpinning(true);
           } else {
@@ -488,6 +523,14 @@ export default function BoxComponent({
 
   // useEffect for handling the animation logic
   useEffect(() => {
+    console.log('🔄 useEffect caja única - Condiciones:', {
+      isSpinning,
+      spinItemsLength: spinItems.length,
+      hasResultSkinForSpin: !!resultSkinForSpin,
+      hasSpinnerRef: !!spinnerRef.current,
+      hasParentElement: !!(spinnerRef.current?.parentElement)
+    });
+    
     if (
       isSpinning &&
       spinItems.length > 0 &&
@@ -495,6 +538,7 @@ export default function BoxComponent({
       spinnerRef.current &&
       spinnerRef.current.parentElement
     ) {
+      console.log('🚀 Iniciando animación de CAJA ÚNICA');
       const viewportElement = spinnerRef.current.parentElement;
       const viewportWidth = viewportElement.offsetWidth;
       const winningItemIndexInSpinItems = Math.floor(spinItems.length / 2);
@@ -509,6 +553,7 @@ export default function BoxComponent({
       const postSpinDelay = 1000;
 
       const timer = setTimeout(() => {
+        console.log('⏰ Timer de CAJA ÚNICA completado');
         setResultSkin(resultSkinForSpin);
         setIsSpinning(false);
         setResultSkinForSpin(null);
@@ -520,6 +565,7 @@ export default function BoxComponent({
       }, animationDuration + postSpinDelay);
 
       return () => {
+        console.log('🧹 Limpiando timer de CAJA ÚNICA');
         clearTimeout(timer);
         // It's also good practice to clean up the transition if the component unmounts or effect re-runs mid-animation
         if (spinnerRef.current) {
@@ -531,26 +577,37 @@ export default function BoxComponent({
 
   // Función para manejar la finalización de las animaciones del spinner
   const handleSpinnerComplete = (spinnerIndex?: number) => {
+    console.log('🎯 handleSpinnerComplete llamado con index:', spinnerIndex, 'isMultipleMode:', isMultipleMode, 'numberOfBoxes:', numberOfBoxes);
+    
     if (isMultipleMode && numberOfBoxes > 1 && spinnerIndex !== undefined) {
-      // Modo múltiples cajas - marcar este spinner como completado
-      const newCompletedSpinners = [...completedSpinners];
-      const newActiveSpinners = [...activeSpinners];
-      
-      newCompletedSpinners[spinnerIndex] = true;
-      newActiveSpinners[spinnerIndex] = false;
-      
-      setCompletedSpinners(newCompletedSpinners);
-      setActiveSpinners(newActiveSpinners);
-      
-      // Verificar si todas las animaciones están completadas
-      if (newCompletedSpinners.every(completed => completed)) {
-        setIsSpinning(false);
-        setIsOpening(false);
-        if (caja && caja.es_diaria) {
-          setDailyOpened(true);
+      // Modo múltiples cajas - escalonado
+      setCompletedSpinners(prev => {
+        console.log('📊 Estado anterior completedSpinners:', prev);
+        const newCompleted = [...prev];
+        newCompleted[spinnerIndex] = true;
+        console.log('📊 Nuevo estado completedSpinners:', newCompleted);
+        
+        // Verificar si todas han terminado
+        const allCompleted = newCompleted.every((completed, idx) => idx >= numberOfBoxes || completed);
+        console.log('✅ Verificación allCompleted:', allCompleted, 'numberOfBoxes:', numberOfBoxes);
+        
+        if (allCompleted) {
+          console.log('🎉 Todas las cajas han completado! Finalizando en 500ms...');
+          // Todas han terminado, esperar un poco más para una transición suave
+          setTimeout(() => {
+            console.log('🏁 Ejecutando finalización después de timeout');
+            setIsSpinning(false);
+            setIsOpening(false);
+            if (caja && caja.es_diaria) {
+              setDailyOpened(true);
+            }
+          }, 500); // Aumentado el delay para una mejor transición
         }
-      }
+        
+        return newCompleted;
+      });
     } else {
+      console.log('📦 Modo caja única - finalizando inmediatamente');
       // Modo caja única
       setResultSkin(resultSkinForSpin);
       setIsSpinning(false);
@@ -564,13 +621,22 @@ export default function BoxComponent({
 
   // Función para resetear todo cuando se cierra el resultado
   const resetResults = () => {
+    console.log('🧹 resetResults llamado - limpiando todos los estados');
     setResultSkin(null);
     setMultipleResults([]);
     setMultipleSpinItems([]);
-    setActiveSpinners([]);
     setCompletedSpinners([]);
     setIsOpening(false);
   };
+
+  // useEffect para actualizar previousNumberOfBoxes después de las animaciones
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPreviousNumberOfBoxes(numberOfBoxes);
+    }, 500); // Después de que terminen las animaciones
+
+    return () => clearTimeout(timer);
+  }, [numberOfBoxes]);
 
   // Si está cargando, mostrar spinner de carga
   if (isLoading) {
@@ -579,7 +645,6 @@ export default function BoxComponent({
         <div className="relative animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary mb-4">
           <div className="absolute inset-0 rounded-full border border-slate-700 opacity-20"></div>
         </div>
-        <p className="text-white/80 font-medium mt-4 animate-pulse">Cargando la caja...</p>
       </div>
     );
   }
@@ -625,14 +690,26 @@ export default function BoxComponent({
     );
   }
 
-  // Determinar el tipo de arma y obtener los estilos específicos
-  const weaponType = getWeaponType(resultSkin?.nombre || '');
-  const weaponStyles = getWeaponSpecificStyles(weaponType);
+  // Log de las condiciones de renderizado
+  const showMultipleResults = multipleResults.length > 0 && !isSpinning;
+  const showSingleResult = !!resultSkin;
+  console.log(`🎭 Render #${renderCountRef.current} - Condiciones de renderizado:`, {
+    multipleResultsLength: multipleResults.length,
+    isSpinning,
+    showMultipleResults,
+    showSingleResult,
+    resultSkinExists: !!resultSkin
+  });
 
-  // Crear el estilo inline para las transformaciones
-  const imageTransformStyle: React.CSSProperties = {
-    transform: `scale(${weaponStyles.baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
-  };
+  let renderBranch = 'unknown';
+  if (showMultipleResults) {
+    renderBranch = 'multipleResults';
+  } else if (showSingleResult) {
+    renderBranch = 'singleResult';
+  } else {
+    renderBranch = 'mainView';
+  }
+  console.log(`🎯 Render #${renderCountRef.current} - Branch: ${renderBranch}`);
 
   return (
     <div className="w-full flex flex-col items-center justify-center py-10">
@@ -690,156 +767,182 @@ export default function BoxComponent({
           </div>
         </div>
       ) : resultSkin ? (
-        
-        // Resultado de apertura de caja mejorado
-        <div className="p-8 md:p-10 rounded-xl max-w-md w-full text-center bg-gradient-to-br from-slate-800/80 via-slate-900/90 to-black/80 shadow-2xl border border-slate-700/50 backdrop-blur-md flex flex-col items-center">
-          {resultSkin.imagen_url && (
-            <div className="mt-12 mb-20 flex items-center justify-center relative">
-              <div 
-                className="relative w-[240px] h-[240px] rounded-xl overflow-hidden flex items-center justify-center group"
-                // style={itemCardStyle}
-              >
-                {resultSkin.content_tier?.id && resultSkin.content_tier.id !== 'standard' && (
+        (() => {
+          // Determinar el tipo de arma y obtener los estilos específicos
+          const weaponType = getWeaponType(resultSkin?.nombre || '');
+          const weaponStyles = getWeaponSpecificStyles(weaponType);
+
+          // Crear el estilo inline para las transformaciones
+          const imageTransformStyle: React.CSSProperties = {
+            transform: `scale(${weaponStyles.baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
+          };
+
+          return (
+            // Resultado de apertura de caja mejorado
+            <div className="p-8 md:p-10 rounded-xl max-w-md w-full text-center bg-gradient-to-br from-slate-800/80 via-slate-900/90 to-black/80 shadow-2xl border border-slate-700/50 backdrop-blur-md flex flex-col items-center">
+              {resultSkin.imagen_url && (
+                <div className="mt-12 mb-20 flex items-center justify-center relative">
+                  <div 
+                    className="relative w-[240px] h-[240px] rounded-xl overflow-hidden flex items-center justify-center group"
+                    // style={itemCardStyle}
+                  >
+                    {resultSkin.content_tier?.id && resultSkin.content_tier.id !== 'standard' && (
+                      <Image
+                        src={`/skins-bg/${resultSkin.content_tier.id}.png`}
+                        alt="" // Decorative
+                        layout="fill"
+                        objectFit="contain"
+                        className="absolute inset-0 z-10 p-2 opacity-40 transform scale-150 rotate-12"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    )}
+                    {resultSkin.imagen_url && (
+                      <Image
+                        alt={resultSkin.nombre}
+                        className="object-contain drop-shadow-lg p-2 relative z-10" 
+                        style={{animation: 'float 3s infinite ease-in-out', ...imageTransformStyle}}
+                        height={250}
+                        src={resultSkin.imagen_url}
+                        width={250}
+                      />
+                    )}
+                    
+                  </div>
                   <Image
-                    src={`/skins-bg/${resultSkin.content_tier.id}.png`}
-                    alt="" // Decorative
-                    layout="fill"
-                    objectFit="contain"
-                    className="absolute inset-0 z-10 p-2 opacity-40 transform scale-150 rotate-12"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
-                )}
-                {resultSkin.imagen_url && (
-                  <Image
-                    alt={resultSkin.nombre}
-                    className="object-contain drop-shadow-lg p-2 relative z-10" 
-                    style={{animation: 'float 3s infinite ease-in-out', ...imageTransformStyle}}
-                    height={250}
-                    src={resultSkin.imagen_url}
-                    width={250}
-                  />
-                )}
-                
-              </div>
-              <Image
-                  alt={resultSkin.nombre}
-                  src={`/skins-bg-result/${resultSkin.content_tier?.id}.png`}
-                  className="object-contain drop-shadow-lg relative mt-10 ml-2 scale-[2] opacity-80"
-                  layout="fill"
-                  objectFit="contain"
-                />
-            </div>
-          )}
-          <p className="text-2xl font-semibold text-white mb-3 capitalize tracking-wide">
-            {resultSkin.nombre}
-          </p>
-          {resultSkin.content_tier && (
-            <div className="mb-6">
-              <div
-                className="px-5 py-2 rounded-full text-sm font-medium shadow-md border border-opacity-50"
-                style={{
-                  backgroundColor: `${resultSkin.content_tier.color}20`, // Lighter background with opacity
-                  color: resultSkin.content_tier.color,
-                  borderColor: resultSkin.content_tier.color,
-                  boxShadow: `0 0 15px ${resultSkin.content_tier.color}40` // Glow effect
-                }}
+                      alt={resultSkin.nombre}
+                      src={`/skins-bg-result/${resultSkin.content_tier?.id}.png`}
+                      className="object-contain drop-shadow-lg relative mt-10 ml-2 scale-[2] opacity-80"
+                      layout="fill"
+                      objectFit="contain"
+                    />
+                </div>
+              )}
+              <p className="text-2xl font-semibold text-white mb-3 capitalize tracking-wide">
+                {resultSkin.nombre}
+              </p>
+              {resultSkin.content_tier && (
+                <div className="mb-6">
+                  <div
+                    className="px-5 py-2 rounded-full text-sm font-medium shadow-md border border-opacity-50"
+                    style={{
+                      backgroundColor: `${resultSkin.content_tier.color}20`, // Lighter background with opacity
+                      color: resultSkin.content_tier.color,
+                      borderColor: resultSkin.content_tier.color,
+                      boxShadow: `0 0 15px ${resultSkin.content_tier.color}40` // Glow effect
+                    }}
+                  >
+                    {resultSkin.content_tier.nombre}
+                  </div>
+                </div>
+              )}
+              <Button
+                onClick={resetResults}
+                className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
               >
-                {resultSkin.content_tier.nombre}
-              </div>
+                Abrir de nuevo
+              </Button>
             </div>
-          )}
-          <Button
-            onClick={resetResults}
-            className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
-          >
-            Abrir de nuevo
-          </Button>
-        </div>
+          );
+        })()
       ) : (
         // Vista principal de la caja mejorada
-        <div className="flex flex-col items-center w-full max-w-6xl mx-auto">
+        <div className="flex flex-col items-center w-full max-w-7xl mx-auto">
           {caja && (
             <div className="w-full text-center relative z-0">
               {/* Efectos de resplandor mejorados detrás de la caja */}
-              <div className="absolute -z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full opacity-20 blur-3xl bg-gradient-radial from-primary/50 to-transparent"></div>
-              <div className="absolute -z-10 left-1/3 top-1/3 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] rounded-full opacity-10 blur-2xl bg-gradient-radial from-amber-300/50 to-transparent"></div>
+              <div className="absolute -z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full opacity-15 blur-3xl bg-gradient-radial from-primary/40 to-transparent"></div>
+              <div className="absolute -z-10 left-1/3 top-1/3 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full opacity-10 blur-2xl bg-gradient-radial from-amber-300/30 to-transparent"></div>
               
-              <h1 className="text-4xl font-semibold capitalize text-foreground text-center">
-                {caja.nombre}
+              {/* Título estilizado */}
+              <h1 className="text-4xl md:text-5xl font-bold font-[Raleway] font-bold italic tracking-widest uppercase mb-12 
+                             [text-shadow:_0px_0px_20px_rgba(255,255,255,0.1)] bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                · {caja.nombre} ·
               </h1>
-              <div className="h-1 w-1/4 bg-gradient-to-r from-primary/60 to-secondary/60 rounded-full mx-auto mt-4" />
 
               {isSpinning ? (
                 isMultipleMode && numberOfBoxes > 1 ? (
-                  // Vista múltiples cajas - Layout en grid
+                  // Vista múltiples cajas - Layout horizontal
                   <div className="w-full mb-8">
-                    <div className="mb-6 text-center">
-                      <p className="text-lg text-white/80 mb-2">
-                        Abriendo {numberOfBoxes} cajas simultáneamente
-                      </p>
-                      <div className="w-full bg-gray-700 rounded-full h-2 max-w-md mx-auto">
-                        <div 
-                          className="bg-primary h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${(completedSpinners.filter(completed => completed).length / numberOfBoxes) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    
-                    <div className={`grid gap-4 ${numberOfBoxes <= 2 ? 'grid-cols-1 md:grid-cols-2' : numberOfBoxes <= 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-2 md:grid-cols-3'} max-w-6xl mx-auto`}>
-                      {Array.from({ length: numberOfBoxes }).map((_, index) => (
-                        <div key={index} className="flex justify-center">
-                          {activeSpinners[index] && multipleSpinItems[index] ? (
-                            <SpinnerAnimation
-                              isSpinning={true}
-                              spinItems={multipleSpinItems[index]}
-                              onAnimationComplete={() => handleSpinnerComplete(index)}
-                              orientation="vertical"
-                              itemSize={140}
-                              animationDuration={10000}
-                            />
-                          ) : completedSpinners[index] && multipleResults[index] ? (
-                            // Resultado ya completado
-                            <div className="w-[240px] h-[300px] rounded-xl bg-gradient-to-br from-slate-800/80 via-slate-900/90 to-black/80 border border-slate-700/50 flex flex-col items-center justify-center p-4">
-                              <div className="relative w-[160px] h-[160px] mb-3">
-                                {multipleResults[index].imagen_url && (
-                                  <Image
-                                    alt={multipleResults[index].nombre}
-                                    className="object-contain drop-shadow-lg p-2 rotate-12"
-                                    fill
-                                    src={multipleResults[index].imagen_url}
-                                    style={{animation: 'float 3s infinite ease-in-out'}}
+                    {/* Cajas en línea horizontal - solo las seleccionadas */}
+                    <div className="flex justify-center items-center gap-3 md:gap-6 px-2 md:px-4 overflow-x-auto">
+                      <div className="flex gap-3 md:gap-6 min-w-max">
+                        {Array.from({ length: numberOfBoxes }).map((_, index) => {
+                          // Verificar si TODOS los spinners han completado
+                          const allSpinnersCompleted = completedSpinners.every((completed, idx) => idx >= numberOfBoxes || completed);
+                          
+                          // Calcular duración escalonada: 12s, 13s, 14s, etc.
+                          const animationDuration = 12000 + (index * 1000);
+                          
+                          console.log(`🎲 Spinner ${index} - allSpinnersCompleted:`, allSpinnersCompleted, 'completedSpinners:', completedSpinners, 'hasResult:', !!multipleResults[index], 'duration:', animationDuration);
+                          
+                          return (
+                            <div key={index} className="flex-shrink-0">
+                              {allSpinnersCompleted && multipleResults[index] ? (
+                                // Resultado - mostrar solo cuando TODOS hayan terminado
+                                <div className="w-[190px] md:w-[220px] h-[300px] md:h-[400px] rounded-xl bg-gradient-to-br from-slate-800/90 via-slate-900/95 to-black/90 border border-slate-600/50 flex flex-col items-center justify-center p-4 md:p-6 shadow-2xl backdrop-blur-sm">
+                                  <div className="relative w-[140px] md:w-[170px] h-[140px] md:h-[170px] mb-4 md:mb-6">
+                                    {multipleResults[index].imagen_url && (
+                                      <Image
+                                        alt={multipleResults[index].nombre}
+                                        className="object-contain drop-shadow-lg p-2 md:p-3 rotate-12"
+                                        fill
+                                        src={multipleResults[index].imagen_url}
+                                        style={{animation: 'float 3s infinite ease-in-out'}}
+                                      />
+                                    )}
+                                  </div>
+                                  <p className="text-sm md:text-base font-semibold text-white mb-3 md:mb-4 text-center leading-tight line-clamp-2">
+                                    {multipleResults[index].nombre}
+                                  </p>
+                                  {multipleResults[index].content_tier && (
+                                    <div
+                                      className="px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-medium text-center shadow-lg"
+                                      style={{
+                                        backgroundColor: `${multipleResults[index].content_tier?.color}20`,
+                                        color: multipleResults[index].content_tier?.color,
+                                        borderColor: multipleResults[index].content_tier?.color,
+                                        border: `1px solid ${multipleResults[index].content_tier?.color}40`,
+                                        boxShadow: `0 0 15px ${multipleResults[index].content_tier?.color}30`
+                                      }}
+                                    >
+                                      {multipleResults[index].content_tier?.nombre}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : multipleSpinItems[index] ? (
+                                // Spinner - continuar girando hasta que TODOS terminen
+                                <div className="w-[190px] md:w-[200px] h-[300px] md:h-[400px] overflow-hidden rounded-xl bg-gradient-to-b from-slate-800/20 via-transparent to-slate-800/20 border border-slate-700/30 shadow-2xl relative">
+                                  {/* Indicador de tiempo de finalización */}
+                                  <div className="absolute top-2 right-2 z-10 bg-slate-900/80 backdrop-blur-sm rounded-lg px-2 py-1">
+                                    <span className="text-xs text-white/70 font-medium">
+                                      {Math.round(animationDuration / 1000)}s
+                                    </span>
+                                  </div>
+                                  
+                                  <SpinnerAnimation
+                                    isSpinning={true} // Mantener todos girando hasta que el estado global cambie
+                                    spinItems={multipleSpinItems[index]}
+                                    onAnimationComplete={() => handleSpinnerComplete(index)}
+                                    orientation="vertical"
+                                    itemSize={130}
+                                    animationDuration={animationDuration}
                                   />
-                                )}
-                              </div>
-                              <p className="text-sm font-semibold text-white mb-2 text-center leading-tight">
-                                {multipleResults[index].nombre}
-                              </p>
-                              {multipleResults[index].content_tier && (
-                                <div
-                                  className="px-2 py-1 rounded-full text-xs font-medium"
-                                  style={{
-                                    backgroundColor: `${multipleResults[index].content_tier?.color}20`,
-                                    color: multipleResults[index].content_tier?.color,
-                                    borderColor: multipleResults[index].content_tier?.color,
-                                  }}
-                                >
-                                  {multipleResults[index].content_tier?.nombre}
+                                </div>
+                              ) : (
+                                // Estado inicial - preparando
+                                <div className="w-[190px] md:w-[200px] h-[300px] md:h-[400px] rounded-xl bg-slate-800/30 border border-slate-700/30 flex items-center justify-center opacity-50 backdrop-blur-sm shadow-xl">
+                                  <div className="text-white/60 text-center">
+                                    <div className="w-12 md:w-16 h-12 md:h-16 border-2 border-white/20 rounded-xl mb-4 md:mb-6 mx-auto flex items-center justify-center bg-slate-700/20">
+                                      <span className="text-2xl md:text-4xl">📦</span>
+                                    </div>
+                                    <p className="text-sm md:text-base font-medium">Preparando...</p>
+                                  </div>
                                 </div>
                               )}
                             </div>
-                          ) : (
-                            // Spinner aún no iniciado
-                            <div className="w-[240px] h-[300px] rounded-xl bg-slate-800/50 border border-slate-700/30 flex items-center justify-center opacity-50">
-                              <div className="text-white/60 text-center">
-                                <div className="w-16 h-16 border-2 border-white/20 rounded-xl mb-3 mx-auto flex items-center justify-center">
-                                  <span className="text-2xl">📦</span>
-                                </div>
-                                <p className="text-sm">Preparando...</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -852,120 +955,142 @@ export default function BoxComponent({
                   />
                 )
               ) : (
-                // Vista inicial de la caja mejorada
-                <div className="my-8 flex items-center justify-center relative">
-                  <div className="">
-                    <Image src="/cajas/left-arrow.png" alt="Caja" width={150} height={150} 
-                    style={{
-                      filter: 'drop-shadow(0 0 20px rgba(255, 255, 255, 0.2))',
-                    }}
-                    />
-                  </div>
-                  {caja.imagen_url && (
-                    <div className="relative group">
-                      <div className="absolute -inset-1 rounded-xl blur opacity-40 transition duration-500"></div>
-                      <div className="relative  p-1 rounded-xl overflow-hidden">
-                        <Image
-                          alt={caja.nombre}
-                          className="relative z-20 object-contain p-2 transform transition-transform duration-700"
-                          height={350}
-                          src={caja.imagen_url || "/free_cage.png"}
-                          width={350}
-                        />
-                      </div>
+                // Vista inicial - solo las cajas seleccionadas
+                <div className="w-full">
+                  {/* Solo las cajas seleccionadas en línea horizontal */}
+                  <div className="flex justify-center items-center gap-2 md:gap-6 mb-8 px-2 md:px-4 overflow-hidden">
+                    <div className="flex gap-0 min-w-max">
+                      <AnimatePresence mode="popLayout">
+                        {Array.from({ length: numberOfBoxes }).map((_, index) => {
+                          // Determinar si esta caja es nueva (apareció al incrementar numberOfBoxes)
+                          const isNewBox = index >= previousNumberOfBoxes;
+                          
+                          return (
+                            <motion.div 
+                              key={`box-${index}`}
+                              layoutId={`box-${index}`}
+                              className="flex flex-col items-center flex-shrink-0"
+                              layout
+                              initial={isNewBox ? { opacity: 0, y: -50, scale: 0.8 } : false}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -30, scale: 0.8 }}
+                              transition={{ 
+                                duration: 0.4, 
+                                ease: "easeOut",
+                                delay: isNewBox ? (index - previousNumberOfBoxes) * 0.08 : 0,
+                                layout: { duration: 0.3, ease: "easeInOut" }
+                              }}
+                            >
+                              {/* Imagen de la caja */}
+                              <motion.div 
+                                className="relative group"
+                                whileHover={{ scale: 1.05 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                <div className="absolute -inset-1 rounded-xl blur opacity-30 transition duration-500"></div>
+                                <div className="relative p-1 rounded-xl overflow-hidden">
+                                  {caja.imagen_url && (
+                                    <Image
+                                      alt={caja.nombre}
+                                      className="relative z-20 object-contain transform transition-transform duration-300"
+                                      height={200}
+                                      width={200}
+                                      src={caja.imagen_url || "/free_cage.png"}
+                                    />
+                                  )}
+                                </div>
+                              </motion.div>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
                     </div>
-                  )}
-                  <div className="">
-                    <Image src="/cajas/right-arrow.png" alt="Caja" width={150} height={150}
-                     style={{
-                      filter: 'drop-shadow(0 0 20px rgba(255, 255, 255, 0.2))',
-                    }}
-                    />
                   </div>
-                </div>
-              )}
-              
-              {caja.es_diaria && nextUpdate && (
-                <div className="mb-8 text-white/90 bg-gradient-to-r from-slate-800/70 to-slate-900/70 border border-slate-700/70 rounded-lg py-3 px-5 shadow-lg inline-block">
-                  <p className="flex items-center gap-2 font-medium">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary">
-                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
-                      <path d="M12 6v6l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                    <span className="text-sm opacity-80">Próxima actualización:</span>
-                    <span className="text-primary font-bold">{nextUpdate}</span>
-                  </p>
-                </div>
-              )}
 
-              {/* Selector de múltiples cajas */}
-              <div className="mb-6 flex flex-col items-center gap-4">
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isMultipleMode}
-                      onChange={(e) => setIsMultipleMode(e.target.checked)}
-                      className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
-                    />
-                    <span className="text-white/90 font-medium">Abrir múltiples cajas</span>
-                  </label>
-                </div>
-                
-                {isMultipleMode && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-white/80 text-sm">Cantidad:</span>
-                    <div className="flex gap-2">
+                  {/* Selector de multiplicador estilizado */}
+                  <div className="mb-8 flex flex-col items-center gap-4">
+                    <div className="flex items-center gap-0 border-2 rounded-2xl border-primary/20">
                       {[1, 2, 3, 4, 5].map((num) => (
                         <button
                           key={num}
-                          onClick={() => setNumberOfBoxes(num)}
-                          className={`w-8 h-8 rounded-full border transition-all duration-200 text-sm font-medium ${
+                          onClick={() => {
+                            setNumberOfBoxes(num);
+                            setIsMultipleMode(num > 1);
+                          }}
+                          className={`relative w-10 h-10 md:w-12 md:h-12 transition-all duration-300 font-bold text-sm md:text-base ${
                             numberOfBoxes === num
-                              ? 'bg-primary text-white border-primary shadow-lg'
-                              : 'bg-gray-700/50 text-white/70 border-gray-600 hover:bg-gray-600/50 hover:border-gray-500'
+                              ? 'bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-primary/40'
+                              : 'bg-gray-800/50 text-white/70 hover:bg-gray-700/60 backdrop-blur-sm'
+                              } ${
+                                num === 1 
+                                ? 'rounded-tl-xl rounded-bl-xl'
+                                : num === 5
+                                ? 'rounded-tr-xl rounded-br-xl'
+                                : ''
                           }`}
                         >
-                          {num}
+                          <span className="relative z-10">x{num}</span>
+                          {numberOfBoxes === num && (
+                            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 blur"></div>
+                          )}
                         </button>
                       ))}
                     </div>
-                    <span className="text-white/60 text-sm">
-                      Precio total: {caja ? caja.precio * numberOfBoxes : 0} VP
-                    </span>
                   </div>
-                )}
-              </div>
 
-              {/* Botones principales */}
-              <div className="flex flex-wrap gap-4 mt-8 mb-8 justify-center">
-                <Button
-                  className={`px-6 py-5 text-lg rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 shadow-lg shadow-red-900/20
-                              text-white hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 
-                              active:scale-95 transition-all duration-300 min-w-[180px] border border-red-500/20 
-                              
-                    ${(!isOpening && !isSpinning && (!caja.es_diaria || !dailyOpened) && caja.esta_disponible) 
-                      ? 'hover:shadow-primary/30' 
-                      : 'opacity-80 cursor-not-allowed'}`}
-                  disabled={isOpening || isSpinning || (caja.es_diaria && dailyOpened) || !caja.esta_disponible}
-                  onClick={openBox}
-                >
-                  {isOpening || isSpinning ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="animate-spin h-4 w-4 border-2 border-white/20 border-t-white rounded-full"></span>
-                      {isSpinning ? "Girando..." : "Abriendo..."}
-                    </span>
-                  ) : caja.es_diaria && dailyOpened ? (
-                    "Ya abierta hoy"
-                  ) : !caja.esta_disponible ? (
-                    "Próximamente"
-                  ) : isMultipleMode && numberOfBoxes > 1 ? (
-                    `Abrir ${numberOfBoxes} cajas por ${caja.precio * numberOfBoxes} VP`
-                  ) : (
-                    `Abrir por ${caja.precio} VP`
+                  {/* Botón principal estilizado */}
+                  <div className="flex justify-center">
+                    <Button
+                      className={`px-8 md:px-12 py-4 md:py-5 text-lg md:text-xl font-medium rounded-2xl bg-gradient-to-r from-red-500/20 to-red-600/20
+                                  text-white hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30
+                                  active:scale-95 transition-all duration-300 min-w-[200px] md:min-w-[280px] shadow-2xl shadow-red-900/20
+                                  border-2 border-red-500/20 hover:border-red-500/60
+                                  ${(!isOpening && !isSpinning && (!caja.es_diaria || !dailyOpened) && caja.esta_disponible) 
+                                    ? 'hover:shadow-primary/50 hover:-translate-y-1' 
+                                    : 'opacity-60 cursor-not-allowed'}`}
+                      disabled={isOpening || isSpinning || (caja.es_diaria && dailyOpened) || !caja.esta_disponible}
+                      onClick={openBox}
+                    >
+                      {isOpening || isSpinning ? (
+                        <span className="flex items-center justify-center gap-3">
+                          <span className="animate-spin h-5 w-5 border-2 border-white/30 border-t-white rounded-full"></span>
+                          Cargando...
+                        </span>
+                      ) : caja.es_diaria && dailyOpened ? (
+                        "YA ABIERTA HOY"
+                      ) : !caja.esta_disponible ? (
+                        "PRÓXIMAMENTE"
+                      ) : numberOfBoxes && caja.precio > 0 ? (
+                        <>
+                          ABRIR POR
+                          <span className="text-primary">{(caja.precio * numberOfBoxes)}VP</span>
+                        </>
+                      ) : numberOfBoxes > 1 && caja.precio > 0 ? (
+                        <>
+                          ABRIR POR
+                          <span className="text-primary">{(caja.precio * numberOfBoxes)}VP</span>
+                        </>
+                      ) : (
+                        `ABRIR GRATIS`
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Timer para caja diaria */}
+                  {caja.es_diaria && nextUpdate && (
+                    <div className="mt-8 text-white/90 bg-gradient-to-r from-slate-800/70 to-slate-900/70 border border-slate-700/70 rounded-xl py-3 px-6 shadow-lg inline-block backdrop-blur-sm">
+                      <p className="flex items-center gap-2 font-medium">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary">
+                          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
+                          <path d="M12 6v6l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                        <span className="text-sm opacity-80">Próxima actualización:</span>
+                        <span className="text-primary font-bold">{nextUpdate}</span>
+                      </p>
+                    </div>
                   )}
-                </Button>
-              </div>
+                </div>
+              )}
             </div>
           )}
           {!caja && <p>Cargando información de la caja...</p>}
