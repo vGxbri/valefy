@@ -378,6 +378,7 @@ export default function BoxComponent({
       const randomSkin = selectRandomSkinByProbability(
         cajaSkins,
         probabilidades,
+        false
       );
 
       if (randomSkin)
@@ -394,6 +395,7 @@ export default function BoxComponent({
       const randomSkin = selectRandomSkinByProbability(
         cajaSkins,
         probabilidades,
+        false
       );
 
       if (randomSkin)
@@ -912,12 +914,6 @@ export default function BoxComponent({
                               ) : multipleSpinItems[index] ? (
                                 // Spinner - continuar girando hasta que TODOS terminen
                                 <div className="w-[190px] md:w-[200px] h-[300px] md:h-[400px] overflow-hidden rounded-xl bg-gradient-to-b from-slate-800/20 via-transparent to-slate-800/20 border border-slate-700/30 shadow-2xl relative">
-                                  {/* Indicador de tiempo de finalización */}
-                                  <div className="absolute top-2 right-2 z-10 bg-slate-900/80 backdrop-blur-sm rounded-lg px-2 py-1">
-                                    <span className="text-xs text-white/70 font-medium">
-                                      {Math.round(animationDuration / 1000)}s
-                                    </span>
-                                  </div>
                                   
                                   <SpinnerAnimation
                                     isSpinning={true} // Mantener todos girando hasta que el estado global cambie
@@ -984,7 +980,6 @@ export default function BoxComponent({
                               {/* Imagen de la caja */}
                               <motion.div 
                                 className="relative group"
-                                whileHover={{ scale: 1.05 }}
                                 transition={{ duration: 0.2 }}
                               >
                                 <div className="absolute -inset-1 rounded-xl blur opacity-30 transition duration-500"></div>

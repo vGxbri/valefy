@@ -203,54 +203,124 @@ export async function addSkinToInventory(
 }
 
 /**
- * Selecciona una skin aleatoria basada en las probabilidades de los tiers
+ * Selecciona una skin aleatoria basada en las probabilidades individuales de cada skin
  * @param skins Array de skins disponibles
  * @param probabilidades Array de probabilidades por tier
+ * @param showLogs Si mostrar logs detallados (por defecto false)
  * @returns La skin seleccionada aleatoriamente
  */
 export function selectRandomSkinByProbability(
   skins: Skin[],
   probabilidades: TierProbabilidad[],
+  showLogs: boolean = false,
 ): Skin | null {
   if (!skins.length || !probabilidades.length) {
+    console.error('❌ Arrays vacíos:', { skinsLength: skins.length, probabilidadesLength: probabilidades.length });
     return null;
   }
 
   try {
-    // Generar un número aleatorio entre 0 y 1
-    const randomNum = Math.random();
-    let accumulatedProbability = 0;
-    let selectedTier: string | null = null;
+    // Crear un array con cada skin y su probabilidad individual
+    const skinProbabilities: { skin: Skin; probability: number; tierName: string }[] = [];
 
-    // Determinar el tier según la probabilidad
-    for (const prob of probabilidades) {
-      accumulatedProbability += prob.probabilidad;
-      if (randomNum <= accumulatedProbability) {
-        selectedTier = prob.content_tier_id;
-        break;
+    // Para cada tier, calcular la probabilidad individual de cada skin
+    for (const tierProb of probabilidades) {
+      // Encontrar todas las skins de este tier usando uuid_api
+      const skinsInTier = skins.filter(skin => 
+        skin.content_tier_id === tierProb.content_tier?.uuid_api
+      );
+      
+      if (showLogs) {
+        console.log(`🔎 Buscando skins para tier "${tierProb.content_tier?.nombre}"`);
+        console.log(`   Tier ID: ${tierProb.content_tier_id}`);
+        console.log(`   Tier UUID_API: ${tierProb.content_tier?.uuid_api}`);
+        console.log(`   Skins encontradas: ${skinsInTier.length}`);
+        if (skinsInTier.length > 0) {
+          skinsInTier.forEach(skin => {
+            console.log(`     - ${skin.nombre} (skin tier_id: ${skin.content_tier_id})`);
+          });
+        }
+      }
+      
+      if (skinsInTier.length > 0) {
+        // Dividir la probabilidad del tier entre todas las skins de ese tier
+        const individualProbability = tierProb.probabilidad / skinsInTier.length;
+        
+        // Agregar cada skin con su probabilidad individual
+        for (const skin of skinsInTier) {
+          skinProbabilities.push({
+            skin,
+            probability: individualProbability,
+            tierName: tierProb.content_tier?.nombre || 'Unknown'
+          });
+        }
       }
     }
 
-    // Si por alguna razón no se seleccionó un tier, usar el último
-    if (!selectedTier && probabilidades.length > 0) {
-      selectedTier = probabilidades[probabilidades.length - 1].content_tier_id;
+    if (skinProbabilities.length === 0) {
+      console.error('❌ No se encontraron skins con probabilidades válidas');
+      return null;
     }
 
-    // Filtrar skins del tier seleccionado
-    const tierSkins = skins.filter(
-      (skin) => skin.content_tier_id === selectedTier,
-    );
+    // Calcular la suma total para normalización
+    const totalProbability = skinProbabilities.reduce((sum, item) => sum + item.probability, 0);
 
-    // Si no hay skins en el tier seleccionado, usar cualquier skin
-    const availableSkins = tierSkins.length > 0 ? tierSkins : skins;
+    if (showLogs) {
+      console.log('🎲 Probabilidades individuales por skin:');
+      
+      // Agrupar por tier para mostrar mejor
+      const tierGroups: { [tierName: string]: { count: number; totalProb: number; individual: number } } = {};
+      skinProbabilities.forEach(item => {
+        if (!tierGroups[item.tierName]) {
+          tierGroups[item.tierName] = { count: 0, totalProb: 0, individual: 0 };
+        }
+        tierGroups[item.tierName].count++;
+        tierGroups[item.tierName].totalProb += item.probability;
+        tierGroups[item.tierName].individual = item.probability;
+      });
 
-    // Seleccionar una skin aleatoria del tier
-    const randomIndex = Math.floor(Math.random() * availableSkins.length);
+      Object.entries(tierGroups).forEach(([tierName, data]) => {
+        console.log(`📊 ${tierName}: ${data.count} skins, ${(data.individual * 100).toFixed(2)}% cada una, ${(data.totalProb * 100).toFixed(2)}% total del tier`);
+      });
 
-    return availableSkins[randomIndex] || null;
+      console.log(`🎯 Total de skins: ${skinProbabilities.length}, Probabilidad total: ${(totalProbability * 100).toFixed(2)}%`);
+    }
+
+    // Generar número aleatorio
+    const randomNum = Math.random();
+    let accumulatedProbability = 0;
+
+    if (showLogs) {
+      console.log('🎲 Número aleatorio generado:', randomNum.toFixed(4));
+    }
+
+    // Seleccionar skin basada en probabilidades individuales
+    for (const item of skinProbabilities) {
+      const normalizedProbability = item.probability / totalProbability;
+      accumulatedProbability += normalizedProbability;
+      
+      if (showLogs) {
+        console.log(`🎨 ${item.skin.nombre} (${item.tierName}): ${(normalizedProbability * 100).toFixed(4)}% - Acumulada: ${(accumulatedProbability * 100).toFixed(4)}%`);
+      }
+      
+      if (randomNum <= accumulatedProbability) {
+        if (showLogs) {
+          console.log(`✅ Skin seleccionada: ${item.skin.nombre} del tier ${item.tierName}`);
+          console.log(`🎉 Probabilidad individual: ${(normalizedProbability * 100).toFixed(4)}%`);
+        }
+        return item.skin;
+      }
+    }
+
+    // Fallback: devolver la última skin si algo salió mal
+    const fallbackSkin = skinProbabilities[skinProbabilities.length - 1]?.skin || null;
+    if (showLogs && fallbackSkin) {
+      console.log(`⚠️ Fallback: usando última skin ${fallbackSkin.nombre}`);
+    }
+    
+    return fallbackSkin;
   } catch (error) {
     console.error("Error al seleccionar skin aleatoria:", error);
-
     return null;
   }
 }
@@ -277,8 +347,10 @@ export async function processBoxOpening(
   error?: any;
 }> {
   try {
-    // Seleccionar skin aleatoria según probabilidades
-    const selectedSkinFromPool = selectRandomSkinByProbability(skins, probabilidades);
+    console.log("🎁 Iniciando apertura de caja con probabilidades:");
+    
+    // Seleccionar skin aleatoria según probabilidades (con logs detallados)
+    const selectedSkinFromPool = selectRandomSkinByProbability(skins, probabilidades, true);
 
     if (!selectedSkinFromPool) {
       return {
@@ -288,6 +360,8 @@ export async function processBoxOpening(
         error: "No se pudo seleccionar una skin del pool",
       };
     }
+
+    console.log(`✅ Skin seleccionada: ${selectedSkinFromPool.nombre} (${selectedSkinFromPool.content_tier?.nombre})`);
 
     // Asumimos que selectedSkinFromPool.id es el API UUID de la skin
     // y selectedSkinFromPool.nombre es el displayName.
