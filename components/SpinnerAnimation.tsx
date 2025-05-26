@@ -12,6 +12,7 @@ interface SpinnerAnimationProps {
   orientation?: "horizontal" | "vertical";
   animationDuration?: number;
   itemSize?: number;
+  customContainerClass?: string;
 }
 
 const ITEM_WIDTH_CAROUSEL = 260;
@@ -24,6 +25,7 @@ export default function SpinnerAnimation({
   orientation = "horizontal",
   animationDuration = 12000, // 12000 por defecto
   itemSize = 240,
+  customContainerClass,
 }: SpinnerAnimationProps) {
   const spinnerRef = useRef<HTMLDivElement>(null);
   const animationStartedRef = useRef(false); // Evitar que se reinicie la animación
@@ -182,17 +184,23 @@ export default function SpinnerAnimation({
     };
   }, []); // Solo ejecutar al montar/desmontar
 
-  const containerClass = orientation === "horizontal" 
+  const defaultContainerClass = orientation === "horizontal" 
     ? "mx-auto overflow-hidden relative rounded-lg shadow-2xl backdrop-blur-lg bg-gradient-to-r from-transparent via-black/50 to-transparent w-full"
     : "mx-auto overflow-hidden relative rounded-lg shadow-2xl backdrop-blur-lg bg-gradient-to-b from-transparent via-black/50 to-transparent w-full";
+
+  const containerClass = customContainerClass 
+    ? `${customContainerClass} overflow-hidden relative rounded-xl shadow-lg`
+    : defaultContainerClass;
 
   const spinnerClass = orientation === "horizontal" 
     ? "flex items-center" 
     : "flex flex-col items-center";
 
-  const containerStyle = orientation === "horizontal" 
-    ? { height: "240px" }
-    : { width: "200px", height: "400px" };
+  const containerStyle = customContainerClass
+    ? {} // No aplicar estilos predeterminados si hay clase personalizada
+    : orientation === "horizontal" 
+      ? { height: "280px" }
+      : { width: "200px", height: "400px" };
 
   const spinnerStyle = orientation === "horizontal"
     ? {
@@ -264,9 +272,13 @@ export default function SpinnerAnimation({
                     {skin.content_tier?.uuid_api && skin.content_tier.uuid_api !== 'default' && (
                       <Image
                         src={`/skins-bg/${skin.content_tier.uuid_api}.png`}
-                        alt=""
-                        fill
-                        className="absolute inset-0 z-0 p-2 opacity-30 transform scale-110 rotate-12 object-contain"
+                        alt={`Fondo para ${skin.content_tier.nombre}`}
+                        layout="fill"
+                        objectFit="contain" // O "cover" si prefieres que llene y recorte
+                        className="absolute inset-0 z-0 p-4 opacity-60 transform"
+                        style={{
+                          scale: orientation === "vertical" ? "2.1" : "1.3",
+                        }}
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         priority={index < 10}
                       />
@@ -276,9 +288,9 @@ export default function SpinnerAnimation({
                         alt={skin.nombre}
                         className="object-contain drop-shadow-lg p-2 relative z-10 transform transition-transform duration-300"
                         style={imageTransformStyle}
-                        height={orientation === "vertical" ? 110 : adjustedItemSize - 20}
+                        height={orientation === "vertical" ? 300 : adjustedItemSize - 20}
                         src={skin.imagen_url}
-                        width={orientation === "vertical" ? 180 : adjustedItemSize - 20}
+                        width={orientation === "vertical" ? 300 : adjustedItemSize - 20}
                         priority={index < 10}
                       />
                     )}

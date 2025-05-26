@@ -62,80 +62,13 @@ export type TierProbabilidad = {
   content_tier?: ContentTier;
 };
 
-/**
- * Registra una transacción cuando un usuario abre una caja
- * @param userId ID del usuario
- * @param cajaId ID de la caja
- * @param skinId ID de la skin obtenida
- * @param supabase Cliente de Supabase
- * @returns Un objeto con {success: boolean, error?: any}
- */
-export async function recordTransaction(
-  userId: string,
-  cajaId: string,
-  skinId: string,
-  supabase: SupabaseClient,
-): Promise<{ success: boolean; error?: any }> {
-  try {
-    const { error } = await supabase.from("transacciones").insert({
-      usuario_id: userId,
-      caja_id: cajaId,
-      skin_id: skinId,
-      fecha: new Date().toISOString(),
-    });
 
-    if (error) {
-      console.error("Error al registrar la transacción:", error);
-
-      return { success: false, error };
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error("Error al registrar la transacción:", error);
-
-    return { success: false, error };
-  }
-}
-
-/**
- * Verifica si una skin ya existe en el inventario del usuario
- * @param userId ID del usuario
- * @param skinId ID de la skin
- * @param supabase Cliente de Supabase
- * @returns true si la skin ya está en el inventario, false si no
- */
-export async function isSkinInInventory(
-  userId: string,
-  skinId: string,
-  supabase: SupabaseClient,
-): Promise<boolean> {
-  try {
-    const { data, error } = await supabase
-      .from("inventario_usuario")
-      .select("*")
-      .eq("usuario_id", userId)
-      .eq("skin_id", skinId)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Error al verificar el inventario:", error);
-
-      return false;
-    }
-
-    return !!data; // Retorna true si data existe, false si es null
-  } catch (error) {
-    console.error("Error al verificar el inventario:", error);
-
-    return false;
-  }
-}
 
 /**
  * Añade una skin al inventario del usuario como una nueva fila.
  * @param userId ID del usuario
  * @param skinFromApi Objeto de la skin tal como viene de la API (debe contener uuid y displayName)
+ * @param metodoAdquisicion Método de adquisición (por defecto 'caja_abierta')
  * @param supabase Cliente de Supabase
  * @returns Un objeto con {success: boolean, error?: any, operationType: 'added' | 'error'}
  */
@@ -153,7 +86,6 @@ export async function addSkinToInventory(
         skin_id: skinFromApi.uuid,
         skin_nombre: skinFromApi.displayName,
         fecha_obtencion: new Date().toISOString(),
-        // metodo_adquisicion puede ser añadido aquí si se pasa
       });
 
     if (insertError) {
@@ -259,7 +191,6 @@ export async function processBoxOpening(
   supabase: SupabaseClient,
 ): Promise<{
   selectedSkin: Skin | null;
-  transactionSuccess: boolean;
   inventoryOperationType: "added" | "error";
   error?: any;
 }> {
@@ -270,7 +201,6 @@ export async function processBoxOpening(
     if (!selectedSkinFromPool) {
       return {
         selectedSkin: null,
-        transactionSuccess: false,
         inventoryOperationType: "error",
         error: "No se pudo seleccionar una skin del pool",
       };
@@ -284,25 +214,19 @@ export async function processBoxOpening(
         contentTierUuid: selectedSkinFromPool.content_tier?.uuid_api
     };
 
-    // Registrar la transacción (usa selectedSkinFromPool.id, que es el API UUID)
-    const { success: transactionSuccess, error: transactionError } =
-      await recordTransaction(userId, cajaId, selectedSkinFromPool.id, supabase);
-
     // Añadir al inventario (siempre una nueva fila)
     const { operationType, error: inventoryError } =
       await addSkinToInventory(userId, skinApiRepresentation, supabase);
 
     return {
       selectedSkin: selectedSkinFromPool,
-      transactionSuccess,
       inventoryOperationType: operationType,
-      error: transactionError || inventoryError,
+      error: inventoryError,
     };
   } catch (error) {
     console.error("Error al procesar la apertura de la caja:", error);
     return {
       selectedSkin: null,
-      transactionSuccess: false,
       inventoryOperationType: "error",
       error,
     };

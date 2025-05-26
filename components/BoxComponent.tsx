@@ -16,7 +16,6 @@ import {
   selectRandomSkinByProbability,
   getTierData,
 } from "@/lib/boxUtils";
-import { Shadow } from "ogl";
 
 // Estilos globales para animaciones
 const globalStyles = `
@@ -68,6 +67,24 @@ const globalStyles = `
 
 .bg-gradient-radial {
   background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+/* Ocultar scrollbars en navegadores webkit */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ocultar scrollbars en Firefox */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Asegurar que las animaciones hover no generen overflow */
+.hover-safe {
+  overflow: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 `;
 
@@ -603,6 +620,17 @@ export default function BoxComponent({
     return () => clearTimeout(timer);
   }, [numberOfBoxes]);
 
+  // Función para separar la última palabra del nombre
+  const formatNameWithLastWordSeparate = (name: string) => {
+    const words = name.trim().split(' ');
+    if (words.length <= 1) return { firstPart: '', lastWord: name };
+    
+    const lastWord = words[words.length - 1];
+    const firstPart = words.slice(0, -1).join(' ');
+    
+    return { firstPart, lastWord };
+  };
+
   // Si está cargando, mostrar spinner de carga
   if (isLoading) {
     return (
@@ -674,103 +702,138 @@ export default function BoxComponent({
 
   return (
     <div className="w-full flex flex-col items-center justify-center py-10">
-      <AnimatePresence mode="wait">
+      {/* Contenedor con altura fija para evitar saltos */}
+      <div className="w-full h-[650px] flex items-center justify-center">
+        <AnimatePresence mode="wait">
         {/* Resultado de caja única */}
         {showSingleResult && (
           <motion.div
             key="single-result"
-            initial={{ opacity: 0, scale: 0.8, y: 40 }}
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: -30 }}
-            transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
-            className="w-full max-w-md"
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
+            className="w-full h-full flex items-center justify-center"
           >
-            {(() => {
-              // Determinar el tipo de arma y obtener los estilos específicos
-              const weaponType = getWeaponType(resultSkin?.nombre || '');
-              const weaponStyles = getWeaponSpecificStyles(weaponType);
-
-              // Crear el estilo inline para las transformaciones
-              const imageTransformStyle: React.CSSProperties = {
-                transform: `scale(${weaponStyles.baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
-              };
-
-              return (
-                // Resultado de apertura de caja mejorado
-                <div className="p-8 md:p-10 rounded-xl w-full text-center bg-gradient-to-br from-slate-800/80 via-slate-900/90 to-black/80 shadow-2xl border border-slate-700/50 backdrop-blur-md flex flex-col items-center">
-                  {resultSkin.imagen_url && (
-                                       <motion.div 
-                     className="mt-12 mb-20 flex items-center justify-center relative"
-                     initial={{ scale: 0.6, opacity: 0, rotateY: -20 }}
-                     animate={{ scale: 1, opacity: 1, rotateY: 0 }}
-                     transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
-                   >
-                      <div 
-                        className="relative w-[240px] h-[240px] rounded-xl overflow-hidden flex items-center justify-center group"
-                      >
-                        {resultSkin.content_tier?.id && resultSkin.content_tier.id !== 'standard' && (
+            <div className="w-full flex flex-col items-center justify-center">
+              <div className="flex justify-center items-center px-2 md:px-4 overflow-hidden mb-8">
+                <div className="flex justify-center items-center">
+                  <motion.div 
+                    className="flex-shrink-0"
+                    initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ 
+                      delay: 0.3, 
+                      duration: 0.5, 
+                      ease: "easeOut" 
+                    }}
+                  >
+                    <motion.div 
+                      className="w-[320px] md:w-[400px] h-[500px] md:h-[600px] rounded-2xl overflow-hidden relative hover-safe"
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ duration: 0.3 }}
+                      style={{
+                        background: resultSkin.content_tier ? 
+                          `radial-gradient(circle at center, ${resultSkin.content_tier.color}15 0%, ${resultSkin.content_tier.color}08 50%, transparent 100%)` : 
+                          'radial-gradient(circle at center, rgba(255,255,255,0.05) 0%, transparent 70%)',
+                        willChange: 'transform'
+                      }}
+                    >
+                      {/* Fondo de la tier */}
+                      {resultSkin.content_tier?.id && resultSkin.content_tier.id !== 'standard' && (
+                        <div className="absolute inset-0 z-0 flex items-center justify-center">
                           <Image
                             src={`/skins-bg/${resultSkin.content_tier.id}.png`}
-                            alt=""
-                            layout="fill"
-                            objectFit="contain"
-                            className="absolute inset-0 z-10 p-2 opacity-40 transform scale-150 rotate-12"
+                            alt={`Fondo para ${resultSkin.content_tier.nombre}`}
+                            width={300}
+                            height={300}
+                            className="scale-125 rotate-12 opacity-40 mb-24"
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
-                        )}
-                        {resultSkin.imagen_url && (
-                          <Image
-                            alt={resultSkin.nombre}
-                            className="object-contain drop-shadow-lg p-2 relative z-10" 
-                            style={{animation: 'float 3s infinite ease-in-out', ...imageTransformStyle}}
-                            height={250}
-                            src={resultSkin.imagen_url}
-                            width={250}
-                          />
-                        )}
-                      </div>
-                      <Image
-                          alt={resultSkin.nombre}
-                          src={`/skins-bg-result/${resultSkin.content_tier?.id}.png`}
-                          className="object-contain drop-shadow-lg relative mt-10 ml-2 scale-[2] opacity-80"
-                          layout="fill"
-                          objectFit="contain"
-                        />
-                    </motion.div>
-                  )}
-                                     <motion.div
-                     initial={{ y: 30, opacity: 0 }}
-                     animate={{ y: 0, opacity: 1 }}
-                     transition={{ delay: 0.7, duration: 0.5, ease: "easeOut" }}
-                   >
-                    <p className="text-2xl font-semibold text-white mb-3 capitalize tracking-wide">
-                      {resultSkin.nombre}
-                    </p>
-                    {resultSkin.content_tier && (
-                      <div className="mb-6">
-                        <div
-                          className="px-5 py-2 rounded-full text-sm font-medium shadow-md border border-opacity-50"
-                          style={{
-                            backgroundColor: `${resultSkin.content_tier.color}20`,
-                            color: resultSkin.content_tier.color,
-                            borderColor: resultSkin.content_tier.color,
-                            boxShadow: `0 0 15px ${resultSkin.content_tier.color}40`
-                          }}
-                        >
-                          {resultSkin.content_tier.nombre}
                         </div>
+                      )}
+                      
+                      {/* Contenido principal */}
+                      <div className="relative z-10 h-full flex flex-col items-center justify-center p-4">
+                        <motion.div 
+                          className="relative w-[260px] md:w-[320px] h-[260px] md:h-[320px] mb-4"
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ delay: 0.5, duration: 0.4, ease: "easeOut" }}
+                        >
+                          {resultSkin.imagen_url && (
+                            <Image
+                              alt={resultSkin.nombre}
+                              className="object-contain drop-shadow-lg p-2 relative z-10 transform transition-transform duration-300"
+                              fill
+                              src={resultSkin.imagen_url}
+                              style={{
+                                animation: 'float 4s infinite ease-in-out',
+                                filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.3))',
+                              }}
+                            />
+                          )}
+                        </motion.div>
+                        
+                        <motion.div
+                          className="text-center space-y-3"
+                          initial={{ y: 20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: 0.7, duration: 0.4 }}
+                        >
+                          {(() => {
+                            const { firstPart, lastWord } = formatNameWithLastWordSeparate(resultSkin.nombre);
+                            return (
+                              <h3 className="text-sm md:text-lg font-bold text-white leading-tight px-2">
+                                {firstPart && <span className="block">{firstPart}</span>}
+                                <span className="block">{lastWord}</span>
+                              </h3>
+                            );
+                          })()}
+                          {resultSkin.content_tier && (
+                            <div
+                              className="px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-2xl border-2 mx-auto inline-block"
+                              style={{
+                                backgroundColor: `${resultSkin.content_tier?.color}25`,
+                                color: resultSkin.content_tier?.color,
+                                borderColor: resultSkin.content_tier?.color,
+                                boxShadow: `0 0 25px ${resultSkin.content_tier?.color}50, inset 0 0 15px ${resultSkin.content_tier?.color}20`
+                              }}
+                            >
+                              {resultSkin.content_tier?.nombre}
+                            </div>
+                          )}
+                        </motion.div>
                       </div>
-                    )}
-                    <Button
-                      onClick={resetResults}
-                      className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
-                    >
-                      Abrir de nuevo
-                    </Button>
+                      
+                      {/* Efecto de brillo */}
+                      <div 
+                        className="absolute inset-0 rounded-2xl pointer-events-none"
+                        style={{
+                          background: `radial-gradient(circle at 50% 30%, ${resultSkin.content_tier?.color || '#ffffff'}20 0%, transparent 60%)`,
+                          animation: 'pulse 2s infinite'
+                        }}
+                      />
+                    </motion.div>
                   </motion.div>
                 </div>
-              );
-            })()}
+              </div>
+              
+              {/* Botón para abrir más cajas */}
+              <motion.div 
+                className="text-center"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1, duration: 0.5 }}
+              >
+                <Button
+                  onClick={resetResults}
+                  className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-8 py-3 text-lg font-medium"
+                >
+                  Abrir de nuevo
+                </Button>
+              </motion.div>
+            </div>
           </motion.div>
         )}
 
@@ -782,11 +845,32 @@ export default function BoxComponent({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
-            className="w-full"
+            className="w-full h-full flex items-center justify-center"
           >
-            <div className="flex justify-center items-center gap-3 md:gap-6 px-2 md:px-4 overflow-x-auto mb-8">
-              <div className="flex gap-3 md:gap-6 min-w-max">
-                {multipleResults.map((result, index) => (
+            <div className="w-full flex flex-col items-center justify-center">
+              <div className="flex justify-center items-center px-2 md:px-4 overflow-hidden mb-8">
+              <div className={`flex justify-center items-center ${
+                numberOfBoxes === 1 ? 'gap-0' :
+                numberOfBoxes === 2 ? 'gap-4 md:gap-8' :
+                numberOfBoxes === 3 ? 'gap-3 md:gap-6' :
+                numberOfBoxes === 4 ? 'gap-2 md:gap-4' :
+                'gap-1 md:gap-3'
+              }`}>
+                {multipleResults.map((result, index) => {
+                  // Calcular tamaños responsivos según número de cajas - Ajustados para evitar scroll
+                  const getSizes = () => {
+                    switch(numberOfBoxes) {
+                      case 1: return { w: 'w-[320px] md:w-[400px]', h: 'h-[500px] md:h-[600px]', imgW: 'w-[260px] md:w-[320px]', imgH: 'h-[260px] md:h-[320px]' };
+                      case 2: return { w: 'w-[280px] md:w-[340px]', h: 'h-[450px] md:h-[520px]', imgW: 'w-[220px] md:w-[270px]', imgH: 'h-[220px] md:h-[270px]' };
+                      case 3: return { w: 'w-[240px] md:w-[290px]', h: 'h-[400px] md:h-[460px]', imgW: 'w-[180px] md:w-[230px]', imgH: 'h-[180px] md:h-[230px]' };
+                      case 4: return { w: 'w-[200px] md:w-[240px]', h: 'h-[360px] md:h-[410px]', imgW: 'w-[150px] md:w-[190px]', imgH: 'h-[150px] md:h-[190px]' };
+                      case 5: return { w: 'w-[170px] md:w-[200px]', h: 'h-[320px] md:h-[370px]', imgW: 'w-[120px] md:w-[150px]', imgH: 'h-[120px] md:h-[150px]' };
+                      default: return { w: 'w-[320px] md:w-[400px]', h: 'h-[500px] md:h-[600px]', imgW: 'w-[260px] md:w-[320px]', imgH: 'h-[260px] md:h-[320px]' };
+                    }
+                  };
+                  const sizes = getSizes();
+
+                  return (
                   <motion.div 
                     key={`result-${index}`}
                     className="flex-shrink-0"
@@ -799,30 +883,35 @@ export default function BoxComponent({
                     }}
                   >
                     <motion.div 
-                      className="w-[190px] md:w-[280px] h-[300px] md:h-[450px] rounded-2xl overflow-hidden relative"
+                      className={`${sizes.w} ${sizes.h} rounded-2xl overflow-hidden relative hover-safe`}
                       whileHover={{ scale: 1.02 }}
                       transition={{ duration: 0.3 }}
                       style={{
                         background: result.content_tier ? 
                           `radial-gradient(circle at center, ${result.content_tier.color}15 0%, ${result.content_tier.color}08 50%, transparent 100%)` : 
-                          'radial-gradient(circle at center, rgba(255,255,255,0.05) 0%, transparent 70%)'
+                          'radial-gradient(circle at center, rgba(255,255,255,0.05) 0%, transparent 70%)',
+                        willChange: 'transform'
                       }}
                     >
                       {/* Fondo de la tier */}
                       {result.content_tier?.uuid_api && result.content_tier.uuid_api !== 'default' && (
-                        <Image
-                          src={`/skins-bg/${result.content_tier.uuid_api}.png`}
-                          alt=""
-                          fill
-                          className="absolute inset-0 z-0 p-4 opacity-20 transform scale-125 rotate-12 object-contain"
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                        />
+                        <div className="absolute inset-0 z-0 flex items-center justify-center">
+                          <Image
+                            src={`/skins-bg/${result.content_tier.uuid_api}.png`}
+                            alt={`Fondo para ${result.content_tier.nombre}`}
+                            width={300}
+                            height={300}
+                            className="scale-125 rotate-12 opacity-40 mb-24"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            priority={index < 10}
+                          />
+                        </div>
                       )}
                       
                       {/* Contenido principal */}
                       <div className="relative z-10 h-full flex flex-col items-center justify-center p-4">
                         <motion.div 
-                          className="relative w-[160px] md:w-[220px] h-[160px] md:h-[220px] mb-4"
+                          className={`relative ${sizes.imgW} ${sizes.imgH} mb-4`}
                           initial={{ scale: 0.8, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{ delay: index * 0.1 + 0.5, duration: 0.4, ease: "easeOut" }}
@@ -830,12 +919,12 @@ export default function BoxComponent({
                           {result.imagen_url && (
                             <Image
                               alt={result.nombre}
-                              className="object-contain drop-shadow-2xl transform rotate-12"
+                              className="object-contain drop-shadow-lg p-2 relative z-10 transform transition-transform duration-300"
                               fill
                               src={result.imagen_url}
                               style={{
                                 animation: 'float 4s infinite ease-in-out',
-                                filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.3))'
+                                filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.3))',
                               }}
                             />
                           )}
@@ -847,9 +936,15 @@ export default function BoxComponent({
                           animate={{ y: 0, opacity: 1 }}
                           transition={{ delay: index * 0.1 + 0.7, duration: 0.4 }}
                         >
-                          <h3 className="text-sm md:text-lg font-bold text-white leading-tight line-clamp-2 px-2">
-                            {result.nombre}
-                          </h3>
+                          {(() => {
+                            const { firstPart, lastWord } = formatNameWithLastWordSeparate(result.nombre);
+                            return (
+                              <h3 className="text-sm md:text-lg font-bold text-white leading-tight px-2">
+                                {firstPart && <span className="block">{firstPart}</span>}
+                                <span className="block">{lastWord}</span>
+                              </h3>
+                            );
+                          })()}
                           {result.content_tier && (
                             <div
                               className="px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-2xl border-2 mx-auto inline-block"
@@ -876,13 +971,14 @@ export default function BoxComponent({
                       />
                     </motion.div>
                   </motion.div>
-                ))}
+                  );
+                })}
               </div>
             </div>
             
             {/* Botón para abrir más cajas */}
             <motion.div 
-              className="text-center mt-8"
+              className="text-center"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: multipleResults.length * 0.1 + 1, duration: 0.5 }}
@@ -894,6 +990,7 @@ export default function BoxComponent({
                 Abrir más cajas
               </Button>
             </motion.div>
+            </div>
           </motion.div>
         )}
 
@@ -901,24 +998,43 @@ export default function BoxComponent({
         {showSpinners && (
           <motion.div
             key="spinners"
-            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+            initial={{ opacity: 0, scale: 0.9, y: 0 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: -20 }}
+            exit={{ opacity: 0, scale: 1, y: 0 }}
             transition={{ 
               duration: 0.5, 
               ease: "easeInOut",
               exit: { duration: 0.6, ease: "easeIn" }
             }}
-            className="w-full"
+            className="w-full h-full flex items-center justify-center"
           >
             {isMultipleMode && numberOfBoxes > 1 ? (
               // Vista múltiples cajas - Layout horizontal
               <div className="w-full mb-8">
-                <div className="flex justify-center items-center gap-3 md:gap-6 px-2 md:px-4 overflow-x-auto">
-                  <div className="flex gap-3 md:gap-6 min-w-max">
+                <div className="flex justify-center items-center px-2 md:px-4 overflow-hidden">
+                  <div className={`flex justify-center items-center ${
+                    numberOfBoxes === 1 ? 'gap-0' :
+                    numberOfBoxes === 2 ? 'gap-4 md:gap-8' :
+                    numberOfBoxes === 3 ? 'gap-3 md:gap-6' :
+                    numberOfBoxes === 4 ? 'gap-2 md:gap-4' :
+                    'gap-1 md:gap-3'
+                  }`}>
                     {Array.from({ length: numberOfBoxes }).map((_, index) => {
                       // Calcular duración escalonada: 12s, 13s, 14s, etc.
                       const animationDuration = 12000 + (index * 1000);
+                      
+                      // Calcular tamaños responsivos según número de cajas - Ajustados para evitar scroll
+                      const getSizes = () => {
+                        switch(numberOfBoxes) {
+                          case 1: return { w: 'w-[320px] md:w-[400px]', h: 'h-[500px] md:h-[600px]', itemSize: 200 };
+                          case 2: return { w: 'w-[280px] md:w-[340px]', h: 'h-[450px] md:h-[520px]', itemSize: 170 };
+                          case 3: return { w: 'w-[240px] md:w-[290px]', h: 'h-[400px] md:h-[460px]', itemSize: 150 };
+                          case 4: return { w: 'w-[200px] md:w-[240px]', h: 'h-[360px] md:h-[410px]', itemSize: 130 };
+                          case 5: return { w: 'w-[170px] md:w-[200px]', h: 'h-[320px] md:h-[370px]', itemSize: 110 };
+                          default: return { w: 'w-[320px] md:w-[400px]', h: 'h-[500px] md:h-[600px]', itemSize: 200 };
+                        }
+                      };
+                      const sizes = getSizes();
                       
                       return (
                         <motion.div 
@@ -929,20 +1045,19 @@ export default function BoxComponent({
                           transition={{ delay: index * 0.1, duration: 0.4 }}
                         >
                           {multipleSpinItems[index] ? (
-                            // Spinner activo
-                            <div className="w-[190px] md:w-[200px] h-[300px] md:h-[400px] overflow-hidden rounded-xl bg-gradient-to-b from-slate-800/20 via-transparent to-slate-800/20 border border-slate-700/30 shadow-2xl relative">
-                              <SpinnerAnimation
-                                isSpinning={true}
-                                spinItems={multipleSpinItems[index]}
-                                onAnimationComplete={() => handleSpinnerComplete(index)}
-                                orientation="vertical"
-                                itemSize={130}
-                                animationDuration={animationDuration}
-                              />
-                            </div>
+                            // Spinner activo - Sin div contenedor extra
+                            <SpinnerAnimation
+                              isSpinning={true}
+                              spinItems={multipleSpinItems[index]}
+                              onAnimationComplete={() => handleSpinnerComplete(index)}
+                              orientation="vertical"
+                              itemSize={sizes.itemSize}
+                              animationDuration={animationDuration}
+                              customContainerClass={`${sizes.w} ${sizes.h}`}
+                            />
                           ) : (
                             // Estado inicial - preparando
-                            <div className="w-[190px] md:w-[200px] h-[300px] md:h-[400px] rounded-xl bg-slate-800/30 border border-slate-700/30 flex items-center justify-center opacity-50 backdrop-blur-sm shadow-xl">
+                            <div className={`${sizes.w} ${sizes.h} rounded-xl bg-slate-800/30 border border-slate-700/30 flex items-center justify-center opacity-50 backdrop-blur-sm shadow-xl`}>
                               <div className="text-white/60 text-center">
                                 <div className="w-12 md:w-16 h-12 md:h-16 border-2 border-white/20 rounded-xl mb-4 md:mb-6 mx-auto flex items-center justify-center bg-slate-700/20">
                                   <span className="text-2xl md:text-4xl">📦</span>
@@ -958,13 +1073,15 @@ export default function BoxComponent({
                 </div>
               </div>
             ) : (
-              // Vista caja única
-              <SpinnerAnimation
-                isSpinning={true}
-                spinItems={spinItems}
-                onAnimationComplete={handleSpinnerComplete}
-                orientation="horizontal"
-              />
+              // Vista caja única - Spinner más grande
+              <div className="w-full mx-auto">
+                <SpinnerAnimation
+                  isSpinning={true}
+                  spinItems={spinItems}
+                  onAnimationComplete={handleSpinnerComplete}
+                  orientation="horizontal"
+                />
+              </div>
             )}
           </motion.div>
         )}
@@ -973,15 +1090,15 @@ export default function BoxComponent({
         {showInitialView && (
           <motion.div 
             key="initial-view"
-            initial={{ opacity: 0, scale: 0.98, y: 5 }}
+            initial={{ opacity: 0, scale: 1, y: 5 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: -15 }}
+            exit={{ opacity: 0, scale: 1, y: 0 }}
             transition={{ 
               duration: 0.6, 
               ease: "easeInOut",
               exit: { duration: 0.4, ease: "easeIn" }
             }}
-            className="w-full"
+            className="w-full h-full flex items-center justify-center"
           >
             {/* Vista principal de la caja mejorada */}
             <div className="flex flex-col items-center w-full max-w-7xl mx-auto">
@@ -1032,8 +1149,16 @@ export default function BoxComponent({
                                     <Image
                                       alt={caja.nombre}
                                       className="relative z-20 object-contain transform transition-transform duration-300"
-                                      height={200}
-                                      width={200}
+                                      height={
+                                        numberOfBoxes === 4 ? 240 : 
+                                        numberOfBoxes === 5 ? 200 : 
+                                        300
+                                      }
+                                      width={
+                                        numberOfBoxes === 4 ? 240 : 
+                                        numberOfBoxes === 5 ? 200 : 
+                                        300
+                                      }
                                       src={caja.imagen_url || "/free_cage.png"}
                                     />
                                   )}
@@ -1134,7 +1259,8 @@ export default function BoxComponent({
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

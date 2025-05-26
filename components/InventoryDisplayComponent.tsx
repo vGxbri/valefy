@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added
 import { getWeaponSkins as fetchAllWeaponSkinsFromApi, getBestDisplayIcon, getContentTiers as fetchAllContentTiersFromApi, Skin as ValorantApiSkin, ContentTier as ValorantApiContentTier, getWeaponType, getWeaponSpecificStyles } from "@/lib/valorantApi";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Componente de carga para el inventario
 const InventoryLoading = ({ className = "" }: { className?: string }) => (
@@ -77,11 +77,11 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
   const [sortOption, setSortOption] = useState<string>("newest");
 
   const [showWelcome, setShowWelcome] = useState<boolean>(true); // Assuming welcome message is part of display
-  const [isSelectionMode, setIsSelectionMode] = useState<boolean>(true);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isInitialLoadAnimationPending, setIsInitialLoadAnimationPending] = useState(true);
   const { isOpen: isDeleteModalOpen, onOpen: onDeleteModalOpen, onOpenChange: onDeleteModalOpenChange, onClose: onDeleteModalClose } = useDisclosure(); // Para el modal de eliminación
   const [isDeletingItems, setIsDeletingItems] = useState(false); // Nuevo estado para controlar la carga durante eliminación
+  const { isOpen: isImprovementModalOpen, onOpen: onImprovementModalOpen, onOpenChange: onImprovementModalOpenChange, onClose: onImprovementModalClose } = useDisclosure(); // Para el modal de mejoras
 
   // Resetear la página cuando cambia el término de búsqueda o filtros
   useEffect(() => {
@@ -243,10 +243,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
     }
   }, [loading, userSkins, isInitialLoadAnimationPending]);
 
-  const toggleSelectionMode = () => {
-    setIsSelectionMode(!isSelectionMode);
-    setSelectedItems(new Set()); // Clear selection when toggling mode
-  };
+
 
   const toggleItemSelection = (uniqueCardId: string) => {
     setSelectedItems(prevSelected => {
@@ -263,6 +260,16 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
   const handleDeleteSelected = () => { // No necesita ser async ya que solo abre el modal
     if (selectedItems.size === 0) return;
     onDeleteModalOpen();
+  };
+
+  const calculateImprovementPercentage = (): number => {
+    return Math.min(selectedItems.size * 20, 100);
+  };
+
+  const handleImprovementClick = () => {
+    if (selectedItems.size >= 1 && selectedItems.size <= 5) {
+      onImprovementModalOpen();
+    }
   };
 
   const confirmDeleteSelected = async () => {
@@ -373,9 +380,6 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
           <h1 className="text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
             / INVENTARIO
           </h1>
-          <Button onClick={toggleSelectionMode} variant={isSelectionMode ? "default" : "outline"} size="sm" className={`${isSelectionMode ? 'rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200' : 'border-slate-700 hover:bg-slate-700 rounded-xl hover:bg-white/5 hover:text-white'}`}>
-            {isSelectionMode ? "Cancelar Selección" : "Seleccionar Skins"}
-          </Button>
           </div>
           <div className="mt-6 flex flex-col md:flex-row gap-4 items-center">
             <div className="relative w-full md:flex-grow group">
@@ -445,7 +449,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
         </div>
       </div>
 
-      {isSelectionMode && selectedItems.size > 0 && (
+      {selectedItems.size > 0 && (
         <div className="sticky top-36 z-20 mb-6">
           <div className="container mx-auto px-4">
             <div className="bg-slate-800/80 backdrop-blur-md p-4 rounded-lg shadow-md flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
@@ -535,12 +539,12 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                     duration: isInitialLoadAnimationPending ? 0.2 : 0.15, 
                     delay: isInitialLoadAnimationPending && index < 18 ? index * 0.05 : 0 
                   }}
-                  onClick={() => { if (isSelectionMode && skin.uniqueCardId) { toggleItemSelection(skin.uniqueCardId); } }}
-                  className={`group relative flex flex-col aspect-[3/4] overflow-hidden rounded-xl border bg-gradient-to-b from-gray-900 to-black transition-all duration-300
+                  onClick={() => { if (skin.uniqueCardId) { toggleItemSelection(skin.uniqueCardId); } }}
+                  className={`group relative flex flex-col aspect-[3/4] overflow-hidden rounded-xl border bg-gradient-to-b from-gray-900 to-black transition-all duration-150
                     ${selectedItems.has(skin.uniqueCardId!) 
                       ? 'border-primary scale-105 shadow-lg shadow-primary/40' 
-                      : 'border-gray-800/70 hover:shadow-[0px_2px_46px_-4px_rgba(255,_255,_255,_0.15)]'}
-                    ${isSelectionMode ? 'cursor-pointer' : 'cursor-default'}`}
+                      : 'border-gray-800/70 hover:shadow-[0px_2px_46px_-4px_rgba(255,_255,_255,_0.10)]'}
+                    cursor-pointer`}
                   style={cardStyle}
                 >
                   {/* Imagen de fondo dinámica basada en contentTier.id */}
@@ -583,17 +587,40 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                       </p>
                     }
                   </div>
-                  {isSelectionMode && (
-                    <div className={`absolute top-2 left-2 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${selectedItems.has(skin.uniqueCardId!) ? 'bg-primary border-white' : 'bg-slate-700/80 border-slate-600 hover:bg-slate-600/80'}`}>
-                      {selectedItems.has(skin.uniqueCardId!)}
-                    </div>
-                  )}
+                  <div className={`absolute top-2 left-2 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${selectedItems.has(skin.uniqueCardId!) ? 'bg-primary border-white' : 'bg-slate-700/80 border-slate-600 hover:bg-slate-600/80'}`}>
+                    {selectedItems.has(skin.uniqueCardId!) && <div className="w-2 h-2 bg-white rounded-full"></div>}
+                  </div>
                 </motion.div>
               );
             })}
           </motion.div>
         </div>
       )}
+      <AnimatePresence>
+        {selectedItems.size >= 1 && selectedItems.size <= 5 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 300, 
+              damping: 30,
+              duration: 0.3 
+            }}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-background via-backgroundAlt/95 to-background/80 backdrop-blur-md border-t border-white/10"
+          >
+            <div className="container mx-auto py-4 flex justify-center">
+              <button 
+                onClick={handleImprovementClick}
+                className="btnMejorar text-md"
+              >
+                {calculateImprovementPercentage()}% de mejorar
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modal de Confirmación de Eliminación */}
       <Modal
@@ -653,6 +680,89 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                   "Eliminar"
                 )}
               </HerouiButton>
+            </ModalFooter>
+          </>
+        </ModalContent>
+      </Modal>
+
+      {/* Modal de Mejoras */}
+      <Modal
+        hideCloseButton
+        backdrop="blur"
+        isOpen={isImprovementModalOpen}
+        onOpenChange={onImprovementModalOpenChange}
+        size="2xl"
+        classNames={{
+          body: "py-6 px-8 flex flex-col items-center gap-5",
+          backdrop: "bg-black/70 backdrop-blur-md",
+          base: "border border-white/10 bg-gradient-to-b from-backgroundAlt to-background text-white rounded-2xl shadow-[0_10px_50px_-12px_rgba(0,0,0,0.4)] overflow-hidden",
+          header: "w-full border-b border-white/10 pb-4 flex flex-col items-center gap-3",
+          footer: "w-full border-t border-white/10 pt-4 flex justify-end gap-3",
+        }}
+        radius="lg"
+      >
+        <ModalContent>
+          <>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-pink-500/50 to-transparent" />
+            <ModalHeader className="flex flex-col items-center gap-2 relative z-10">
+              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-600/30 border border-purple-500/30 mt-2 shadow-lg shadow-purple-900/10 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20 opacity-50" />
+                <span className="text-2xl relative z-10">✨</span>
+              </div>
+              <span className="text-2xl font-bold text-white drop-shadow-sm">
+                Mejorar Skins
+              </span>
+            </ModalHeader>
+            <ModalBody className="relative z-10">
+              <p className="text-white/80 text-center text-base mb-4">
+                ¿Deseas mejorar estas {selectedItems.size} skin(s) con un {calculateImprovementPercentage()}% de probabilidad de éxito?
+              </p>
+              
+              {/* Grid de skins seleccionadas */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-60 overflow-y-auto w-full">
+                {processedSkins
+                  .filter(skin => selectedItems.has(skin.uniqueCardId!))
+                  .map((skin) => (
+                    <div 
+                      key={skin.uniqueCardId}
+                      className="flex flex-col items-center p-3 bg-slate-800/50 rounded-lg border border-slate-700"
+                    >
+                      <Image
+                        src={skin.skinIcon || '/images/placeholder_icon.webp'}
+                        alt={skin.skinName}
+                        width={80}
+                        height={80}
+                        className="object-contain mb-2"
+                      />
+                      <h4 className="text-sm font-medium text-center text-white truncate w-full" title={skin.skinName}>
+                        {skin.skinName}
+                      </h4>
+                      <p className="text-xs text-slate-400" style={{ color: skin.contentTier.color }}>
+                        {skin.contentTier.nombre}
+                      </p>
+                    </div>
+                  ))
+                }
+              </div>
+            </ModalBody>
+            <ModalFooter className="relative z-10">
+              <HerouiButton
+                className="!text-white/70 hover:!bg-white/10 active:!bg-white/20 transition-all duration-200 rounded-xl border border-transparent hover:border-white/10 active:scale-95"
+                variant="light"
+                onPress={onImprovementModalClose}
+              >
+                Cancelar
+              </HerouiButton>
+              <Link href="/main/mejoras">
+                <HerouiButton
+                  className="bg-purple-600/20 hover:bg-purple-600/30 text-white border border-purple-500/20 hover:border-purple-500/30 font-semibold px-6 rounded-xl transition-colors duration-300 shadow-lg shadow-purple-900/20 active:scale-95 active:shadow-inner"
+                  onPress={onImprovementModalClose}
+                >
+                  <span className="flex items-center gap-2">
+                    ✨ Mejorar ({calculateImprovementPercentage()}%)
+                  </span>
+                </HerouiButton>
+              </Link>
             </ModalFooter>
           </>
         </ModalContent>

@@ -66,6 +66,39 @@ Para mantener la UI existente funcionando, se implementó un patrón donde:
 3. **Sistema de mejoras**: ✅ Selección y eliminación de skins funcionando
 4. **Eliminación de skins**: ✅ Operaciones directas por ID de fila
 
+### Cambio Adicional: Siempre Modo Selección ✅ COMPLETADO
+- **Fecha**: Actual  
+- **Cambio**: Eliminado botón "Seleccionar Skins" / "Cancelar Selección"
+- **Nuevo comportamiento**: Las skins siempre están en modo de selección
+- **Archivos modificados**: `components/InventoryDisplayComponent.tsx`
+  - Eliminado estado `isSelectionMode`
+  - Eliminada función `toggleSelectionMode`
+  - Eliminado botón del header
+  - Simplificada lógica de clicks - siempre permiten selección
+  - Checkbox de selección siempre visible
+
+#### 4. Botón "Mejorar Skins" ✅ COMPLETADO
+- **Fecha**: Actual
+- **Funcionalidad**: Botón flotante que aparece cuando se seleccionan 1-5 skins
+- **Ubicación**: Barra inferior que ocupa el ancho del inventario (max-w-7xl)
+- **Animación**: Entrada y salida desde abajo con animación spring usando AnimatePresence
+- **Diseño**: Div de fondo con gradiente y backdrop blur, botón centrado dentro
+- **Posicionamiento**: Centrado horizontalmente con transform
+- **Comportamiento**: Redirige a `/main/mejoras` y muestra contador de skins seleccionadas
+- **Estilo**: Gradiente púrpura-rosa con efectos hover y backdrop blur
+
+#### 5. Modal de Mejoras ✅ COMPLETADO
+- **Fecha**: Actual
+- **Funcionalidad**: Modal que se abre al hacer click en el botón "Mejorar Skins"
+- **Características**:
+  - Muestra las skins seleccionadas en un grid visual
+  - Calcula porcentaje dinámico: 1 skin = 20%, 5 skins = 100%
+  - Texto del botón actualizado a "x% de mejorar"
+  - Modal con estilo consistente con la página (gradientes púrpura-rosa)
+  - Vista previa de skins con imágenes, nombres y tiers
+  - Botones de confirmación y cancelación
+  - Redirección a `/main/mejoras` al confirmar
+
 ### Próximos Pasos Sugeridos
 - Testear la funcionalidad completa en desarrollo
 - Verificar que todas las animaciones y transiciones funcionan correctamente
