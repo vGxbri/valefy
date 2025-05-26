@@ -133,69 +133,38 @@ export async function isSkinInInventory(
 }
 
 /**
- * Añade una skin al inventario del usuario o actualiza su cantidad si ya existe.
+ * Añade una skin al inventario del usuario como una nueva fila.
  * @param userId ID del usuario
  * @param skinFromApi Objeto de la skin tal como viene de la API (debe contener uuid y displayName)
  * @param supabase Cliente de Supabase
- * @returns Un objeto con {success: boolean, error?: any, operationType: 'added' | 'updated' | 'error'}
+ * @returns Un objeto con {success: boolean, error?: any, operationType: 'added' | 'error'}
  */
 export async function addSkinToInventory(
   userId: string,
   skinFromApi: { uuid: string; displayName: string; contentTierUuid?: string },
   supabase: SupabaseClient,
-): Promise<{ success: boolean; error?: any; operationType: "added" | "updated" | "error" }> {
+): Promise<{ success: boolean; error?: any; operationType: "added" | "error" }> {
   try {
-    // Verificar si la skin (basada en skinFromApi.uuid) ya existe en el inventario del usuario
-    const { data: existingInventoryItem, error: fetchError } = await supabase
+    // Siempre insertar una nueva fila para cada skin obtenida
+    const { error: insertError } = await supabase
       .from("inventario_usuario")
-      .select("id, cantidad") // Seleccionar id y cantidad actual
-      .eq("usuario_id", userId)
-      .eq("skin_id", skinFromApi.uuid) // skin_id en la DB es el UUID de la API
-      .maybeSingle();
+      .insert({
+        usuario_id: userId,
+        skin_id: skinFromApi.uuid,
+        skin_nombre: skinFromApi.displayName,
+        fecha_obtencion: new Date().toISOString(),
+        // metodo_adquisicion puede ser añadido aquí si se pasa
+      });
 
-    if (fetchError) {
-      console.error("Error al verificar el inventario:", fetchError);
-      return { success: false, error: fetchError, operationType: "error" };
+    if (insertError) {
+      console.error("Error al guardar nueva skin en el inventario:", insertError);
+      return { success: false, error: insertError, operationType: "error" };
     }
-
-    if (existingInventoryItem) {
-      // La skin ya existe, actualizar cantidad
-      const newQuantity = (existingInventoryItem.cantidad || 0) + 1;
-      const { error: updateError } = await supabase
-        .from("inventario_usuario")
-        .update({ cantidad: newQuantity, fecha_obtencion: new Date().toISOString() })
-        .eq("id", existingInventoryItem.id);
-
-      if (updateError) {
-        console.error("Error al actualizar la cantidad en el inventario:", updateError);
-        return { success: false, error: updateError, operationType: "error" };
-      }
-      console.log(
-        `Cantidad de skin '${skinFromApi.displayName}' actualizada a ${newQuantity} para el usuario ${userId}`,
-      );
-      return { success: true, operationType: "updated" };
-    } else {
-      // La skin no existe, añadirla con cantidad 1
-      const { error: insertError } = await supabase
-        .from("inventario_usuario")
-        .insert({
-          usuario_id: userId,
-          skin_id: skinFromApi.uuid,
-          skin_nombre: skinFromApi.displayName,
-          fecha_obtencion: new Date().toISOString(),
-          cantidad: 1,
-          // metodo_adquisicion puede ser añadido aquí si se pasa
-        });
-
-      if (insertError) {
-        console.error("Error al guardar nueva skin en el inventario:", insertError);
-        return { success: false, error: insertError, operationType: "error" };
-      }
-      console.log(
-        `Skin '${skinFromApi.displayName}' añadida al inventario del usuario ${userId} con cantidad 1`,
-      );
-      return { success: true, operationType: "added" };
-    }
+    
+    console.log(
+      `Skin '${skinFromApi.displayName}' añadida al inventario del usuario ${userId}`,
+    );
+    return { success: true, operationType: "added" };
   } catch (error) {
     console.error("Error general en addSkinToInventory:", error);
     return { success: false, error, operationType: "error" };
@@ -291,7 +260,7 @@ export async function processBoxOpening(
 ): Promise<{
   selectedSkin: Skin | null;
   transactionSuccess: boolean;
-  inventoryOperationType: "added" | "updated" | "error";
+  inventoryOperationType: "added" | "error";
   error?: any;
 }> {
   try {
@@ -319,7 +288,7 @@ export async function processBoxOpening(
     const { success: transactionSuccess, error: transactionError } =
       await recordTransaction(userId, cajaId, selectedSkinFromPool.id, supabase);
 
-    // Añadir al inventario o actualizar cantidad
+    // Añadir al inventario (siempre una nueva fila)
     const { operationType, error: inventoryError } =
       await addSkinToInventory(userId, skinApiRepresentation, supabase);
 

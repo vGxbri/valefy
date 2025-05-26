@@ -52,15 +52,13 @@ export interface InventorySkin {
   };
   dateAcquired: Date;
   metodoAdquisicion?: string;
-  cantidad: number; // Added cantidad
-  uniqueCardId?: string; // Added for displaying duplicates
+  uniqueCardId?: string; // ID único para cada card en la visualización
 }
 
 interface InventoryItemFromDB {
   id: string;
   skin_id: string;
   fecha_obtencion: string;
-  cantidad: number; // Added cantidad
 }
 
 interface InventoryDisplayProps {
@@ -83,6 +81,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isInitialLoadAnimationPending, setIsInitialLoadAnimationPending] = useState(true);
   const { isOpen: isDeleteModalOpen, onOpen: onDeleteModalOpen, onOpenChange: onDeleteModalOpenChange, onClose: onDeleteModalClose } = useDisclosure(); // Para el modal de eliminación
+  const [isDeletingItems, setIsDeletingItems] = useState(false); // Nuevo estado para controlar la carga durante eliminación
 
   // Resetear la página cuando cambia el término de búsqueda o filtros
   useEffect(() => {
@@ -154,7 +153,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
 
       const { data: inventoryData, error: inventoryError } = await supabase
         .from('inventario_usuario')
-        .select('id, skin_id, fecha_obtencion, cantidad')
+        .select('id, skin_id, fecha_obtencion')
         .eq('usuario_id', userId);
 
       if (inventoryError) {
@@ -190,7 +189,6 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
             color: (apiTier && apiTier.highlightColor) ? `#${apiTier.highlightColor.substring(0, 6)}` : '#FFFFFF',
           },
           dateAcquired: new Date(item.fecha_obtencion),
-          cantidad: item.cantidad || 1, 
         };
       });
 
@@ -272,65 +270,35 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
       onDeleteModalClose();
       return;
     }
-    console.log("Deleting items with uniqueCardIds:", Array.from(selectedItems));
-
-    const itemsToUpdate = new Map<string, number>();
-
-    selectedItems.forEach(uniqueCardId => {
-      const originalId = uniqueCardId.substring(0, uniqueCardId.lastIndexOf('-'));
-      itemsToUpdate.set(originalId, (itemsToUpdate.get(originalId) || 0) + 1);
-    });
-
-    const dbPromises: Promise<any>[] = [];
-    let anyError = false;
-
-    const updateOperations = Array.from(itemsToUpdate.entries());
-
-    for (const [originalId, countToDelete] of updateOperations) {
-      const { data: currentSkinData, error: fetchError } = await supabase
-        .from('inventario_usuario')
-        .select('cantidad')
-        .eq('id', originalId)
-        .single();
-
-      if (fetchError || !currentSkinData) {
-        console.error(`Error fetching skin ${originalId} for deletion:`, fetchError);
-        setError(`Error al obtener datos de la skin ${originalId} para eliminar.`);
-        anyError = true;
-        continue;
-      }
-
-      const currentQuantity = currentSkinData.cantidad;
-      const newQuantity = currentQuantity - countToDelete;
-
-      if (newQuantity <= 0) {
-        dbPromises.push(
-          supabase.from('inventario_usuario').delete().eq('id', originalId)
-        );
-      } else {
-        dbPromises.push(
-          supabase.from('inventario_usuario').update({ cantidad: newQuantity }).eq('id', originalId)
-        );
-      }
-    }
+    
+    setIsDeletingItems(true); // Iniciar estado de carga
+    console.log("Deleting items with IDs:", Array.from(selectedItems));
 
     try {
-      const results = await Promise.all(dbPromises.map(p => p.then((res: { error: any; data?: any }) => {
-        if (res.error) throw res.error;
-        return res;
-      })));
-      console.log("DB operations results:", results);
-      if (!anyError) {
+      // Ahora cada selectedItem es directamente el ID de la base de datos
+      const idsToDelete = Array.from(selectedItems);
+      
+      const { error: deleteError } = await supabase
+        .from('inventario_usuario')
+        .delete()
+        .in('id', idsToDelete);
+
+      if (deleteError) {
+        console.error("Error during delete operation:", deleteError);
+        setError("Error al eliminar skins: " + (deleteError.message || 'Error desconocido'));
+      } else {
+        console.log("Successfully deleted", idsToDelete.length, "skins");
         await fetchUserInventory();
         setSelectedItems(new Set());
-        // setIsSelectionMode(false); // Opcional: decidir si salir del modo selección
         setError(null);
       }
     } catch (deleteError: any) {
-      console.error("Error during bulk delete/update operation:", deleteError);
-      setError("Error al eliminar/actualizar skins: " + (deleteError.message || 'Error desconocido'));
+      console.error("Error during bulk delete operation:", deleteError);
+      setError("Error al eliminar skins: " + (deleteError.message || 'Error desconocido'));
+    } finally {
+      setIsDeletingItems(false); // Finalizar estado de carga
+      onDeleteModalClose();
     }
-    onDeleteModalClose();
   };
 
   const calculateTierStats = () => {
@@ -376,15 +344,11 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
         default:
           return 0;
       }
-    });
-
-  // Expandir skins por cantidad para la visualización
-  const expandedSkins = processedSkins.flatMap(skin =>
-    Array.from({ length: skin.cantidad }, (_, index) => ({
+    })
+    .map(skin => ({
       ...skin,
-      uniqueCardId: `${skin.id}-${index}` // skin.id es el Supabase row ID
-    }))
-  );
+      uniqueCardId: skin.id // Usar directamente el ID de la base de datos como uniqueCardId
+    }));
 
   const tierStats = calculateTierStats();
 
@@ -409,14 +373,9 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
           <h1 className="text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
             / INVENTARIO
           </h1>
-            <div className="flex items-center gap-2">
-              <Button onClick={fetchUserInventory} variant="outline" size="sm" className="border-slate-700 hover:bg-slate-700 rounded-xl">
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
-              <Button onClick={toggleSelectionMode} variant={isSelectionMode ? "default" : "outline"} size="sm" className={`${isSelectionMode ? 'rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r' : 'border-slate-700 hover:bg-slate-700 rounded-xl hover:bg-white/5 hover:text-white'}`}>
-                {isSelectionMode ? "Cancelar Selección" : "Seleccionar Skins"}
-              </Button>
-            </div>
+          <Button onClick={toggleSelectionMode} variant={isSelectionMode ? "default" : "outline"} size="sm" className={`${isSelectionMode ? 'rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200' : 'border-slate-700 hover:bg-slate-700 rounded-xl hover:bg-white/5 hover:text-white'}`}>
+            {isSelectionMode ? "Cancelar Selección" : "Seleccionar Skins"}
+          </Button>
           </div>
           <div className="mt-6 flex flex-col md:flex-row gap-4 items-center">
             <div className="relative w-full md:flex-grow group">
@@ -494,9 +453,9 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
               <div className="flex gap-2 sm:gap-3">
                 <Button 
                   onClick={() => {
-                    const allVisibleCardIds = new Set(expandedSkins.map(s => s.uniqueCardId!));
+                    const allVisibleCardIds = new Set(processedSkins.map(s => s.uniqueCardId!));
                     const currentSelectedArray = Array.from(selectedItems);
-                    let allCurrentlyVisibleAreSelected = expandedSkins.length > 0 && expandedSkins.every(s => selectedItems.has(s.uniqueCardId!));
+                    let allCurrentlyVisibleAreSelected = processedSkins.length > 0 && processedSkins.every(s => selectedItems.has(s.uniqueCardId!));
 
                     if (allCurrentlyVisibleAreSelected) {
                       // Deseleccionar todas las visibles
@@ -514,7 +473,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                   size="sm"
                   className="rounded-xl border-slate-600 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 h-auto"
                 >
-                  { expandedSkins.length > 0 && expandedSkins.every(s => selectedItems.has(s.uniqueCardId!)) ? "Deseleccionar Todas" : "Seleccionar Todas" }
+                  { processedSkins.length > 0 && processedSkins.every(s => selectedItems.has(s.uniqueCardId!)) ? "Deseleccionar Todas" : "Seleccionar Todas" }
                 </Button>
                 <Button 
                   onClick={handleDeleteSelected} 
@@ -534,14 +493,14 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
       {!loading && error && <p className="text-red-400 text-center mt-10"><XCircle className="inline mr-2" />{error}</p>}
       {!loading && !error && userSkins.length === 0 && <EmptyInventory className="mt-10"/>}
 
-      {expandedSkins.length > 0 && (
+      {processedSkins.length > 0 && (
         <div className="container mx-auto px-4">
           <motion.div 
             key={`${searchTerm}-${filterTier || 'all'}`}
             layout 
             className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 pb-10"
           >
-            {expandedSkins.map((skin, index) => {
+            {processedSkins.map((skin, index) => {
               let cardStyle: React.CSSProperties = {}; // Estilo por defecto
 
               if (!selectedItems.has(skin.uniqueCardId!) && skin.contentTier.color && skin.contentTier.color !== '#FFFFFF') {
@@ -673,17 +632,26 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
             </ModalBody>
             <ModalFooter className="relative z-10">
               <HerouiButton
-                className="!text-white/70 hover:!bg-white/10 active:!bg-white/20 transition-all duration-200 rounded-xl border border-transparent hover:border-white/10 active:scale-95"
+                className="!text-white/70 hover:!bg-white/10 active:!bg-white/20 transition-all duration-200 rounded-xl border border-transparent hover:border-white/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 variant="light"
                 onPress={onDeleteModalClose}
+                disabled={isDeletingItems}
               >
                 Cancelar
               </HerouiButton>
               <HerouiButton
-                className="bg-red-600/20 hover:bg-red-600/30 text-white border border-red-500/20 hover:border-red-500/30 font-semibold px-6 rounded-xl transition-colors duration-300 shadow-lg shadow-red-900/20 active:scale-95 active:shadow-inner"
+                className="bg-red-600/20 hover:bg-red-600/30 text-white border border-red-500/20 hover:border-red-500/30 font-semibold px-6 rounded-xl transition-colors duration-300 shadow-lg shadow-red-900/20 active:scale-95 active:shadow-inner disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600/20"
                 onPress={confirmDeleteSelected}
+                disabled={isDeletingItems}
               >
-                Eliminar
+                {isDeletingItems ? (
+                  <span className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    Eliminando...
+                  </span>
+                ) : (
+                  "Eliminar"
+                )}
               </HerouiButton>
             </ModalFooter>
           </>

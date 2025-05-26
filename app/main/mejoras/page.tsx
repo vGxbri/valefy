@@ -27,7 +27,7 @@ type SupabaseContentTier = {
   grado: string;
 };
 
-// Definición de Skin para la página de Mejoras (ya existente y correcta)
+// Definición de Skin para la página de Mejoras (actualizada sin cantidad)
 type Skin = {
   id: string; // Valorant API skin UUID
   nombre: string;
@@ -36,16 +36,18 @@ type Skin = {
   uuid: string; // Valorant API skin UUID
   imagen_url: string;
   content_tier?: SupabaseContentTier;
-  cantidad?: number;
   selected?: boolean;
+  // Agregamos campos para manejar conteo de skins duplicadas
+  count?: number;
+  inventoryIds?: string[]; // IDs de las filas en la DB para esta skin
 };
 
-// Tipo para los items del inventario del usuario desde la DB
+// Tipo para los items del inventario del usuario desde la DB (actualizado)
 interface InventoryItemFromDB {
   id: string; // ID de la fila en inventario_usuario
   skin_id: string; // Valorant API skin UUID
   skin_nombre: string | null; // Nombre de la skin (fallback)
-  cantidad: number;
+  fecha_obtencion: string; // Fecha de obtención
 }
 
 export default function MejorasPage() {
@@ -164,7 +166,7 @@ export default function MejorasPage() {
 
       const { data: inventoryData, error: inventoryError } = await supabase
         .from("inventario_usuario")
-        .select("id, skin_id, skin_nombre, cantidad")
+        .select("id, skin_id, skin_nombre, fecha_obtencion")
         .eq("usuario_id", userId);
 
       if (inventoryError) throw inventoryError;
@@ -174,7 +176,14 @@ export default function MejorasPage() {
         return;
       }
       
-      const mappedSkins: Skin[] = inventoryData.map((item: InventoryItemFromDB) => {
+      // Agrupar skins duplicadas y contar cuántas de cada una tiene el usuario
+      const skinGroupsMap = new Map<string, {
+        skin: Skin,
+        inventoryIds: string[],
+        count: number
+      }>();
+
+      inventoryData.forEach((item: InventoryItemFromDB) => {
         const apiSkinDetails = apiSkinsMap.get(item.skin_id);
         let skinName = item.skin_nombre || "Skin Desconocida";
         let imageUrl = "/images/placeholder_icon.webp"; // Default placeholder
@@ -192,18 +201,44 @@ export default function MejorasPage() {
           bundleName = extractBundleName(apiSkinDetails.displayName);
         }
 
-        return {
-          id: item.skin_id, // Valorant API Skin UUID
-          nombre: skinName,
-          bundleName: bundleName,
-          content_tier_id: valorantApiTierUuid,
-          uuid: item.skin_id, // Valorant API Skin UUID
-          imagen_url: imageUrl,
-          content_tier: contentTierForSkin,
-          cantidad: item.cantidad,
-          selected: false,
-        };
-      }).filter(skin => skin.imagen_url && !skin.imagen_url.includes('StandardAnimation')); // Similar filter to InventoryDisplayComponent
+        const skinId = item.skin_id;
+        
+        if (skinGroupsMap.has(skinId)) {
+          // Si ya existe esta skin, incrementar el contador y agregar el ID
+          const existing = skinGroupsMap.get(skinId)!;
+          existing.count += 1;
+          existing.inventoryIds.push(item.id);
+        } else {
+          // Si es nueva, crear entrada
+          const newSkin: Skin = {
+            id: skinId, // Valorant API Skin UUID
+            nombre: skinName,
+            bundleName: bundleName,
+            content_tier_id: valorantApiTierUuid,
+            uuid: skinId, // Valorant API Skin UUID
+            imagen_url: imageUrl,
+            content_tier: contentTierForSkin,
+            selected: false,
+            count: 1,
+            inventoryIds: [item.id],
+          };
+          
+          skinGroupsMap.set(skinId, {
+            skin: newSkin,
+            inventoryIds: [item.id],
+            count: 1
+          });
+        }
+      });
+
+      // Convertir el mapa a array y filtrar skins sin imagen válida
+      const mappedSkins: Skin[] = Array.from(skinGroupsMap.values())
+        .map(group => ({
+          ...group.skin,
+          count: group.count,
+          inventoryIds: group.inventoryIds
+        }))
+        .filter(skin => skin.imagen_url && !skin.imagen_url.includes('StandardAnimation'));
 
       setUserInventory(mappedSkins);
 
@@ -232,37 +267,23 @@ export default function MejorasPage() {
     setImprovementProbability(probability);
   }, [selectedSkins, targetSkin, calculateImprovementProbability]);
 
-  const handleSelectSkin = (skin: Skin) => {
-    setUserInventory(prev => 
-      prev.map(s => s.id === skin.id ? { ...s, selected: !s.selected } : s)
-    );
-    
-    const skinInSelected = selectedSkins.find(s => s.id === skin.id);
 
-    if (skinInSelected) { // If it was selected, now it's deselected
-      setSelectedSkins(prev => prev.filter(s => s.id !== skin.id));
-    } else { // If it was not selected, now it is
-      // Find the full skin object from userInventory to add to selectedSkins
-      const fullSkinToAdd = userInventory.find(invSkin => invSkin.id === skin.id);
-      if (fullSkinToAdd) {
-        setSelectedSkins(prev => [...prev, { ...fullSkinToAdd, selected: true }]);
-      }
-    }
-  };
-  
-  // En handleSelectSkin, la lógica de añadir a selectedSkins debe asegurar que el objeto completo (con content_tier) se añade
-  // La lógica actual de `handleSelectSkin` para añadir/quitar de `selectedSkins` puede ser un poco confusa
-  // con el estado `selected` dentro del objeto `Skin`.
-  // Simplificando:
   const toggleSelectSkin = (skinToToggle: Skin) => {
     const isCurrentlySelected = selectedSkins.some(s => s.id === skinToToggle.id);
     if (isCurrentlySelected) {
+      // Deseleccionar la skin
       setSelectedSkins(prev => prev.filter(s => s.id !== skinToToggle.id));
     } else {
-      // Asegurarse de añadir la skin con todos sus detalles, especialmente content_tier
+      // Seleccionar la skin
       const fullSkinData = userInventory.find(s => s.id === skinToToggle.id);
-      if (fullSkinData) {
-         setSelectedSkins(prev => [...prev, fullSkinData]);
+      if (fullSkinData && fullSkinData.inventoryIds && fullSkinData.inventoryIds.length > 0) {
+        // Crear una copia de la skin con solo un inventoryId para la selección
+        const skinForSelection: Skin = {
+          ...fullSkinData,
+          inventoryIds: [fullSkinData.inventoryIds[0]], // Solo tomar el primer ID
+          count: 1 // Esta selección representa una sola skin
+        };
+        setSelectedSkins(prev => [...prev, skinForSelection]);
       }
     }
     // Actualizar el estado 'selected' en userInventory para UI
@@ -318,60 +339,40 @@ export default function MejorasPage() {
 
       if (mejoraError) throw mejoraError;
 
+      // Eliminar las skins seleccionadas del inventario
+      // En el nuevo sistema, cada skin seleccionada significa eliminar una fila de la DB
       for (const skin of selectedSkins) {
-        const { data: inventoryItem, error: fetchErr } = await supabase
-          .from("inventario_usuario")
-          .select("id, cantidad")
-          .eq("usuario_id", userId)
-          .eq("skin_id", skin.id)
-          .single();
-        
-        if (fetchErr) { console.warn(`Error fetching item ${skin.id} for update: ${fetchErr.message}`); continue; }
-
-        if (inventoryItem) {
-          if (inventoryItem.cantidad > 1) {
-            await supabase
-              .from("inventario_usuario")
-              .update({ cantidad: inventoryItem.cantidad - 1 })
-              .eq("id", inventoryItem.id);
-          } else {
-            await supabase
-              .from("inventario_usuario")
-              .delete()
-              .eq("id", inventoryItem.id);
+        // Usar el primer ID disponible de los inventoryIds para esta skin
+        if (skin.inventoryIds && skin.inventoryIds.length > 0) {
+          const inventoryIdToDelete = skin.inventoryIds[0]; // Tomar el primer ID
+          
+          const { error: deleteError } = await supabase
+            .from("inventario_usuario")
+            .delete()
+            .eq("id", inventoryIdToDelete);
+            
+          if (deleteError) {
+            console.warn(`Error deleting inventory item ${inventoryIdToDelete}: ${deleteError.message}`);
           }
         }
       }
 
       if (isSuccessful) {
-        const { data: existingItem, error: fetchExistingItemError } = await supabase
+        // En el nuevo sistema, siempre insertamos una nueva fila para la skin objetivo
+        const { error: insertError } = await supabase
           .from("inventario_usuario")
-          .select("id, cantidad")
-          .eq("usuario_id", userId)
-          .eq("skin_id", targetSkin.id)
-          .maybeSingle();
-
-        if (fetchExistingItemError) { console.warn(`Error fetching target item ${targetSkin.id} for update: ${fetchExistingItemError.message}`); }
-
-        if (existingItem) {
-          await supabase
-            .from("inventario_usuario")
-            .update({
-              cantidad: existingItem.cantidad + 1,
-              fecha_obtencion: new Date().toISOString()
-            })
-            .eq("id", existingItem.id);
-        } else {
-          await supabase
-            .from("inventario_usuario")
-            .insert({
-              usuario_id: userId,
-              skin_id: targetSkin.id,
-              skin_nombre: targetSkin.nombre, // Asegúrate de que skin_nombre se guarda
-              fecha_obtencion: new Date().toISOString(),
-              cantidad: 1
-            });
+          .insert({
+            usuario_id: userId,
+            skin_id: targetSkin.id,
+            skin_nombre: targetSkin.nombre,
+            fecha_obtencion: new Date().toISOString()
+          });
+          
+        if (insertError) {
+          console.error(`Error inserting target skin ${targetSkin.id}:`, insertError);
+          throw insertError;
         }
+        
         toast.success("¡Mejora exitosa! Has conseguido la skin objetivo");
       } else {
         toast.error("La mejora ha fallado. Las skins seleccionadas se han perdido");
@@ -583,7 +584,7 @@ export default function MejorasPage() {
                     <div className="p-2 text-center">
                       <h3 className="text-sm font-medium text-white truncate" title={skin.nombre}>{skin.nombre}</h3>
                       <p className="text-xs text-gray-400 truncate" title={skin.content_tier?.nombre || "Tier Desconocido"}>
-                        {skin.content_tier?.nombre || "Tier Desconocido"} (x{skin.cantidad})
+                        {skin.content_tier?.nombre || "Tier Desconocido"} (x{skin.count})
                       </p>
                     </div>
                     {skin.selected && (

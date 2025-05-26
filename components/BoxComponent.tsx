@@ -530,17 +530,11 @@ export default function BoxComponent({
       animateSpinner(finalPosition);
 
       const animationDuration = 12000; // Match the transition duration (changed to 12s)
-      const postSpinDelay = 1000;
+      const postSpinDelay = 800; // Reducido para transiciones más fluidas
 
       const timer = setTimeout(() => {
-        setResultSkin(resultSkinForSpin);
-        setIsSpinning(false);
-        setResultSkinForSpin(null);
-
-        if (caja && caja.es_diaria) {
-          setDailyOpened(true);
-        }
-        setIsOpening(false);
+        // Usar la función handleSpinnerComplete para consistencia
+        handleSpinnerComplete();
       }, animationDuration + postSpinDelay);
 
       return () => {
@@ -565,27 +559,29 @@ export default function BoxComponent({
         const allCompleted = newCompleted.every((completed, idx) => idx >= numberOfBoxes || completed);
         
         if (allCompleted) {
-          // Todas han terminado, esperar un poco más para una transición suave
+          // Todas han terminado, aplicar transición suave
           setTimeout(() => {
             setIsSpinning(false);
             setIsOpening(false);
             if (caja && caja.es_diaria) {
               setDailyOpened(true);
             }
-          }, 500); // Aumentado el delay para una mejor transición
+          }, 800); // Tiempo optimizado para transición más fluida
         }
         
         return newCompleted;
       });
     } else {
-      // Modo caja única
-      setResultSkin(resultSkinForSpin);
-      setIsSpinning(false);
-      setResultSkinForSpin(null);
-      if (caja && caja.es_diaria) {
-        setDailyOpened(true);
-      }
-      setIsOpening(false);
+      // Modo caja única - transición mejorada
+      setTimeout(() => {
+        setResultSkin(resultSkinForSpin);
+        setIsSpinning(false);
+        setResultSkinForSpin(null);
+        if (caja && caja.es_diaria) {
+          setDailyOpened(true);
+        }
+        setIsOpening(false);
+      }, 400); // Pequeña pausa para transición más suave
     }
   };
 
@@ -659,250 +655,348 @@ export default function BoxComponent({
     );
   }
 
-  // Log de las condiciones de renderizado
-  const showMultipleResults = multipleResults.length > 0 && !isSpinning;
-  const showSingleResult = !!resultSkin;
+  // Estados de renderizado - transiciones mejoradas
+  const showMultipleResults = multipleResults.length > 0 && !isSpinning && !isOpening;
+  const showSingleResult = !!resultSkin && !isSpinning && !isOpening;
+  const showSpinners = isSpinning;
+  const showInitialView = !isSpinning && !showSingleResult && !showMultipleResults && !isOpening;
+
+  // Log para debugging
+  console.log('🔄 Render state:', {
+    isSpinning,
+    showSingleResult,
+    showMultipleResults,
+    showSpinners,
+    showInitialView,
+    resultSkin: !!resultSkin,
+    multipleResultsLength: multipleResults.length
+  });
 
   return (
     <div className="w-full flex flex-col items-center justify-center py-10">
-      {multipleResults.length > 0 && !isSpinning ? (
-        // Vista de resultados múltiples
-        <div className="w-full max-w-6xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-4">
-              ¡Resultados de las {numberOfBoxes} cajas!
-            </h2>
-            <div className="h-1 w-1/4 bg-gradient-to-r from-primary/60 to-secondary/60 rounded-full mx-auto" />
-          </div>
-          
-          <div className={`grid gap-6 ${numberOfBoxes <= 2 ? 'grid-cols-1 md:grid-cols-2' : numberOfBoxes <= 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-2 md:grid-cols-3'} mb-8`}>
-            {multipleResults.map((skin, index) => (
-              <div key={index} className="p-6 rounded-xl bg-gradient-to-br from-slate-800/80 via-slate-900/90 to-black/80 shadow-2xl border border-slate-700/50 backdrop-blur-md flex flex-col items-center">
-                <div className="relative w-[200px] h-[200px] mb-4">
-                  {skin.imagen_url && (
-                    <Image
-                      alt={skin.nombre}
-                      className="object-contain drop-shadow-lg p-2 rotate-12"
-                      fill
-                      src={skin.imagen_url}
-                      style={{animation: 'float 3s infinite ease-in-out'}}
-                    />
+      <AnimatePresence mode="wait">
+        {/* Resultado de caja única */}
+        {showSingleResult && (
+          <motion.div
+            key="single-result"
+            initial={{ opacity: 0, scale: 0.8, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: -30 }}
+            transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
+            className="w-full max-w-md"
+          >
+            {(() => {
+              // Determinar el tipo de arma y obtener los estilos específicos
+              const weaponType = getWeaponType(resultSkin?.nombre || '');
+              const weaponStyles = getWeaponSpecificStyles(weaponType);
+
+              // Crear el estilo inline para las transformaciones
+              const imageTransformStyle: React.CSSProperties = {
+                transform: `scale(${weaponStyles.baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
+              };
+
+              return (
+                // Resultado de apertura de caja mejorado
+                <div className="p-8 md:p-10 rounded-xl w-full text-center bg-gradient-to-br from-slate-800/80 via-slate-900/90 to-black/80 shadow-2xl border border-slate-700/50 backdrop-blur-md flex flex-col items-center">
+                  {resultSkin.imagen_url && (
+                                       <motion.div 
+                     className="mt-12 mb-20 flex items-center justify-center relative"
+                     initial={{ scale: 0.6, opacity: 0, rotateY: -20 }}
+                     animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+                     transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
+                   >
+                      <div 
+                        className="relative w-[240px] h-[240px] rounded-xl overflow-hidden flex items-center justify-center group"
+                      >
+                        {resultSkin.content_tier?.id && resultSkin.content_tier.id !== 'standard' && (
+                          <Image
+                            src={`/skins-bg/${resultSkin.content_tier.id}.png`}
+                            alt=""
+                            layout="fill"
+                            objectFit="contain"
+                            className="absolute inset-0 z-10 p-2 opacity-40 transform scale-150 rotate-12"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        )}
+                        {resultSkin.imagen_url && (
+                          <Image
+                            alt={resultSkin.nombre}
+                            className="object-contain drop-shadow-lg p-2 relative z-10" 
+                            style={{animation: 'float 3s infinite ease-in-out', ...imageTransformStyle}}
+                            height={250}
+                            src={resultSkin.imagen_url}
+                            width={250}
+                          />
+                        )}
+                      </div>
+                      <Image
+                          alt={resultSkin.nombre}
+                          src={`/skins-bg-result/${resultSkin.content_tier?.id}.png`}
+                          className="object-contain drop-shadow-lg relative mt-10 ml-2 scale-[2] opacity-80"
+                          layout="fill"
+                          objectFit="contain"
+                        />
+                    </motion.div>
                   )}
+                                     <motion.div
+                     initial={{ y: 30, opacity: 0 }}
+                     animate={{ y: 0, opacity: 1 }}
+                     transition={{ delay: 0.7, duration: 0.5, ease: "easeOut" }}
+                   >
+                    <p className="text-2xl font-semibold text-white mb-3 capitalize tracking-wide">
+                      {resultSkin.nombre}
+                    </p>
+                    {resultSkin.content_tier && (
+                      <div className="mb-6">
+                        <div
+                          className="px-5 py-2 rounded-full text-sm font-medium shadow-md border border-opacity-50"
+                          style={{
+                            backgroundColor: `${resultSkin.content_tier.color}20`,
+                            color: resultSkin.content_tier.color,
+                            borderColor: resultSkin.content_tier.color,
+                            boxShadow: `0 0 15px ${resultSkin.content_tier.color}40`
+                          }}
+                        >
+                          {resultSkin.content_tier.nombre}
+                        </div>
+                      </div>
+                    )}
+                    <Button
+                      onClick={resetResults}
+                      className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
+                    >
+                      Abrir de nuevo
+                    </Button>
+                  </motion.div>
                 </div>
-                <p className="text-lg font-semibold text-white mb-2 capitalize tracking-wide text-center">
-                  {skin.nombre}
-                </p>
-                {skin.content_tier && (
-                  <div
-                    className="px-3 py-1 rounded-full text-xs font-medium shadow-md border border-opacity-50"
-                    style={{
-                      backgroundColor: `${skin.content_tier.color}20`,
-                      color: skin.content_tier.color,
-                      borderColor: skin.content_tier.color,
-                      boxShadow: `0 0 10px ${skin.content_tier.color}40`
+              );
+            })()}
+          </motion.div>
+        )}
+
+        {/* Resultados múltiples */}
+        {showMultipleResults && (
+          <motion.div
+            key="multiple-results"
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
+            className="w-full"
+          >
+            <div className="flex justify-center items-center gap-3 md:gap-6 px-2 md:px-4 overflow-x-auto mb-8">
+              <div className="flex gap-3 md:gap-6 min-w-max">
+                {multipleResults.map((result, index) => (
+                  <motion.div 
+                    key={`result-${index}`}
+                    className="flex-shrink-0"
+                    initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ 
+                      delay: index * 0.1 + 0.3, 
+                      duration: 0.5, 
+                      ease: "easeOut" 
                     }}
                   >
-                    {skin.content_tier.nombre}
-                  </div>
-                )}
+                    <motion.div 
+                      className="w-[190px] md:w-[280px] h-[300px] md:h-[450px] rounded-2xl overflow-hidden relative"
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ duration: 0.3 }}
+                      style={{
+                        background: result.content_tier ? 
+                          `radial-gradient(circle at center, ${result.content_tier.color}15 0%, ${result.content_tier.color}08 50%, transparent 100%)` : 
+                          'radial-gradient(circle at center, rgba(255,255,255,0.05) 0%, transparent 70%)'
+                      }}
+                    >
+                      {/* Fondo de la tier */}
+                      {result.content_tier?.uuid_api && result.content_tier.uuid_api !== 'default' && (
+                        <Image
+                          src={`/skins-bg/${result.content_tier.uuid_api}.png`}
+                          alt=""
+                          fill
+                          className="absolute inset-0 z-0 p-4 opacity-20 transform scale-125 rotate-12 object-contain"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      )}
+                      
+                      {/* Contenido principal */}
+                      <div className="relative z-10 h-full flex flex-col items-center justify-center p-4">
+                        <motion.div 
+                          className="relative w-[160px] md:w-[220px] h-[160px] md:h-[220px] mb-4"
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ delay: index * 0.1 + 0.5, duration: 0.4, ease: "easeOut" }}
+                        >
+                          {result.imagen_url && (
+                            <Image
+                              alt={result.nombre}
+                              className="object-contain drop-shadow-2xl transform rotate-12"
+                              fill
+                              src={result.imagen_url}
+                              style={{
+                                animation: 'float 4s infinite ease-in-out',
+                                filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.3))'
+                              }}
+                            />
+                          )}
+                        </motion.div>
+                        
+                        <motion.div
+                          className="text-center space-y-3"
+                          initial={{ y: 20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: index * 0.1 + 0.7, duration: 0.4 }}
+                        >
+                          <h3 className="text-sm md:text-lg font-bold text-white leading-tight line-clamp-2 px-2">
+                            {result.nombre}
+                          </h3>
+                          {result.content_tier && (
+                            <div
+                              className="px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-2xl border-2 mx-auto inline-block"
+                              style={{
+                                backgroundColor: `${result.content_tier?.color}25`,
+                                color: result.content_tier?.color,
+                                borderColor: result.content_tier?.color,
+                                boxShadow: `0 0 25px ${result.content_tier?.color}50, inset 0 0 15px ${result.content_tier?.color}20`
+                              }}
+                            >
+                              {result.content_tier?.nombre}
+                            </div>
+                          )}
+                        </motion.div>
+                      </div>
+                      
+                      {/* Efecto de brillo */}
+                      <div 
+                        className="absolute inset-0 rounded-2xl pointer-events-none"
+                        style={{
+                          background: `radial-gradient(circle at 50% 30%, ${result.content_tier?.color || '#ffffff'}20 0%, transparent 60%)`,
+                          animation: 'pulse 2s infinite'
+                        }}
+                      />
+                    </motion.div>
+                  </motion.div>
+                ))}
               </div>
-            ))}
-          </div>
-          
-          <div className="text-center">
-            <Button
-              onClick={resetResults}
-              className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-8 py-3"
+            </div>
+            
+            {/* Botón para abrir más cajas */}
+            <motion.div 
+              className="text-center mt-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: multipleResults.length * 0.1 + 1, duration: 0.5 }}
             >
-              Abrir más cajas
-            </Button>
-          </div>
-        </div>
-      ) : resultSkin ? (
-        (() => {
-          // Determinar el tipo de arma y obtener los estilos específicos
-          const weaponType = getWeaponType(resultSkin?.nombre || '');
-          const weaponStyles = getWeaponSpecificStyles(weaponType);
-
-          // Crear el estilo inline para las transformaciones
-          const imageTransformStyle: React.CSSProperties = {
-            transform: `scale(${weaponStyles.baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
-          };
-
-          return (
-            // Resultado de apertura de caja mejorado
-            <div className="p-8 md:p-10 rounded-xl max-w-md w-full text-center bg-gradient-to-br from-slate-800/80 via-slate-900/90 to-black/80 shadow-2xl border border-slate-700/50 backdrop-blur-md flex flex-col items-center">
-              {resultSkin.imagen_url && (
-                <div className="mt-12 mb-20 flex items-center justify-center relative">
-                  <div 
-                    className="relative w-[240px] h-[240px] rounded-xl overflow-hidden flex items-center justify-center group"
-                    // style={itemCardStyle}
-                  >
-                    {resultSkin.content_tier?.id && resultSkin.content_tier.id !== 'standard' && (
-                      <Image
-                        src={`/skins-bg/${resultSkin.content_tier.id}.png`}
-                        alt="" // Decorative
-                        layout="fill"
-                        objectFit="contain"
-                        className="absolute inset-0 z-10 p-2 opacity-40 transform scale-150 rotate-12"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    )}
-                    {resultSkin.imagen_url && (
-                      <Image
-                        alt={resultSkin.nombre}
-                        className="object-contain drop-shadow-lg p-2 relative z-10" 
-                        style={{animation: 'float 3s infinite ease-in-out', ...imageTransformStyle}}
-                        height={250}
-                        src={resultSkin.imagen_url}
-                        width={250}
-                      />
-                    )}
-                    
-                  </div>
-                  <Image
-                      alt={resultSkin.nombre}
-                      src={`/skins-bg-result/${resultSkin.content_tier?.id}.png`}
-                      className="object-contain drop-shadow-lg relative mt-10 ml-2 scale-[2] opacity-80"
-                      layout="fill"
-                      objectFit="contain"
-                    />
-                </div>
-              )}
-              <p className="text-2xl font-semibold text-white mb-3 capitalize tracking-wide">
-                {resultSkin.nombre}
-              </p>
-              {resultSkin.content_tier && (
-                <div className="mb-6">
-                  <div
-                    className="px-5 py-2 rounded-full text-sm font-medium shadow-md border border-opacity-50"
-                    style={{
-                      backgroundColor: `${resultSkin.content_tier.color}20`, // Lighter background with opacity
-                      color: resultSkin.content_tier.color,
-                      borderColor: resultSkin.content_tier.color,
-                      boxShadow: `0 0 15px ${resultSkin.content_tier.color}40` // Glow effect
-                    }}
-                  >
-                    {resultSkin.content_tier.nombre}
-                  </div>
-                </div>
-              )}
               <Button
                 onClick={resetResults}
-                className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
+                className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-8 py-3 text-lg font-medium"
               >
-                Abrir de nuevo
+                Abrir más cajas
               </Button>
-            </div>
-          );
-        })()
-      ) : (
-        // Vista principal de la caja mejorada
-        <div className="flex flex-col items-center w-full max-w-7xl mx-auto">
-          {caja && (
-            <div className="w-full text-center relative z-0">
-              {/* Efectos de resplandor mejorados detrás de la caja */}
-              <div className="absolute -z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full opacity-15 blur-3xl bg-gradient-radial from-primary/40 to-transparent"></div>
-              <div className="absolute -z-10 left-1/3 top-1/3 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full opacity-10 blur-2xl bg-gradient-radial from-amber-300/30 to-transparent"></div>
-              
-              {/* Título estilizado */}
-              <h1 className="text-4xl md:text-5xl font-bold font-[Raleway] font-bold italic tracking-widest uppercase mb-12 
-                             [text-shadow:_0px_0px_20px_rgba(255,255,255,0.1)] bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                · {caja.nombre} ·
-              </h1>
+            </motion.div>
+          </motion.div>
+        )}
 
-              {isSpinning ? (
-                isMultipleMode && numberOfBoxes > 1 ? (
-                  // Vista múltiples cajas - Layout horizontal
-                  <div className="w-full mb-8">
-                    {/* Cajas en línea horizontal - solo las seleccionadas */}
-                    <div className="flex justify-center items-center gap-3 md:gap-6 px-2 md:px-4 overflow-x-auto">
-                      <div className="flex gap-3 md:gap-6 min-w-max">
-                        {Array.from({ length: numberOfBoxes }).map((_, index) => {
-                          // Verificar si TODOS los spinners han completado
-                          const allSpinnersCompleted = completedSpinners.every((completed, idx) => idx >= numberOfBoxes || completed);
-                          
-                          // Calcular duración escalonada: 12s, 13s, 14s, etc.
-                          const animationDuration = 12000 + (index * 1000);
-                          
-                          console.log(`🎲 Spinner ${index} - allSpinnersCompleted:`, allSpinnersCompleted, 'completedSpinners:', completedSpinners, 'hasResult:', !!multipleResults[index], 'duration:', animationDuration);
-                          
-                          return (
-                            <div key={index} className="flex-shrink-0">
-                              {allSpinnersCompleted && multipleResults[index] ? (
-                                // Resultado - mostrar solo cuando TODOS hayan terminado
-                                <div className="w-[190px] md:w-[220px] h-[300px] md:h-[400px] rounded-xl bg-gradient-to-br from-slate-800/90 via-slate-900/95 to-black/90 border border-slate-600/50 flex flex-col items-center justify-center p-4 md:p-6 shadow-2xl backdrop-blur-sm">
-                                  <div className="relative w-[140px] md:w-[170px] h-[140px] md:h-[170px] mb-4 md:mb-6">
-                                    {multipleResults[index].imagen_url && (
-                                      <Image
-                                        alt={multipleResults[index].nombre}
-                                        className="object-contain drop-shadow-lg p-2 md:p-3 rotate-12"
-                                        fill
-                                        src={multipleResults[index].imagen_url}
-                                        style={{animation: 'float 3s infinite ease-in-out'}}
-                                      />
-                                    )}
-                                  </div>
-                                  <p className="text-sm md:text-base font-semibold text-white mb-3 md:mb-4 text-center leading-tight line-clamp-2">
-                                    {multipleResults[index].nombre}
-                                  </p>
-                                  {multipleResults[index].content_tier && (
-                                    <div
-                                      className="px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-medium text-center shadow-lg"
-                                      style={{
-                                        backgroundColor: `${multipleResults[index].content_tier?.color}20`,
-                                        color: multipleResults[index].content_tier?.color,
-                                        borderColor: multipleResults[index].content_tier?.color,
-                                        border: `1px solid ${multipleResults[index].content_tier?.color}40`,
-                                        boxShadow: `0 0 15px ${multipleResults[index].content_tier?.color}30`
-                                      }}
-                                    >
-                                      {multipleResults[index].content_tier?.nombre}
-                                    </div>
-                                  )}
-                                </div>
-                              ) : multipleSpinItems[index] ? (
-                                // Spinner - continuar girando hasta que TODOS terminen
-                                <div className="w-[190px] md:w-[200px] h-[300px] md:h-[400px] overflow-hidden rounded-xl bg-gradient-to-b from-slate-800/20 via-transparent to-slate-800/20 border border-slate-700/30 shadow-2xl relative">
-                                  
-                                  <SpinnerAnimation
-                                    isSpinning={true} // Mantener todos girando hasta que el estado global cambie
-                                    spinItems={multipleSpinItems[index]}
-                                    onAnimationComplete={() => handleSpinnerComplete(index)}
-                                    orientation="vertical"
-                                    itemSize={130}
-                                    animationDuration={animationDuration}
-                                  />
-                                </div>
-                              ) : (
-                                // Estado inicial - preparando
-                                <div className="w-[190px] md:w-[200px] h-[300px] md:h-[400px] rounded-xl bg-slate-800/30 border border-slate-700/30 flex items-center justify-center opacity-50 backdrop-blur-sm shadow-xl">
-                                  <div className="text-white/60 text-center">
-                                    <div className="w-12 md:w-16 h-12 md:h-16 border-2 border-white/20 rounded-xl mb-4 md:mb-6 mx-auto flex items-center justify-center bg-slate-700/20">
-                                      <span className="text-2xl md:text-4xl">📦</span>
-                                    </div>
-                                    <p className="text-sm md:text-base font-medium">Preparando...</p>
-                                  </div>
-                                </div>
-                              )}
+        {/* Spinners */}
+        {showSpinners && (
+          <motion.div
+            key="spinners"
+            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: -20 }}
+            transition={{ 
+              duration: 0.5, 
+              ease: "easeInOut",
+              exit: { duration: 0.6, ease: "easeIn" }
+            }}
+            className="w-full"
+          >
+            {isMultipleMode && numberOfBoxes > 1 ? (
+              // Vista múltiples cajas - Layout horizontal
+              <div className="w-full mb-8">
+                <div className="flex justify-center items-center gap-3 md:gap-6 px-2 md:px-4 overflow-x-auto">
+                  <div className="flex gap-3 md:gap-6 min-w-max">
+                    {Array.from({ length: numberOfBoxes }).map((_, index) => {
+                      // Calcular duración escalonada: 12s, 13s, 14s, etc.
+                      const animationDuration = 12000 + (index * 1000);
+                      
+                      return (
+                        <motion.div 
+                          key={`spinner-${index}`} 
+                          className="flex-shrink-0"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1, duration: 0.4 }}
+                        >
+                          {multipleSpinItems[index] ? (
+                            // Spinner activo
+                            <div className="w-[190px] md:w-[200px] h-[300px] md:h-[400px] overflow-hidden rounded-xl bg-gradient-to-b from-slate-800/20 via-transparent to-slate-800/20 border border-slate-700/30 shadow-2xl relative">
+                              <SpinnerAnimation
+                                isSpinning={true}
+                                spinItems={multipleSpinItems[index]}
+                                onAnimationComplete={() => handleSpinnerComplete(index)}
+                                orientation="vertical"
+                                itemSize={130}
+                                animationDuration={animationDuration}
+                              />
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                          ) : (
+                            // Estado inicial - preparando
+                            <div className="w-[190px] md:w-[200px] h-[300px] md:h-[400px] rounded-xl bg-slate-800/30 border border-slate-700/30 flex items-center justify-center opacity-50 backdrop-blur-sm shadow-xl">
+                              <div className="text-white/60 text-center">
+                                <div className="w-12 md:w-16 h-12 md:h-16 border-2 border-white/20 rounded-xl mb-4 md:mb-6 mx-auto flex items-center justify-center bg-slate-700/20">
+                                  <span className="text-2xl md:text-4xl">📦</span>
+                                </div>
+                                <p className="text-sm md:text-base font-medium">Preparando...</p>
+                              </div>
+                            </div>
+                          )}
+                        </motion.div>
+                      );
+                    })}
                   </div>
-                ) : (
-                  // Vista caja única
-                  <SpinnerAnimation
-                    isSpinning={isSpinning}
-                    spinItems={spinItems}
-                    onAnimationComplete={handleSpinnerComplete}
-                    orientation="horizontal"
-                  />
-                )
-              ) : (
-                // Vista inicial - solo las cajas seleccionadas
-                <div className="w-full">
+                </div>
+              </div>
+            ) : (
+              // Vista caja única
+              <SpinnerAnimation
+                isSpinning={true}
+                spinItems={spinItems}
+                onAnimationComplete={handleSpinnerComplete}
+                orientation="horizontal"
+              />
+            )}
+          </motion.div>
+        )}
+
+        {/* Vista inicial */}
+        {showInitialView && (
+          <motion.div 
+            key="initial-view"
+            initial={{ opacity: 0, scale: 0.98, y: 5 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: -15 }}
+            transition={{ 
+              duration: 0.6, 
+              ease: "easeInOut",
+              exit: { duration: 0.4, ease: "easeIn" }
+            }}
+            className="w-full"
+          >
+            {/* Vista principal de la caja mejorada */}
+            <div className="flex flex-col items-center w-full max-w-7xl mx-auto">
+              {caja && (
+                <div className="w-full text-center relative z-0">
+                  {/* Efectos de resplandor mejorados detrás de la caja */}
+                  <div className="absolute -z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full opacity-15 blur-3xl bg-gradient-radial from-primary/40 to-transparent"></div>
+                  <div className="absolute -z-10 left-1/3 top-1/3 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full opacity-10 blur-2xl bg-gradient-radial from-amber-300/30 to-transparent"></div>
+                  
+                  {/* Título estilizado */}
+                  <h1 className="text-4xl md:text-5xl font-bold font-[Raleway] font-bold italic tracking-widest uppercase mb-12 
+                                 [text-shadow:_0px_0px_20px_rgba(255,255,255,0.1)] bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                    · {caja.nombre} ·
+                  </h1>
+
                   {/* Solo las cajas seleccionadas en línea horizontal */}
                   <div className="flex justify-center items-center gap-2 md:gap-6 mb-8 px-2 md:px-4 overflow-hidden">
                     <div className="flex gap-0 min-w-max">
@@ -917,7 +1011,7 @@ export default function BoxComponent({
                               layoutId={`box-${index}`}
                               className="flex flex-col items-center flex-shrink-0"
                               layout
-                              initial={isNewBox ? { opacity: 0, y: -50, scale: 0.8 } : false}
+                              initial={isNewBox ? { opacity: 0, y: -50, scale: 0.8 } : { opacity: 1, scale: 1 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               exit={{ opacity: 0, y: -30, scale: 0.8 }}
                               transition={{ 
@@ -1036,11 +1130,11 @@ export default function BoxComponent({
                   )}
                 </div>
               )}
+              {!caja && <p>Cargando información de la caja...</p>}
             </div>
-          )}
-          {!caja && <p>Cargando información de la caja...</p>}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
