@@ -739,6 +739,20 @@ export default function BoxComponent({
                         willChange: 'transform'
                       }}
                     >
+                      {/* Tag de NUEVA en esquina superior derecha */}
+                      {resultSkin.isNewSkin && (
+                        <motion.div
+                          initial={{ scale: 1, opacity: 0, x: 0, y: 0 }}
+                          animate={{ scale: 1, opacity: 1, x: 0, y: 0 }}
+                          transition={{ delay: 1.2, duration: 0.4, type: "spring", stiffness: 300 }}
+                          className="absolute top-2 right-2 mt-2 mr-2 z-20 px-2 py-1 rounded-xl text-xs font-bold 
+                                     bg-gradient-to-r from-red-500/20 to-red-600/20 text-white-300 shadow-lg 
+                                     shadow-red-900/20 border border-red-500/20 backdrop-blur-sm hover:bg-gradient-to-r 
+                                     hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
+                        >
+                          ✨ NUEVA
+                        </motion.div>
+                      )}
                       {/* Fondo de la tier */}
                       {resultSkin.content_tier?.id && resultSkin.content_tier.id !== 'standard' && (
                         <div className="absolute inset-0 z-0 flex items-center justify-center">
@@ -893,6 +907,20 @@ export default function BoxComponent({
                         willChange: 'transform'
                       }}
                     >
+                      {/* Tag de NUEVA en esquina superior derecha */}
+                      {result.isNewSkin && (
+                        <motion.div
+                          initial={{ scale: 1, opacity: 0, x: 0, y: 0 }}
+                          animate={{ scale: 1, opacity: 1, x: 0, y: 0 }}
+                          transition={{ delay: index * 0.1 + 1.2, duration: 0.4, type: "spring", stiffness: 300 }}
+                          className="absolute top-2 right-2 z-20 mt-2 mr-2 px-2 py-1 rounded-xl text-xs font-bold 
+                                     bg-gradient-to-r from-red-500/20 to-red-600/20 text-white-300 shadow-lg 
+                                     shadow-red-900/20 border border-red-500/20 backdrop-blur-sm hover:bg-gradient-to-r 
+                                     hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
+                        >
+                          ✨ NUEVA
+                        </motion.div>
+                      )}
                       {/* Fondo de la tier */}
                       {result.content_tier?.uuid_api && result.content_tier.uuid_api !== 'default' && (
                         <div className="absolute inset-0 z-0 flex items-center justify-center">
@@ -987,7 +1015,7 @@ export default function BoxComponent({
                 onClick={resetResults}
                 className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-8 py-3 text-lg font-medium"
               >
-                Abrir más cajas
+                Abrir de nuevo
               </Button>
             </motion.div>
             </div>

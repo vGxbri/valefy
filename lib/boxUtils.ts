@@ -51,6 +51,7 @@ export type Skin = {
   uuid: string;
   imagen_url: string;
   content_tier?: ContentTier;
+  isNewSkin?: boolean; // Indica si es una skin nueva para el usuario
 };
 
 export type TierProbabilidad = {
@@ -206,6 +207,21 @@ export async function processBoxOpening(
       };
     }
 
+    // Verificar si el usuario ya tiene esta skin antes de añadirla
+    const { data: existingSkins, error: checkError } = await supabase
+      .from("inventario_usuario")
+      .select("id")
+      .eq("usuario_id", userId)
+      .eq("skin_id", selectedSkinFromPool.id)
+      .limit(1);
+
+    if (checkError) {
+      console.warn("Error al verificar si la skin es nueva:", checkError);
+    }
+
+    // Determinar si es una skin nueva (no tiene entradas previas en el inventario)
+    const isNewSkin = !existingSkins || existingSkins.length === 0;
+
     // Asumimos que selectedSkinFromPool.id es el API UUID de la skin
     // y selectedSkinFromPool.nombre es el displayName.
     const skinApiRepresentation = {
@@ -218,8 +234,14 @@ export async function processBoxOpening(
     const { operationType, error: inventoryError } =
       await addSkinToInventory(userId, skinApiRepresentation, supabase);
 
+    // Crear una copia de la skin con la información de si es nueva
+    const selectedSkinWithNewFlag: Skin = {
+      ...selectedSkinFromPool,
+      isNewSkin: isNewSkin
+    };
+
     return {
-      selectedSkin: selectedSkinFromPool,
+      selectedSkin: selectedSkinWithNewFlag,
       inventoryOperationType: operationType,
       error: inventoryError,
     };
