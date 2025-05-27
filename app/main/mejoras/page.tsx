@@ -6,8 +6,6 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RiSearch2Line } from "react-icons/ri";
 import { X, Filter, Sparkles } from 'lucide-react';
@@ -19,6 +17,7 @@ import {
   getBestDisplayIcon,
   getWeaponType,
   getWeaponSpecificStyles,
+  filterSkinsByBundleWithIcon,
   Skin as ValorantApiSkin
 } from "@/lib/valorantApi";
 import { extractBundleName } from '@/lib/utils';
@@ -65,17 +64,17 @@ export default function MejorasPage() {
 
   const [userInventory, setUserInventory] = useState<Skin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [selectedSkins, setSelectedSkins] = useState<Skin[]>([]);
-  const [targetSkin, setTargetSkin] = useState<Skin | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterTier, setFilterTier] = useState<string>("");
   const maxSelectedSkins = 5;
 
   const [allApiSkins, setAllApiSkins] = useState<ValorantApiSkin[] | null>(null);
   const [allSupabaseTiers, setAllSupabaseTiers] = useState<SupabaseContentTier[] | null>(null);
-
-  const [improvementProbability, setImprovementProbability] = useState(0);
+  
+  // Estados para el modal de resultado
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [rewardSkin, setRewardSkin] = useState<ValorantApiSkin | null>(null);
 
   useEffect(() => {
     if (nextAuthStatus === "loading") {
@@ -110,7 +109,7 @@ export default function MejorasPage() {
   const successPercentage = useMemo(() => {
     const basePercentage = 0;
     const perSkinBonus = 20;
-    return Math.min(basePercentage + (selectedSkins.length * perSkinBonus), 95);
+    return Math.min(basePercentage + (selectedSkins.length * perSkinBonus), 100);
   }, [selectedSkins.length]);
 
   const bestSelectedSkin = useMemo(() => {
@@ -122,28 +121,14 @@ export default function MejorasPage() {
     })[0];
   }, [selectedSkins]);
 
-  const calculateImprovementProbability = useCallback(() => {
-    if (selectedSkins.length === 0 || !targetSkin) return 0;
-    const totalGrades = selectedSkins.reduce((sum, skin) => {
-      const grade = skin.content_tier?.grado ? parseInt(skin.content_tier.grado) : 0;
-      return sum + grade;
-    }, 0);
-    const targetGrade = targetSkin.content_tier?.grado ? parseInt(targetSkin.content_tier.grado) : 0;
-    let probability = 10 + (selectedSkins.length * 5) + (totalGrades * 10);
-    const maxSelectedGrade = bestSelectedSkin?.content_tier?.grado ? parseInt(bestSelectedSkin.content_tier.grado) : 0;
-    if (targetGrade > maxSelectedGrade) {
-      probability -= ((targetGrade - maxSelectedGrade) * 20);
-    }
-    return Math.min(Math.max(probability, 0), 95);
-  }, [selectedSkins, targetSkin, bestSelectedSkin]);
+
 
   const loadUserInventory = useCallback(async () => {
     if (!userId) {
       setUserInventory([]); 
       setIsLoading(false);
-      // También reseteamos skins seleccionadas y objetivo si el usuario cambia o cierra sesión
+      // También reseteamos skins seleccionadas si el usuario cambia o cierra sesión
       setSelectedSkins([]);
-      setTargetSkin(null);
       return;
     }
     setIsLoading(true);
@@ -236,7 +221,6 @@ export default function MejorasPage() {
     } else {
         setUserInventory([]);
         setSelectedSkins([]);
-        setTargetSkin(null);
         setIsLoading(false);
     }
   }, [userId, loadUserInventory]);
@@ -302,95 +286,56 @@ export default function MejorasPage() {
   };
 
 
-  const handleSelectTargetSkin = (skin: Skin) => {
-    setTargetSkin(skin.id === targetSkin?.id ? null : skin);
+
+
+  // Función para obtener una skin aleatoria filtrada
+  const getRandomRewardSkin = async (): Promise<ValorantApiSkin | null> => {
+    try {
+      let currentApiSkins = allApiSkins;
+      if (!currentApiSkins) {
+        currentApiSkins = await fetchAllApiSkinsFromValorantApi();
+        setAllApiSkins(currentApiSkins);
+      }
+      
+      // Aplicar los mismos filtros que en el catálogo (bundles con icono)
+      const filteredSkins = await filterSkinsByBundleWithIcon(currentApiSkins);
+      
+      if (filteredSkins.length === 0) {
+        console.error("No hay skins filtradas disponibles");
+        return null;
+      }
+      
+      // Seleccionar una skin aleatoria
+      const randomIndex = Math.floor(Math.random() * filteredSkins.length);
+      return filteredSkins[randomIndex];
+    } catch (error) {
+      console.error("Error al obtener skin aleatoria:", error);
+      return null;
+    }
   };
 
   const handleImprovement = async () => {
-    if (!userId) {
-      toast.error("Por favor, inicia sesión para realizar mejoras.");
-      return;
-    }
-    if (!targetSkin || selectedSkins.length === 0) {
-      toast.error("Selecciona al menos una skin para descartar y una skin objetivo");
+    if (selectedSkins.length !== 5) {
+      toast.error("Debes seleccionar exactamente 5 skins para realizar la mejora");
       return;
     }
 
-    setIsProcessing(true);
-    
     try {
-      const skinsDescartadasData = selectedSkins.map(skin => ({
-        id: skin.id,
-        nombre: skin.nombre,
-        content_tier_id: skin.content_tier_id,
-        content_tier_nombre: skin.content_tier?.nombre || "Desconocido",
-        grado: skin.content_tier?.grado || "0"
-      }));
-
-      const randomValue = Math.random() * 100;
-      const isSuccessful = randomValue <= improvementProbability;
+      // Obtener una skin aleatoria
+      const randomSkin = await getRandomRewardSkin();
       
-      const { error: mejoraError } = await supabase
-        .from("mejoras")
-        .insert({
-          usuario_id: userId,
-          fecha: new Date().toISOString(),
-          exitoso: isSuccessful,
-          probabilidad_calculada: improvementProbability,
-          skin_objetivo_id: targetSkin.id,
-          skin_objetivo_nombre: targetSkin.nombre,
-          skins_descartadas: skinsDescartadasData
-        });
-
-      if (mejoraError) throw mejoraError;
-
-      // Eliminar las skins seleccionadas del inventario
-      // En el nuevo sistema, cada skin seleccionada significa eliminar una fila de la DB
-      for (const skin of selectedSkins) {
-        // Usar el primer ID disponible de los inventoryIds para esta skin
-        if (skin.inventoryIds && skin.inventoryIds.length > 0) {
-          const inventoryIdToDelete = skin.inventoryIds[0]; // Tomar el primer ID
-          
-          const { error: deleteError } = await supabase
-            .from("inventario_usuario")
-            .delete()
-            .eq("id", inventoryIdToDelete);
-            
-          if (deleteError) {
-            console.warn(`Error deleting inventory item ${inventoryIdToDelete}: ${deleteError.message}`);
-          }
-        }
-      }
-
-      if (isSuccessful) {
-        // En el nuevo sistema, siempre insertamos una nueva fila para la skin objetivo
-        const { error: insertError } = await supabase
-          .from("inventario_usuario")
-          .insert({
-            usuario_id: userId,
-            skin_id: targetSkin.id,
-            skin_nombre: targetSkin.nombre,
-            fecha_obtencion: new Date().toISOString()
-          });
-          
-        if (insertError) {
-          console.error(`Error inserting target skin ${targetSkin.id}:`, insertError);
-          throw insertError;
-        }
-        
-        toast.success("¡Mejora exitosa! Has conseguido la skin objetivo");
-      } else {
-        toast.error("La mejora ha fallado. Las skins seleccionadas se han perdido");
+      if (!randomSkin) {
+        toast.error("Error al obtener la skin premiada");
+        return;
       }
       
-      setSelectedSkins([]);
-      setTargetSkin(null);
-      await loadUserInventory();
-    } catch (error: any) {
-      console.error("Error en el proceso de mejora:", error);
-      toast.error(`Error en la mejora: ${error.message || "Error desconocido"}`);
-    } finally {
-      setIsProcessing(false);
+      // Mostrar el modal con la skin premiada
+      setRewardSkin(randomSkin);
+      setShowResultModal(true);
+      
+    } catch (error) {
+      console.error("Error en handleImprovement:", error);
+      toast.error("Error al procesar la mejora");
     }
   };
 
@@ -442,10 +387,10 @@ export default function MejorasPage() {
                 <div className="text-3xl font-bold text-primary">{successPercentage}%</div>
                 <div className="text-sm text-slate-400">Probabilidad de éxito</div>
               </div>
-              <Button
-                onClick={() => toast.info("Funcionalidad próximamente")}
-                disabled={selectedSkins.length === 0}
-                className="rounded-xl bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-white shadow-lg shadow-purple-900/20 border border-purple-500/20 hover:bg-gradient-to-r hover:from-purple-500/30 hover:to-purple-600/30 active:scale-95 transition-all duration-200 px-6 py-3 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              
+              <Button variant="default" className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
+              disabled={selectedSkins.length === 0}
+              onClick={handleImprovement}
               >
                 <Sparkles className="w-4 h-4 mr-2" />
                 Mejorar ({selectedSkins.length}/5)
@@ -615,6 +560,7 @@ export default function MejorasPage() {
           </div>
         ) : (
           <motion.div 
+            key={`${searchTerm}-${filterTier || 'all'}`}
             layout 
             className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
           >
@@ -634,9 +580,10 @@ export default function MejorasPage() {
                  <motion.div
                    key={skin.id}
                    layout
-                   initial={{ opacity: 0, y: 0 }}
-                   animate={{ opacity: 1, y: 0 }}
-                   transition={{ duration: 0.2, delay: index * 0.02 }}
+                   initial={{ opacity: 0 }}
+                   animate={{ opacity: 1 }}
+                   exit={{ opacity: 0 }}
+                   transition={{ duration: 0.15, delay: index * 0.02 }}
                    onClick={() => toggleSelectSkin(skin)}
                    className={`group relative flex flex-col aspect-[3/4] overflow-hidden rounded-xl border bg-gradient-to-b from-gray-900 to-black transition-all duration-150 cursor-pointer
                      ${isSelected 
@@ -692,6 +639,118 @@ export default function MejorasPage() {
           </motion.div>
         )}
       </div>
+
+      {/* Modal de Resultado */}
+      <AnimatePresence>
+        {showResultModal && rewardSkin && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              setShowResultModal(false);
+              setRewardSkin(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: -20 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="bg-gradient-to-b from-slate-900 to-black rounded-2xl p-8 max-w-md w-full border border-slate-700 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="text-center mb-6">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, duration: 0.4, type: "spring", stiffness: 200 }}
+                  className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-yellow-500/30"
+                >
+                  <Sparkles className="w-8 h-8 text-black" />
+                </motion.div>
+                <motion.h2
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, duration: 0.4 }}
+                  className="text-2xl font-bold text-white mb-2"
+                >
+                  ¡Skin Premiada!
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.4 }}
+                  className="text-slate-400"
+                >
+                  Has obtenido una nueva skin
+                </motion.p>
+              </div>
+
+              {/* Skin premiada */}
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.5, ease: "easeOut" }}
+                className="relative w-full h-64 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl overflow-hidden mb-6 border border-slate-600"
+              >
+                {/* Imagen de la skin */}
+                <div className="relative w-full h-full flex items-center justify-center p-4">
+                  {getBestDisplayIcon(rewardSkin) && (
+                    <Image
+                      src={getBestDisplayIcon(rewardSkin) || ''}
+                      alt={rewardSkin.displayName}
+                      fill
+                      className="object-contain p-4"
+                      style={{
+                        filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.3))',
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* Efecto de brillo */}
+                <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/5 to-transparent opacity-50" />
+              </motion.div>
+
+              {/* Información de la skin */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6, duration: 0.4 }}
+                className="text-center mb-6"
+              >
+                <h3 className="text-xl font-bold text-white mb-2">
+                  {rewardSkin.displayName}
+                </h3>
+                <p className="text-slate-400 text-sm">
+                  {rewardSkin.displayName.split(' ')[0]} Collection
+                </p>
+              </motion.div>
+
+              {/* Botón de cerrar */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7, duration: 0.4 }}
+                className="flex justify-center"
+              >
+                <Button
+                  onClick={() => {
+                    setShowResultModal(false);
+                    setRewardSkin(null);
+                  }}
+                  className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-8 py-3"
+                >
+                  ¡Excelente!
+                </Button>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

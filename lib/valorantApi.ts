@@ -75,7 +75,7 @@ export const BANNED_WEAPON_NAMES = [
  * @param skinName El nombre de la skin
  * @returns El tipo de arma detectado
  */
-export const getWeaponType = (skinName: string): 'classic' | 'frenzy' | 'sheriff' | 'melee' | 'standard' => {
+export const getWeaponType = (skinName: string): 'classic' | 'frenzy' | 'sheriff' | 'melee' | 'standard' | 'karambit' => {
   if (skinName.endsWith(' Classic')) {
     return 'classic';
   }
@@ -84,6 +84,9 @@ export const getWeaponType = (skinName: string): 'classic' | 'frenzy' | 'sheriff
   }
   if (skinName.endsWith(' Sheriff')) {
     return 'sheriff';
+  }
+  if (skinName.endsWith(' Karambit')) {
+    return 'karambit';
   }
   
   // Para cuchillos: si NO termina con ninguno de los nombres de armas básicas, es un cuchillo/melee
@@ -124,6 +127,11 @@ export const getWeaponSpecificStyles = (weaponType: ReturnType<typeof getWeaponT
       return {
         baseScale: 1, // Sin escala adicional
         hasRotation: false // Sin rotación para cuchillos
+      };
+    case 'karambit':
+      return {
+        baseScale: 0.65,
+        hasRotation: false
       };
     default:
       return {
