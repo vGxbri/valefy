@@ -893,8 +893,8 @@ export default function AdminPage() {
                   }}
                 >
                   { filteredBundles.length > 0 && filteredBundles.every(b => expandedBundles.includes(b.uuid)) 
-                    ? "Contraer Todos Visibles" 
-                    : "Expandir Todos Visibles" }
+                    ? "Contraer Todos" 
+                    : "Expandir Todos" }
                 </Button>
               )}
               <div className="ml-auto text-white/70">

@@ -6,12 +6,12 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { Button as HeroUIButton } from "@heroui/react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RiSearch2Line } from "react-icons/ri";
-import { X, Filter, Sparkles } from 'lucide-react';
+import { X, Filter, Sparkles, ArrowDownWideNarrow } from 'lucide-react';
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import InfoModal from "./InfoModal";
 import { 
   getWeaponSkins as fetchAllApiSkinsFromValorantApi,
   getBestDisplayIcon,
@@ -21,6 +21,7 @@ import {
   Skin as ValorantApiSkin
 } from "@/lib/valorantApi";
 import { extractBundleName } from '@/lib/utils';
+import CircularRoulette from "@/components/CircularRoulette";
 
 // Definición del ContentTier de Supabase (ya existente y correcta)
 type SupabaseContentTier = {
@@ -42,6 +43,7 @@ type Skin = {
   imagen_url: string;
   content_tier?: SupabaseContentTier;
   selected?: boolean;
+  fecha_obtencion?: string; // Fecha de obtención para ordenamiento
   // Agregamos campos para manejar conteo de skins duplicadas
   count?: number;
   inventoryIds?: string[]; // IDs de las filas en la DB para esta skin
@@ -67,14 +69,21 @@ export default function MejorasPage() {
   const [selectedSkins, setSelectedSkins] = useState<Skin[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterTier, setFilterTier] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<string>("skin"); // "skin", "newest", "oldest"
   const maxSelectedSkins = 5;
 
   const [allApiSkins, setAllApiSkins] = useState<ValorantApiSkin[] | null>(null);
   const [allSupabaseTiers, setAllSupabaseTiers] = useState<SupabaseContentTier[] | null>(null);
-  
+
   // Estados para el modal de resultado
   const [showResultModal, setShowResultModal] = useState(false);
   const [rewardSkin, setRewardSkin] = useState<ValorantApiSkin | null>(null);
+  const [isNewSkin, setIsNewSkin] = useState<boolean>(false);
+
+  // Estados para el modal de ruleta
+  const [showRouletteModal, setShowRouletteModal] = useState(false);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [rouletteResult, setRouletteResult] = useState<'win' | 'lose' | null>(null);
 
   useEffect(() => {
     if (nextAuthStatus === "loading") {
@@ -95,7 +104,7 @@ export default function MejorasPage() {
   }, [nextAuthSession, nextAuthStatus]);
 
   const filteredInventory = useMemo(() => {
-    return userInventory.filter((skin) => {
+    let filtered = userInventory.filter((skin) => {
       const searchMatch = skin.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (skin.content_tier?.nombre || "").toLowerCase().includes(searchTerm.toLowerCase());
       
@@ -103,7 +112,53 @@ export default function MejorasPage() {
       
       return searchMatch && tierMatch;
     });
-  }, [userInventory, searchTerm, filterTier]);
+
+    // Aplicar ordenamiento
+    switch (sortOrder) {
+      case "skin":
+        // Ordenar por duplicados (más cantidad primero)
+        const skinCounts = new Map<string, number>();
+        
+        // Contar cuántas veces aparece cada skin_id
+        filtered.forEach(skin => {
+          const count = skinCounts.get(skin.skin_id || skin.uuid) || 0;
+          skinCounts.set(skin.skin_id || skin.uuid, count + 1);
+        });
+        
+        // Ordenar por cantidad (mayor a menor) y luego alfabéticamente
+        filtered.sort((a, b) => {
+          const countA = skinCounts.get(a.skin_id || a.uuid) || 0;
+          const countB = skinCounts.get(b.skin_id || b.uuid) || 0;
+          
+          if (countA !== countB) {
+            return countB - countA; // Mayor cantidad primero
+          }
+          
+          return a.nombre.localeCompare(b.nombre); // Alfabético como desempate
+        });
+        break;
+      case "newest":
+        // Más recientes primero (fecha más nueva primero)
+        filtered.sort((a, b) => {
+          const dateA = new Date(a.fecha_obtencion || 0).getTime();
+          const dateB = new Date(b.fecha_obtencion || 0).getTime();
+          return dateB - dateA;
+        });
+        break;
+      case "oldest":
+        // Más antiguas primero (fecha más vieja primero)
+        filtered.sort((a, b) => {
+          const dateA = new Date(a.fecha_obtencion || 0).getTime();
+          const dateB = new Date(b.fecha_obtencion || 0).getTime();
+          return dateA - dateB;
+        });
+        break;
+      default:
+        break;
+    }
+
+    return filtered;
+  }, [userInventory, searchTerm, filterTier, sortOrder]);
 
   // Calcular porcentaje de éxito basado en skins seleccionadas
   const successPercentage = useMemo(() => {
@@ -120,8 +175,6 @@ export default function MejorasPage() {
       return gradeB - gradeA;
     })[0];
   }, [selectedSkins]);
-
-
 
   const loadUserInventory = useCallback(async () => {
     if (!userId) {
@@ -164,7 +217,7 @@ export default function MejorasPage() {
         .eq("usuario_id", userId);
 
       if (inventoryError) throw inventoryError;
-            if (!inventoryData) {
+      if (!inventoryData) {
         setUserInventory([]);
         setIsLoading(false);
         return;
@@ -199,6 +252,7 @@ export default function MejorasPage() {
           imagen_url: imageUrl,
           content_tier: contentTierForSkin,
           selected: false,
+          fecha_obtencion: item.fecha_obtencion, // Incluir fecha de obtención
           count: 1, // Cada entrada individual tiene count 1
           inventoryIds: [item.id], // Solo este ID específico
         };
@@ -229,9 +283,9 @@ export default function MejorasPage() {
   useEffect(() => {
     if (allSupabaseTiers && allSupabaseTiers.length > 0 && !filterTier) {
       const availableTiers = allSupabaseTiers.filter(tier => 
-        tier.nombre.toLowerCase() !== 'ultra edition' && 
-        tier.nombre.toLowerCase() !== 'exclusive edition'
+        tier.nombre.toLowerCase() !== 'ultra edition'
       );
+      // Buscar el tier con grado más bajo (Select Edition = grado 1)
       const lowestTier = availableTiers
         .sort((a, b) => parseInt(a.grado) - parseInt(b.grado))[0];
       setFilterTier(lowestTier.uuid_api);
@@ -243,12 +297,11 @@ export default function MejorasPage() {
     if (selectedSkins.length > 0) {
       setSelectedSkins([]);
       // También actualizar el estado 'selected' en userInventory
-      setUserInventory(prev => 
+    setUserInventory(prev => 
         prev.map(skin => ({ ...skin, selected: false }))
       );
     }
   }, [filterTier]);
-
 
   const toggleSelectSkin = (skinToToggle: Skin) => {
     const isCurrentlySelected = selectedSkins.some(s => s.id === skinToToggle.id);
@@ -285,10 +338,7 @@ export default function MejorasPage() {
     );
   };
 
-
-
-
-  // Función para obtener una skin aleatoria filtrada
+  // Función para obtener una skin aleatoria de tier superior
   const getRandomRewardSkin = async (): Promise<ValorantApiSkin | null> => {
     try {
       let currentApiSkins = allApiSkins;
@@ -296,46 +346,326 @@ export default function MejorasPage() {
         currentApiSkins = await fetchAllApiSkinsFromValorantApi();
         setAllApiSkins(currentApiSkins);
       }
+
+      let currentSupabaseTiers = allSupabaseTiers;
+      if (!currentSupabaseTiers) {
+        const { data: tiersData, error: tiersError } = await supabase
+          .from("content_tiers")
+          .select("id, nombre, color, uuid_api, grado");
+        if (tiersError) throw tiersError;
+        currentSupabaseTiers = tiersData as SupabaseContentTier[];
+        setAllSupabaseTiers(currentSupabaseTiers);
+      }
       
-      // Aplicar los mismos filtros que en el catálogo (bundles con icono)
+      if (!currentApiSkins || !currentSupabaseTiers || selectedSkins.length === 0) {
+        console.error("Datos insuficientes para generar skin de tier superior");
+        return null;
+      }
+
+      // Obtener el tier de las skins seleccionadas
+      const selectedTier = selectedSkins[0].content_tier;
+      if (!selectedTier) {
+        console.error("No se pudo determinar el tier de las skins seleccionadas");
+        return null;
+      }
+
+      const selectedTierGrade = parseInt(selectedTier.grado);
+
+      // Buscar el tier inmediatamente superior (siguiente grado)
+      const nextTierGrade = selectedTierGrade + 1;
+      const superiorTiers = currentSupabaseTiers.filter(tier => {
+        const tierGrade = parseInt(tier.grado);
+        const isUltraEdition = tier.nombre.toLowerCase() === 'ultra edition';
+        
+        // Si estamos mejorando desde Exclusive Edition, permitir Ultra Edition
+        if (isUltraEdition && tierGrade === nextTierGrade) {
+          return true;
+        }
+        
+        // Para otros casos, buscar exactamente el siguiente grado y excluir Exclusive/Ultra
+        return tierGrade === nextTierGrade && !isUltraEdition;
+      });
+
+      if (superiorTiers.length === 0) {
+        console.error("No hay tiers superiores disponibles");
+        return null;
+      }
+
+      // Aplicar filtros básicos (bundles con icono)
       const filteredSkins = await filterSkinsByBundleWithIcon(currentApiSkins);
       
-      if (filteredSkins.length === 0) {
-        console.error("No hay skins filtradas disponibles");
+      // Filtrar skins que sean de tiers superiores
+      const superiorTierUuids = superiorTiers.map(tier => tier.uuid_api);
+      const superiorSkins = filteredSkins.filter(skin => 
+        skin.contentTierUuid && superiorTierUuids.includes(skin.contentTierUuid)
+      );
+      
+      if (superiorSkins.length === 0) {
+        console.error("No hay skins de tier superior disponibles");
         return null;
       }
       
-      // Seleccionar una skin aleatoria
-      const randomIndex = Math.floor(Math.random() * filteredSkins.length);
-      return filteredSkins[randomIndex];
+      // Seleccionar una skin aleatoria de tier superior
+      const randomIndex = Math.floor(Math.random() * superiorSkins.length);
+      return superiorSkins[randomIndex];
     } catch (error) {
-      console.error("Error al obtener skin aleatoria:", error);
+      console.error("Error al obtener skin de tier superior:", error);
       return null;
     }
   };
 
   const handleImprovement = async () => {
-    if (selectedSkins.length !== 5) {
-      toast.error("Debes seleccionar exactamente 5 skins para realizar la mejora");
+    if (selectedSkins.length === 0) {
+      toast.error("Debes seleccionar al menos 1 skin para realizar la mejora");
+      return;
+    }
+
+    if (selectedSkins.length > 5) {
+      toast.error("Solo puedes seleccionar hasta 5 skins");
+      return;
+    }
+
+    if (!userId) {
+      toast.error("Error: Usuario no identificado");
+      return;
+    }
+
+    // Si son 5 skins, hacer la mejora directamente (100% éxito)
+    if (selectedSkins.length === 5) {
+      return handleDirectImprovement();
+    }
+
+    // Si son 1-4 skins, abrir modal de ruleta
+    setShowRouletteModal(true);
+    setRouletteResult(null);
+    setIsSpinning(false);
+  };
+
+  const handleDirectImprovement = async () => {
+    if (!userId) {
+      toast.error("Error: Usuario no identificado");
       return;
     }
 
     try {
-      // Obtener una skin aleatoria
+      // Obtener una skin aleatoria de tier superior
       const randomSkin = await getRandomRewardSkin();
       
       if (!randomSkin) {
         toast.error("Error al obtener la skin premiada");
         return;
       }
+
+      // Verificar si la skin es nueva para el usuario (antes de añadirla)
+      const { data: existingSkins, error: checkError } = await supabase
+          .from("inventario_usuario")
+        .select("id")
+          .eq("usuario_id", userId)
+        .eq("skin_id", randomSkin.uuid)
+        .limit(1);
+
+      if (checkError) {
+        console.warn("Error al verificar si la skin es nueva:", checkError);
+      }
+
+      // Determinar si es una skin nueva (no tiene entradas previas en el inventario)
+      const skinIsNew = !existingSkins || existingSkins.length === 0;
+
+      // Eliminar las skins seleccionadas del inventario
+      const selectedInventoryIds = selectedSkins.flatMap(skin => skin.inventoryIds || []);
       
+      const { error: deleteError } = await supabase
+              .from("inventario_usuario")
+              .delete()
+        .in("id", selectedInventoryIds);
+
+      if (deleteError) {
+        console.error("Error al eliminar skins seleccionadas:", deleteError);
+        toast.error("Error al procesar las skins seleccionadas");
+        return;
+      }
+
+      // Agregar la nueva skin al inventario
+      const { error: insertError } = await supabase
+        .from("inventario_usuario")
+        .insert({
+          usuario_id: userId,
+          skin_id: randomSkin.uuid,
+          skin_nombre: randomSkin.displayName,
+          fecha_obtencion: new Date().toISOString()
+        });
+
+      if (insertError) {
+        console.error("Error al agregar nueva skin:", insertError);
+        toast.error("Error al agregar la nueva skin al inventario");
+        return;
+      }
+
+      // Actualizar el estado local: eliminar skins seleccionadas
+      setUserInventory(prev => 
+        prev.filter(skin => !selectedInventoryIds.includes(skin.id))
+      );
+
+      // Limpiar selección
+      setSelectedSkins([]);
+
       // Mostrar el modal con la skin premiada
       setRewardSkin(randomSkin);
+      setIsNewSkin(skinIsNew);
       setShowResultModal(true);
+
+      // Recargar inventario para mostrar la nueva skin
+      setTimeout(() => {
+        loadUserInventory();
+      }, 1000);
+
+      toast.success("¡Mejora realizada exitosamente!");
       
     } catch (error) {
-      console.error("Error en handleImprovement:", error);
+      console.error("Error en handleDirectImprovement:", error);
       toast.error("Error al procesar la mejora");
+    }
+  };
+
+  const handleRouletteConfirm = async () => {
+    setIsSpinning(true);
+    setRouletteResult(null);
+
+    // Si hay menos de 5 skins, CircularRoulette manejará el resultado
+    if (selectedSkins.length < 5) {
+      return; // CircularRoulette se encarga del resto a través de onSpinComplete
+    }
+
+    // Para 5 skins (caso original, aunque no debería llegar aquí)
+    // Simular el tiempo de la ruleta
+    setTimeout(async () => {
+      const success = Math.random() * 100 < successPercentage;
+      setRouletteResult(success ? 'win' : 'lose');
+      setIsSpinning(false);
+
+      if (success) {
+        // Si gana, hacer la mejora con recompensa
+        setTimeout(async () => {
+          setShowRouletteModal(false);
+          await handleRouletteWin();
+        }, 2000);
+      } else {
+        // Si pierde, solo eliminar las skins
+        setTimeout(async () => {
+          await handleRouletteLose();
+        }, 2000);
+      }
+    }, 3000); // 3 segundos de ruleta girando
+  };
+
+  const handleRouletteWin = async () => {
+    try {
+      // Obtener una skin aleatoria de tier superior
+      const randomSkin = await getRandomRewardSkin();
+      
+      if (!randomSkin) {
+        toast.error("Error al obtener la skin premiada");
+        return;
+      }
+
+      // Verificar si la skin es nueva para el usuario
+      const { data: existingSkins, error: checkError } = await supabase
+          .from("inventario_usuario")
+        .select("id")
+          .eq("usuario_id", userId)
+        .eq("skin_id", randomSkin.uuid)
+        .limit(1);
+
+      if (checkError) {
+        console.warn("Error al verificar si la skin es nueva:", checkError);
+      }
+
+      const skinIsNew = !existingSkins || existingSkins.length === 0;
+
+      // Eliminar las skins seleccionadas
+      const selectedInventoryIds = selectedSkins.flatMap(skin => skin.inventoryIds || []);
+      
+      const { error: deleteError } = await supabase
+            .from("inventario_usuario")
+        .delete()
+        .in("id", selectedInventoryIds);
+
+      if (deleteError) {
+        console.error("Error al eliminar skins:", deleteError);
+        toast.error("Error al procesar las skins");
+        return;
+      }
+
+      // Agregar la nueva skin
+      const { error: insertError } = await supabase
+            .from("inventario_usuario")
+            .insert({
+              usuario_id: userId,
+          skin_id: randomSkin.uuid,
+          skin_nombre: randomSkin.displayName,
+          fecha_obtencion: new Date().toISOString()
+        });
+
+      if (insertError) {
+        console.error("Error al agregar nueva skin:", insertError);
+        toast.error("Error al agregar la nueva skin");
+        return;
+      }
+
+      // Actualizar estado local
+      setUserInventory(prev => 
+        prev.filter(skin => !selectedInventoryIds.includes(skin.id))
+      );
+      setSelectedSkins([]);
+
+      // Mostrar resultado
+      setRewardSkin(randomSkin);
+      setIsNewSkin(skinIsNew);
+      setShowResultModal(true);
+
+      setTimeout(() => {
+        loadUserInventory();
+      }, 1000);
+
+      toast.success("¡Has ganado la mejora!");
+    } catch (error) {
+      console.error("Error en handleRouletteWin:", error);
+      toast.error("Error al procesar la victoria");
+    }
+  };
+
+  const handleRouletteLose = async () => {
+    try {
+      // Solo eliminar las skins seleccionadas sin dar recompensa
+      const selectedInventoryIds = selectedSkins.flatMap(skin => skin.inventoryIds || []);
+      
+      const { error: deleteError } = await supabase
+        .from("inventario_usuario")
+        .delete()
+        .in("id", selectedInventoryIds);
+
+      if (deleteError) {
+        console.error("Error al eliminar skins:", deleteError);
+        toast.error("Error al procesar las skins");
+        return;
+      }
+
+      // Actualizar estado local
+      setUserInventory(prev => 
+        prev.filter(skin => !selectedInventoryIds.includes(skin.id))
+      );
+      setSelectedSkins([]);
+
+      // Cerrar modal y mostrar mensaje
+      setShowRouletteModal(false);
+      toast.error("La mejora ha fallado. Has perdido las skins seleccionadas.");
+
+      setTimeout(() => {
+        loadUserInventory();
+      }, 1000);
+    } catch (error) {
+      console.error("Error en handleRouletteLose:", error);
+      toast.error("Error al procesar la derrota");
     }
   };
 
@@ -363,15 +693,14 @@ export default function MejorasPage() {
     <div className="px-4 sm:px-6 lg:px-8 pt-12 pb-12 min-h-screen bg-background text-white">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
-          / MEJORAS
-        </h1>
-        <InfoModal />
+      <h1 className="text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
+        / MEJORAS
+      </h1>
       </div>
 
       {/* Sección Superior: Skins Seleccionadas */}
       <div className="mb-8">
-        <div className="bg-gradient-to-b from-slate-900/60 to-black/60 rounded-xl shadow-inner p-6 border border-slate-700/30">
+        <div className="bg-backgroundAlt/10 border border-white/10 rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <div>
               <h2 className="text-2xl font-bold text-white mb-2">Skins Seleccionadas</h2>
@@ -380,23 +709,23 @@ export default function MejorasPage() {
                 <p className="text-sm text-primary mt-1">
                   Tier actual: {selectedSkins[0].content_tier?.nombre || "Desconocido"}
                 </p>
-              )}
-            </div>
+                )}
+              </div>
             <div className="flex flex-col items-end mt-4 md:mt-0">
               <div className="text-right mb-4">
-                <div className="text-3xl font-bold text-primary">{successPercentage}%</div>
+                <div className="text-3xl font-bold text-red-500">{successPercentage}%</div>
                 <div className="text-sm text-slate-400">Probabilidad de éxito</div>
-              </div>
+            </div>
               
               <Button variant="default" className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
               disabled={selectedSkins.length === 0}
               onClick={handleImprovement}
               >
                 <Sparkles className="w-4 h-4 mr-2" />
-                Mejorar ({selectedSkins.length}/5)
+                {selectedSkins.length === 5 ? 'Mejorar (5/5)' : `Probar Suerte (${selectedSkins.length}/5)`}
               </Button>
             </div>
-          </div>
+        </div>
 
           {/* Grid de skins seleccionadas - Grid fijo de 5 posiciones */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 min-h-[200px]">
@@ -419,33 +748,39 @@ export default function MejorasPage() {
                     exit={{ opacity: 0, scale: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
                     className="relative group flex flex-col aspect-[3/4] overflow-hidden rounded-xl border bg-gradient-to-b from-gray-900 to-black transition-all duration-150 border-primary/50 shadow-lg shadow-primary/20"
-                    style={{
+              style={{
                       backgroundImage: skin.content_tier ? 
                         `linear-gradient(to top, rgba(${parseInt(skin.content_tier.color.slice(1,3), 16)},${parseInt(skin.content_tier.color.slice(3,5), 16)},${parseInt(skin.content_tier.color.slice(5,7), 16)},0.10) 0%, rgba(${parseInt(skin.content_tier.color.slice(1,3), 16)},${parseInt(skin.content_tier.color.slice(3,5), 16)},${parseInt(skin.content_tier.color.slice(5,7), 16)},0.15) 35%, rgba(17, 24, 39, 0.85) 80%, #0A0E16 100%)` : 
                         undefined
                     }}
                   >
-                    {/* Botón de eliminar */}
-                    <button
-                      onClick={() => toggleSelectSkin(skin)}
-                      className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500/80 hover:bg-red-500 rounded-full flex items-center justify-center transition-colors"
-                    >
-                      <X className="w-4 h-4 text-white" />
-                    </button>
+                                        {/* Overlay de eliminación al hacer hover */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 transition-opacity duration-200 z-20 flex items-center justify-center cursor-pointer rounded-xl"
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           toggleSelectSkin(skin);
+                         }}>
+                      <X className="w-12 h-12 text-primary" />
+        </div>
 
                     {/* Imagen de fondo del tier */}
-                    {skin.content_tier?.id && skin.content_tier.id !== 'default' && (
+                    {skin.content_tier?.uuid_api && skin.content_tier.uuid_api !== 'default' && (
                       <Image 
-                        src={`/skins-bg/${skin.content_tier.id}.png`}
+                        src={`/skins-bg/${skin.content_tier.uuid_api}.png`}
                         alt={`Fondo para ${skin.content_tier.nombre}`}
-                        fill
+                        layout="fill"
+                        objectFit="contain" // O "cover" si prefieres que llene y recorte
                         className="absolute inset-0 z-0 p-4 opacity-20 transform scale-125 rotate-12"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        priority={index < 10}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          console.warn(`No se encontró la imagen de fondo para el tier: /skins-bg/${skin.content_tier?.uuid_api}.png`);
+                        }}
                       />
                     )}
 
                     {/* Imagen de la skin */}
-                    <Image
+                  <Image
                       src={skin.imagen_url || '/images/placeholder_icon.webp'}
                       alt={skin.nombre}
                       fill
@@ -463,8 +798,8 @@ export default function MejorasPage() {
                         <p className="text-xs text-slate-300 truncate" title={skin.content_tier.nombre}>
                           {skin.content_tier.nombre}
                         </p>
-                      )}
-                    </div>
+                )}
+              </div>
                   </motion.div>
                 );
               } else {
@@ -477,8 +812,8 @@ export default function MejorasPage() {
                     <div className="text-slate-500 text-center">
                       <div className="w-12 h-12 border-2 border-slate-600 border-dashed rounded-xl mb-2 mx-auto"></div>
                       <p className="text-xs">Slot {index + 1}</p>
-                    </div>
-                  </div>
+            </div>
+            </div>
                 );
               }
             })}
@@ -487,65 +822,68 @@ export default function MejorasPage() {
       </div>
 
       {/* Sección Inferior: Inventario */}
-      <div className="bg-gradient-to-b from-slate-900/60 to-black/60 rounded-xl shadow-inner p-6 border border-slate-700/30">
+      <div className="bg-backgroundAlt/10 border border-white/10 rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-6">
         {/* Header del inventario */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <h2 className="text-2xl font-bold text-white">Tu Inventario</h2>
           
           {/* Filtros */}
           <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-            {/* Búsqueda */}
-            <div className="relative w-full md:w-64 group">
-              <div className="relative flex items-center rounded-xl border-2 border-slate-700 focus-within:border-primary bg-slate-800/50 backdrop-blur-sm text-sm focus-within:outline-none focus-within:ring-0 transition-all duration-300">
-                <span className="pl-3 pr-2 flex items-center pointer-events-none">
-                  <RiSearch2Line className="w-5 h-5 text-white/50 group-focus-within:text-primary transition-colors duration-300" />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Buscar skins..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1 py-2.5 bg-transparent appearance-none focus:outline-none text-white placeholder:text-muted-foreground/70 pr-10"
-                />
-                {searchTerm && (
-                  <button
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
-                    onClick={() => setSearchTerm("")}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Filtro de rareza */}
-             {allSupabaseTiers && (
-               <Select value={filterTier} onValueChange={setFilterTier}>
-                 <SelectTrigger className="w-full md:w-48 bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150">
-                   <Filter className="h-4 w-4 mr-2 inline-block opacity-70" />
-                   <SelectValue placeholder="Filtrar Rareza" />
-                 </SelectTrigger>
-                 <SelectContent className="bg-slate-800 text-white rounded-md shadow-lg border-slate-700">
-                   {allSupabaseTiers
-                     .filter(tier => 
-                       tier.nombre.toLowerCase() !== 'ultra edition'                     
-                      )
-                     .sort((a, b) => parseInt(a.grado) - parseInt(b.grado))
-                     .map(tier => (
-                     <SelectItem 
-                       key={tier.uuid_api}
-                       value={tier.uuid_api}
-                       className="hover:bg-slate-700 rounded-md active:bg-slate-700"
-                       style={{ color: tier.color }}
-                     >
-                       {tier.nombre}
-                     </SelectItem>
-                   ))}
-                 </SelectContent>
-               </Select>
-             )}
+          {/* Filtro de ordenamiento */}
+            <Select value={sortOrder} onValueChange={setSortOrder}>
+              <SelectTrigger className="w-full md:w-48 bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150">
+                <ArrowDownWideNarrow className="h-4 w-4 mr-2 inline-block opacity-70" />
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-800 text-white rounded-md shadow-lg border-slate-700">
+                <SelectItem 
+                  value="skin"
+                  className="hover:bg-slate-700 rounded-md active:bg-slate-700"
+                >
+                  Duplicados
+                </SelectItem>
+                <SelectItem 
+                  value="newest"
+                  className="hover:bg-slate-700 rounded-md active:bg-slate-700"
+                >
+                  Más Recientes
+                </SelectItem>
+                <SelectItem 
+                  value="oldest"
+                  className="hover:bg-slate-700 rounded-md active:bg-slate-700"
+                >
+                  Más Antiguas
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          {/* Filtro de rareza */}
+            {allSupabaseTiers && (
+              <Select value={filterTier} onValueChange={setFilterTier}>
+                <SelectTrigger className="w-full md:w-48 bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150">
+                  <Filter className="h-4 w-4 mr-2 inline-block opacity-70" />
+                  <SelectValue placeholder="Filtrar Rareza" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 text-white rounded-md shadow-lg border-slate-700">
+                  {allSupabaseTiers
+                    .filter(tier => 
+                      tier.nombre.toLowerCase() !== 'ultra edition'
+                    )
+                    .sort((a, b) => parseInt(a.grado) - parseInt(b.grado))
+                    .map(tier => (
+                    <SelectItem 
+                      key={tier.uuid_api}
+                      value={tier.uuid_api}
+                      className="hover:bg-slate-700 rounded-md active:bg-slate-700"
+                      style={{ color: tier.color }}
+                    >
+                      {tier.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+      </div>
           </div>
-        </div>
 
         {/* Grid del inventario */}
         {isLoading ? (
@@ -556,14 +894,10 @@ export default function MejorasPage() {
           <div className="text-center py-12">
             <p className="text-slate-400 text-lg">
               {userInventory.length === 0 ? "No hay skins en tu inventario" : "No se encontraron skins"}
-            </p>
-          </div>
-        ) : (
-          <motion.div 
-            key={`${searchTerm}-${filterTier || 'all'}`}
-            layout 
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
-          >
+              </p>
+            </div>
+          ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filteredInventory.map((skin, index) => {
               const isSelected = selectedSkins.some(s => s.id === skin.id);
               const weaponType = getWeaponType(skin.nombre);
@@ -577,43 +911,43 @@ export default function MejorasPage() {
                  selectedSkins[0].content_tier?.uuid_api === skin.content_tier?.uuid_api;
 
                return (
-                 <motion.div
+                 <div
                    key={skin.id}
-                   layout
-                   initial={{ opacity: 0 }}
-                   animate={{ opacity: 1 }}
-                   exit={{ opacity: 0 }}
-                   transition={{ duration: 0.15, delay: index * 0.02 }}
-                   onClick={() => toggleSelectSkin(skin)}
+                    onClick={() => toggleSelectSkin(skin)}
                    className={`group relative flex flex-col aspect-[3/4] overflow-hidden rounded-xl border bg-gradient-to-b from-gray-900 to-black transition-all duration-150 cursor-pointer
                      ${isSelected 
-                       ? 'border-primary scale-105 shadow-lg shadow-primary/40' 
+                       ? 'border-primary shadow-lg shadow-primary/40 grayscale scale-95' 
                        : canBeSelected
                          ? 'border-gray-800/70 hover:shadow-[0px_2px_46px_-4px_rgba(255,_255,_255,_0.10)]'
                          : 'border-gray-600/30 opacity-50 cursor-not-allowed hover:opacity-60'}
                    `}
-                  style={{
+                    style={{
                     backgroundImage: !isSelected && skin.content_tier ? 
                       `linear-gradient(to top, rgba(${parseInt(skin.content_tier.color.slice(1,3), 16)},${parseInt(skin.content_tier.color.slice(3,5), 16)},${parseInt(skin.content_tier.color.slice(5,7), 16)},0.10) 0%, rgba(${parseInt(skin.content_tier.color.slice(1,3), 16)},${parseInt(skin.content_tier.color.slice(3,5), 16)},${parseInt(skin.content_tier.color.slice(5,7), 16)},0.15) 35%, rgba(17, 24, 39, 0.85) 80%, #0A0E16 100%)` : 
                       undefined
-                  }}
-                >
+                    }}
+                  >
                   {/* Imagen de fondo del tier */}
-                  {skin.content_tier?.id && skin.content_tier.id !== 'default' && (
-                    <Image 
-                      src={`/skins-bg/${skin.content_tier.id}.png`}
-                      alt={`Fondo para ${skin.content_tier.nombre}`}
-                      fill
-                      className="absolute inset-0 z-0 p-4 opacity-20 transform scale-125 rotate-12"
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    />
-                  )}
+                    {skin.content_tier?.uuid_api && skin.content_tier.uuid_api !== 'default' && (
+                        <Image
+                        src={`/skins-bg/${skin.content_tier.uuid_api}.png`}
+                        alt={`Fondo para ${skin.content_tier.nombre}`}
+                        layout="fill"
+                        objectFit="contain" // O "cover" si prefieres que llene y recorte
+                        className="absolute inset-0 z-0 p-4 opacity-20 transform scale-125 rotate-12"
+                        priority={index < 10}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          console.warn(`No se encontró la imagen de fondo para el tier: /skins-bg/${skin.content_tier?.uuid_api}.png`);
+                        }}
+                      />
+                    )}
 
                   {/* Imagen de la skin */}
                   <Image
                     src={skin.imagen_url || '/images/placeholder_icon.webp'}
-                    alt={skin.nombre}
-                    fill
+                          alt={skin.nombre}
+                          fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                     className="object-contain p-4 group-hover:scale-105 transition-transform duration-300 z-10"
                     style={imageTransformStyle}
@@ -626,19 +960,142 @@ export default function MejorasPage() {
                       <p className="text-sm text-slate-300 truncate" title={skin.content_tier.nombre}>
                         {skin.content_tier.nombre}
                       </p>
-                    )}
-                  </div>
+                      )}
+                    </div>
 
                   {/* Indicador de selección */}
                   <div className={`absolute top-2 left-2 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-primary border-white' : 'bg-slate-700/80 border-slate-600 hover:bg-slate-600/80'}`}>
                     {isSelected && <div className="w-2 h-2 bg-white rounded-full"></div>}
-                  </div>
-                </motion.div>
+                    </div>
+                </div>
               );
             })}
+                      </div>
+                    )}
+                  </div>
+
+      {/* Modal de Ruleta */}
+      <AnimatePresence>
+        {showRouletteModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+              if (!isSpinning && rouletteResult === null) {
+                setShowRouletteModal(false);
+              }
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: -20 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="p-8 max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="text-center mb-6">
+                <motion.h3
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, duration: 0.4 }}
+                  className="font-bold inline-block mt-10 text-3xl font-bold text-foreground font-[Raleway] font-semibold 
+                             italic tracking-widest [text-shadow:_0px_0px_20px_rgba(255,255,255,0.35)] 
+                             bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
+                >
+                  · MEJORAR ·
+                </motion.h3>
+              </div>
+
+              {/* Ruleta Visual */}
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.5, ease: "easeOut" }}
+                className="mb-6"
+              >
+                {selectedSkins.length < 5 ? (
+                  // Nueva ruleta circular para menos de 5 skins
+                  <CircularRoulette
+                    successPercentage={successPercentage}
+                    isSpinning={isSpinning}
+                    onSpinComplete={(success) => {
+                      setRouletteResult(success ? 'win' : 'lose');
+                      setIsSpinning(false);
+
+                      if (success) {
+                        // Si gana, hacer la mejora con recompensa
+                        setTimeout(async () => {
+                          setShowRouletteModal(false);
+                          await handleRouletteWin();
+                        }, 2000);
+                      } else {
+                        // Si pierde, solo eliminar las skins
+                        setTimeout(async () => {
+                          await handleRouletteLose();
+                        }, 2000);
+                      }
+                    }}
+                  />
+                ) : (
+                  // Ruleta original para 5 skins (no debería mostrarse, pero por seguridad)
+                  <div className="relative w-full h-40 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl overflow-hidden border border-slate-600 flex items-center justify-center">
+                    {/* Barra de porcentaje */}
+                    <div className="w-4/5 h-8 bg-gray-700 rounded-full overflow-hidden relative">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-red-500 to-green-500 rounded-full relative"
+                        style={{ width: `${successPercentage}%` }}
+                        animate={isSpinning ? { 
+                          x: ['-100%', '200%', '-100%'],
+                          transition: { 
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "linear"
+                          }
+                        } : {}}
+                      />
+                      {/* Indicador central */}
+                      <div className="absolute top-0 left-1/2 w-1 h-full bg-white shadow-lg transform -translate-x-1/2" />
+                      
+                      {/* Texto del porcentaje */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">{successPercentage}%</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+
+              {/* Botones */}
+              {!isSpinning && rouletteResult === null && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7, duration: 0.4 }}
+                  className="flex justify-center gap-4"
+                >
+                  <Button
+                    onClick={() => setShowRouletteModal(false)}
+                    variant="outline"
+                    className="rounded-xl border-slate-600 hover:bg-slate-700 text-slate-300 px-6 py-3"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleRouletteConfirm}
+                    className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-6 py-3"
+                  >
+                    {selectedSkins.length < 5 ? 'Girar Ruleta' : 'Confirmar Mejora'}
+                  </Button>
+                </motion.div>
+              )}
+            </motion.div>
           </motion.div>
         )}
-      </div>
+      </AnimatePresence>
 
       {/* Modal de Resultado */}
       <AnimatePresence>
@@ -648,10 +1105,11 @@ export default function MejorasPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4"
-            onClick={() => {
-              setShowResultModal(false);
-              setRewardSkin(null);
-            }}
+                          onClick={() => {
+                setShowResultModal(false);
+                setRewardSkin(null);
+                setIsNewSkin(false);
+              }}
           >
             <motion.div
               initial={{ scale: 0.8, opacity: 0, y: 50 }}
@@ -696,20 +1154,34 @@ export default function MejorasPage() {
                 transition={{ delay: 0.5, duration: 0.5, ease: "easeOut" }}
                 className="relative w-full h-64 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl overflow-hidden mb-6 border border-slate-600"
               >
+                {/* Tag de NUEVA en esquina superior derecha */}
+                {isNewSkin && (
+                  <motion.div
+                    initial={{ scale: 1, opacity: 0, x: 0, y: 0 }}
+                    animate={{ scale: 1, opacity: 1, x: 0, y: 0 }}
+                    transition={{ delay: 1.2, duration: 0.4, type: "spring", stiffness: 300 }}
+                    className="absolute top-2 right-2 z-20 px-2 py-1 rounded-xl text-xs font-bold 
+                               bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg 
+                               shadow-red-900/20 border border-red-500/20 backdrop-blur-sm
+                               active:scale-95 transition-all duration-200"
+                  >
+                    ✨ NUEVA
+                  </motion.div>
+                )}
                 {/* Imagen de la skin */}
                 <div className="relative w-full h-full flex items-center justify-center p-4">
                   {getBestDisplayIcon(rewardSkin) && (
-                    <Image
+                      <Image
                       src={getBestDisplayIcon(rewardSkin) || ''}
                       alt={rewardSkin.displayName}
-                      fill
+                        fill
                       className="object-contain p-4"
                       style={{
                         filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.3))',
                       }}
-                    />
-                  )}
-                </div>
+                      />
+                    )}
+                  </div>
 
                 {/* Efecto de brillo */}
                 <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/5 to-transparent opacity-50" />
@@ -741,6 +1213,7 @@ export default function MejorasPage() {
                   onClick={() => {
                     setShowResultModal(false);
                     setRewardSkin(null);
+                    setIsNewSkin(false);
                   }}
                   className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-8 py-3"
                 >

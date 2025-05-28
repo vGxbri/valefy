@@ -80,24 +80,24 @@ export async function addSkinToInventory(
 ): Promise<{ success: boolean; error?: any; operationType: "added" | "error" }> {
   try {
     // Siempre insertar una nueva fila para cada skin obtenida
-    const { error: insertError } = await supabase
-      .from("inventario_usuario")
-      .insert({
-        usuario_id: userId,
-        skin_id: skinFromApi.uuid,
-        skin_nombre: skinFromApi.displayName,
-        fecha_obtencion: new Date().toISOString(),
-      });
+      const { error: insertError } = await supabase
+        .from("inventario_usuario")
+        .insert({
+          usuario_id: userId,
+          skin_id: skinFromApi.uuid,
+          skin_nombre: skinFromApi.displayName,
+          fecha_obtencion: new Date().toISOString(),
+        });
 
-    if (insertError) {
-      console.error("Error al guardar nueva skin en el inventario:", insertError);
-      return { success: false, error: insertError, operationType: "error" };
-    }
+      if (insertError) {
+        console.error("Error al guardar nueva skin en el inventario:", insertError);
+        return { success: false, error: insertError, operationType: "error" };
+      }
     
-    console.log(
+      console.log(
       `Skin '${skinFromApi.displayName}' añadida al inventario del usuario ${userId}`,
-    );
-    return { success: true, operationType: "added" };
+      );
+      return { success: true, operationType: "added" };
   } catch (error) {
     console.error("Error general en addSkinToInventory:", error);
     return { success: false, error, operationType: "error" };

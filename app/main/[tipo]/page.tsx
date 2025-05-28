@@ -816,7 +816,7 @@ export default function CajaPage() {
 
         {/* Contenedor principal con efecto de fondo mejorado */}
         <motion.div 
-          className="w-full rounded-3xl bg-gradient-to-br from-primary/10 via-backgroundAlt/30 to-secondary/5 backdrop-blur-sm border border-border/30 p-6 shadow-xl overflow-hidden relative"
+          className="w-full p-6 overflow-hidden relative bg-backgroundAlt/10 border border-white/10 rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)]"
           variants={itemVariants}
         >
           {/* Efectos de fondo mejorados */}
