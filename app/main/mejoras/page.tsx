@@ -6,10 +6,8 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Button as HeroUIButton } from "@heroui/react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RiSearch2Line } from "react-icons/ri";
-import { X, Filter, Sparkles, ArrowDownWideNarrow } from 'lucide-react';
+import { X, Filter, Sparkles, ArrowDownWideNarrow, CircleFadingArrowUp } from 'lucide-react';
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -721,8 +719,8 @@ export default function MejorasPage() {
               disabled={selectedSkins.length === 0}
               onClick={handleImprovement}
               >
-                <Sparkles className="w-4 h-4 mr-2" />
-                {selectedSkins.length === 5 ? 'Mejorar (5/5)' : `Probar Suerte (${selectedSkins.length}/5)`}
+                <CircleFadingArrowUp className="w-4 h-4" />
+                {selectedSkins.length === 5 ? 'Mejorar (5/5)' : `Mejorar (${selectedSkins.length}/5)`}
               </Button>
             </div>
         </div>
@@ -748,7 +746,7 @@ export default function MejorasPage() {
                     exit={{ opacity: 0, scale: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
                     className="relative group flex flex-col aspect-[3/4] overflow-hidden rounded-xl border bg-gradient-to-b from-gray-900 to-black transition-all duration-150 border-primary/50 shadow-lg shadow-primary/20"
-              style={{
+                    style={{
                       backgroundImage: skin.content_tier ? 
                         `linear-gradient(to top, rgba(${parseInt(skin.content_tier.color.slice(1,3), 16)},${parseInt(skin.content_tier.color.slice(3,5), 16)},${parseInt(skin.content_tier.color.slice(5,7), 16)},0.10) 0%, rgba(${parseInt(skin.content_tier.color.slice(1,3), 16)},${parseInt(skin.content_tier.color.slice(3,5), 16)},${parseInt(skin.content_tier.color.slice(5,7), 16)},0.15) 35%, rgba(17, 24, 39, 0.85) 80%, #0A0E16 100%)` : 
                         undefined
@@ -761,8 +759,7 @@ export default function MejorasPage() {
                            toggleSelectSkin(skin);
                          }}>
                       <X className="w-12 h-12 text-primary" />
-        </div>
-
+                    </div>
                     {/* Imagen de fondo del tier */}
                     {skin.content_tier?.uuid_api && skin.content_tier.uuid_api !== 'default' && (
                       <Image 
@@ -882,8 +879,8 @@ export default function MejorasPage() {
                 </SelectContent>
               </Select>
             )}
-      </div>
           </div>
+        </div>
 
         {/* Grid del inventario */}
         {isLoading ? (
@@ -970,9 +967,9 @@ export default function MejorasPage() {
                 </div>
               );
             })}
-                      </div>
-                    )}
-                  </div>
+          </div>
+        )}
+      </div>
 
       {/* Modal de Ruleta */}
       <AnimatePresence>
@@ -1114,53 +1111,31 @@ export default function MejorasPage() {
             <motion.div
               initial={{ scale: 0.8, opacity: 0, y: 50 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: -20 }}
+              exit={{ scale: 0.9, opacity: 0, y: 0 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="bg-gradient-to-b from-slate-900 to-black rounded-2xl p-8 max-w-md w-full border border-slate-700 shadow-2xl"
+              className="p-8 max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header del modal */}
               <div className="text-center mb-6">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, duration: 0.4, type: "spring", stiffness: 200 }}
-                  className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-yellow-500/30"
-                >
-                  <Sparkles className="w-8 h-8 text-black" />
-                </motion.div>
-                <motion.h2
+                <motion.h3
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3, duration: 0.4 }}
-                  className="text-2xl font-bold text-white mb-2"
+                  className="font-bold inline-block text-3xl font-bold text-foreground font-[Raleway] font-semibold 
+                             italic tracking-widest [text-shadow:_0px_0px_20px_rgba(255,255,255,0.35)] 
+                             bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
                 >
-                  ¡Skin Premiada!
-                </motion.h2>
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4, duration: 0.4 }}
-                  className="text-slate-400"
-                >
-                  Has obtenido una nueva skin
-                </motion.p>
-              </div>
-
-              {/* Skin premiada */}
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.5, duration: 0.5, ease: "easeOut" }}
-                className="relative w-full h-64 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl overflow-hidden mb-6 border border-slate-600"
-              >
-                {/* Tag de NUEVA en esquina superior derecha */}
+                  · SKIN MEJORADA ·
+                </motion.h3>
+                
+                {/* Tag de NUEVA debajo de SKIN MEJORADA */}
                 {isNewSkin && (
                   <motion.div
                     initial={{ scale: 1, opacity: 0, x: 0, y: 0 }}
                     animate={{ scale: 1, opacity: 1, x: 0, y: 0 }}
-                    transition={{ delay: 1.2, duration: 0.4, type: "spring", stiffness: 300 }}
-                    className="absolute top-2 right-2 z-20 px-2 py-1 rounded-xl text-xs font-bold 
+                    transition={{ delay: 0.4, duration: 0.4, type: "spring", stiffness: 300 }}
+                    className="inline-block mt-4 px-3 py-1 rounded-xl text-sm font-bold 
                                bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg 
                                shadow-red-900/20 border border-red-500/20 backdrop-blur-sm
                                active:scale-95 transition-all duration-200"
@@ -1168,23 +1143,51 @@ export default function MejorasPage() {
                     ✨ NUEVA
                   </motion.div>
                 )}
+              </div>
+              
+              {/* Skin premiada */}
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.5, ease: "easeOut" }}
+                className="relative w-full h-64 overflow-hidden mb-6"
+              >
                 {/* Imagen de la skin */}
-                <div className="relative w-full h-full flex items-center justify-center p-4">
-                  {getBestDisplayIcon(rewardSkin) && (
-                      <Image
-                      src={getBestDisplayIcon(rewardSkin) || ''}
-                      alt={rewardSkin.displayName}
-                        fill
-                      className="object-contain p-4"
-                      style={{
-                        filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.3))',
+                <div className="relative w-full h-full flex items-center justify-center p-4 ">
+                    <Image 
+                      src={`/skins-bg/${rewardSkin.contentTierUuid}.png`}
+                      alt={`Fondo para ${rewardSkin.contentTierUuid}`}
+                      layout="fill"
+                      objectFit="contain"
+                      className="absolute inset-0 z-0 p-4 opacity-20 transform scale-125 rotate-12"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        console.warn(`No se encontró la imagen de fondo para el tier: /skins-bg/${rewardSkin.contentTierUuid}.png`); // Usar skin.contentTier.id
                       }}
+                    />
+                  {getBestDisplayIcon(rewardSkin) && (() => {
+                    // Determinar el tipo de arma y obtener los estilos específicos
+                    const weaponType = getWeaponType(rewardSkin.displayName);
+                    const weaponStyles = getWeaponSpecificStyles(weaponType);
+                    // Crear el estilo inline para las transformaciones
+                    const imageTransformStyle: React.CSSProperties = {
+                      transform: `scale(${weaponStyles.baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
+                    };
+                    
+                    return (
+                      <Image
+                        src={getBestDisplayIcon(rewardSkin) || ''}
+                        alt={rewardSkin.displayName}
+                        fill
+                        className="object-contain p-4 group-hover:scale-105 transition-transform duration-300 z-10"
+                        style={imageTransformStyle}
+                        priority={true}
                       />
-                    )}
-                  </div>
+                    );
+                  })()}
+                </div>
 
-                {/* Efecto de brillo */}
-                <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/5 to-transparent opacity-50" />
+              
               </motion.div>
 
               {/* Información de la skin */}
@@ -1194,12 +1197,9 @@ export default function MejorasPage() {
                 transition={{ delay: 0.6, duration: 0.4 }}
                 className="text-center mb-6"
               >
-                <h3 className="text-xl font-bold text-white mb-2">
+                <h3 className="text-2xl font-bold text-white mb-2">
                   {rewardSkin.displayName}
                 </h3>
-                <p className="text-slate-400 text-sm">
-                  {rewardSkin.displayName.split(' ')[0]} Collection
-                </p>
               </motion.div>
 
               {/* Botón de cerrar */}

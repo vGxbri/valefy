@@ -57,7 +57,7 @@ export default function CircularRoulette({
         // Usar SOLO el resultado visual (donde realmente cayó)
         onSpinComplete(visualResult);
         setHasResult(false);
-      }, 9000); // 6 segundos de animación + 3 segundos de pausa = 9 segundos total
+      }, 6000); // 6 segundos de animación + 3 segundos de pausa = 9 segundos total
     }
   }, [isSpinning, successPercentage, hasResult, onSpinComplete]);
 
@@ -180,7 +180,7 @@ export default function CircularRoulette({
               {successPercentage}%
             </div>
             <div className="text-xs text-white/80 font-medium">
-              ÉXITO
+              PROBABILIDAD
             </div>
           </div>
         </div>

@@ -539,31 +539,26 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                   {/* Imagen de fondo dinámica basada en contentTier.id */}
                   {skin.contentTier.id && skin.contentTier.id !== 'default' && (
                     <Image 
-                      src={`/skins-bg/${skin.contentTier.id}.png`} // Usar skin.contentTier.id
-                      // src={`/skins-bg/prueba-bg.png`}
+                      src={`/skins-bg/${skin.contentTier.id}.png`}
                       alt={`Fondo para ${skin.contentTier.nombre}`}
                       layout="fill"
-                      objectFit="contain" // O "cover" si prefieres que llene y recorte
+                      objectFit="contain"
                       className="absolute inset-0 z-0 p-4 opacity-20 transform scale-125 rotate-12"
-                      priority={index < 10} // Priorizar las primeras imágenes
-                      // onError para manejar casos donde la imagen no exista
+                      priority={index < 10}
                       onError={(e) => {
-                        // Opcional: Cambiar a una imagen de fallback o aplicar un estilo
-                        // e.currentTarget.src = '/skins-bg/default-bg.png';
-                        // O simplemente ocultarla si no hay fallback
                         e.currentTarget.style.display = 'none';
-                        console.warn(`No se encontró la imagen de fondo para el tier: /skins-bg/${skin.contentTier.id}.png`); // Usar skin.contentTier.id
+                        console.warn(`No se encontró la imagen de fondo para el tier: /skins-bg/${skin.contentTier.id}.png`);
                       }}
                     />
                   )}
                   <Image
-                    src={skin.skinIcon || '/images/placeholder_icon.webp'}
+                    src={skin.skinIcon}
                     alt={skin.skinName}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                     className="object-contain p-4 group-hover:scale-105 transition-transform duration-300 z-10"
                     style={imageTransformStyle}
-                    priority={index < 12} // Prioritize loading first 12 images
+                    priority={index < 12}
                   />
                   <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-10">
                     <h3 className="font-semibold text-primary" title={skin.skinName}>{skin.skinName}</h3>
