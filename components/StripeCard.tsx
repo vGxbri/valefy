@@ -18,32 +18,6 @@ function StripeCard({
 }: StripeCardProps) {
   return (
     <>
-      <style jsx global>{`
-        .image-hover-white-glow {
-          transition: filter 0.25s ease-in-out, scale 0.25s ease-in-out;
-        }
-        .group:hover .image-hover-white-glow {
-          scale: 1.03;
-          /**
-          filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.1))
-                  drop-shadow(0 0 20px rgba(255, 255, 255, 0.1))
-                  drop-shadow(0 0 20px rgba(255, 255, 255, 0.1));
-          */
-        }
-
-        .div-general-stripecard {
-          border-color: transparent;
-          border-top-width: 1px;
-          border-bottom-width: 1px;
-          border-left-width: 0px;
-          border-right-width: 0px;
-          transition: border-color 0.25s ease-in-out;
-        }
-        
-        .div-general-stripecard:hover {
-          border-color: rgb(255, 255, 255);
-        }
-      `}</style>
       <div className="div-general-stripecard w-full h-auto group p-4 rounded-2xl transition-all duration-300">
         <figure className="w-full h-auto aspect-[4/3] transition-all duration-300 rounded-xl relative">
           <Image

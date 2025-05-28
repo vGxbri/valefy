@@ -753,13 +753,17 @@ export default function MejorasPage() {
                     }}
                   >
                                         {/* Overlay de eliminación al hacer hover */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 transition-opacity duration-200 z-20 flex items-center justify-center cursor-pointer rounded-xl"
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           toggleSelectSkin(skin);
-                         }}>
+                    <button 
+                      className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 transition-opacity duration-200 z-20 flex items-center justify-center cursor-pointer rounded-xl border-none"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSelectSkin(skin);
+                      }}
+                      aria-label={`Deseleccionar ${skin.nombre}`}
+                      type="button"
+                    >
                       <X className="w-12 h-12 text-primary" />
-                    </div>
+                    </button>
                     {/* Imagen de fondo del tier */}
                     {skin.content_tier?.uuid_api && skin.content_tier.uuid_api !== 'default' && (
                       <Image 
@@ -908,9 +912,12 @@ export default function MejorasPage() {
                  selectedSkins[0].content_tier?.uuid_api === skin.content_tier?.uuid_api;
 
                return (
-                 <div
+                 <button
                    key={skin.id}
-                    onClick={() => toggleSelectSkin(skin)}
+                   onClick={() => toggleSelectSkin(skin)}
+                   disabled={!canBeSelected}
+                   aria-label={`${isSelected ? 'Deseleccionar' : 'Seleccionar'} ${skin.nombre} - ${skin.content_tier?.nombre || 'Sin tier'}`}
+                   type="button"
                    className={`group relative flex flex-col aspect-[3/4] overflow-hidden rounded-xl border bg-gradient-to-b from-gray-900 to-black transition-all duration-150 cursor-pointer
                      ${isSelected 
                        ? 'border-primary shadow-lg shadow-primary/40 grayscale scale-95' 
@@ -918,12 +925,12 @@ export default function MejorasPage() {
                          ? 'border-gray-800/70 hover:shadow-[0px_2px_46px_-4px_rgba(255,_255,_255,_0.10)]'
                          : 'border-gray-600/30 opacity-50 cursor-not-allowed hover:opacity-60'}
                    `}
-                    style={{
-                    backgroundImage: !isSelected && skin.content_tier ? 
-                      `linear-gradient(to top, rgba(${parseInt(skin.content_tier.color.slice(1,3), 16)},${parseInt(skin.content_tier.color.slice(3,5), 16)},${parseInt(skin.content_tier.color.slice(5,7), 16)},0.10) 0%, rgba(${parseInt(skin.content_tier.color.slice(1,3), 16)},${parseInt(skin.content_tier.color.slice(3,5), 16)},${parseInt(skin.content_tier.color.slice(5,7), 16)},0.15) 35%, rgba(17, 24, 39, 0.85) 80%, #0A0E16 100%)` : 
-                      undefined
-                    }}
-                  >
+                   style={{
+                     backgroundImage: !isSelected && skin.content_tier ? 
+                       `linear-gradient(to top, rgba(${parseInt(skin.content_tier.color.slice(1,3), 16)},${parseInt(skin.content_tier.color.slice(3,5), 16)},${parseInt(skin.content_tier.color.slice(5,7), 16)},0.10) 0%, rgba(${parseInt(skin.content_tier.color.slice(1,3), 16)},${parseInt(skin.content_tier.color.slice(3,5), 16)},${parseInt(skin.content_tier.color.slice(5,7), 16)},0.15) 35%, rgba(17, 24, 39, 0.85) 80%, #0A0E16 100%)` : 
+                       undefined
+                   }}
+                 >
                   {/* Imagen de fondo del tier */}
                     {skin.content_tier?.uuid_api && skin.content_tier.uuid_api !== 'default' && (
                         <Image
@@ -964,7 +971,7 @@ export default function MejorasPage() {
                   <div className={`absolute top-2 left-2 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-primary border-white' : 'bg-slate-700/80 border-slate-600 hover:bg-slate-600/80'}`}>
                     {isSelected && <div className="w-2 h-2 bg-white rounded-full"></div>}
                     </div>
-                </div>
+                </button>
               );
             })}
           </div>

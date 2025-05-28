@@ -215,6 +215,31 @@
     z-index: -1;
     animation: steam 20s linear infinite;
   }
+
+  .image-hover-white-glow {
+    transition: filter 0.25s ease-in-out, scale 0.25s ease-in-out;
+  }
+  .group:hover .image-hover-white-glow {
+    scale: 1.03;
+    /**
+    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.1))
+            drop-shadow(0 0 20px rgba(255, 255, 255, 0.1))
+            drop-shadow(0 0 20px rgba(255, 255, 255, 0.1));
+    */
+  }
+
+  .div-general-stripecard {
+    border-color: transparent;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 0px;
+    border-right-width: 0px;
+    transition: border-color 0.25s ease-in-out;
+  }
+  
+  .div-general-stripecard:hover {
+    border-color: rgb(255, 255, 255);
+  }
   
   @keyframes steam {
     0% {
