@@ -1422,6 +1422,14 @@ export default function AdminPage() {
                             <div
                               className="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-white/5 border border-white/10 hover:border-primary/40"
                               onClick={() => loadSkinsForBundle(bundle)}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  loadSkinsForBundle(bundle);
+                                }
+                              }}
                             >
                               <Image
                                 src={bundle.displayIcon}
@@ -1458,6 +1466,16 @@ export default function AdminPage() {
                                             : "bg-black/20 border border-white/10 hover:bg-black/40"
                                         }`}
                                         onClick={() => toggleSkinSelection(skin)}
+                                        role="button"
+                                        tabIndex={0}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            toggleSkinSelection(skin);
+                                          }
+                                        }}
+                                        aria-pressed={selectedSkins.some(s => s.id === skin.id)}
+                                        aria-label={`${selectedSkins.some(s => s.id === skin.id) ? 'Deseleccionar' : 'Seleccionar'} skin ${skin.nombre}`}
                                       >
                                         <div className="aspect-square mb-1 bg-black/30 rounded overflow-hidden">
                                           {skin.imagen_url && (
