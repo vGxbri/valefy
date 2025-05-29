@@ -692,7 +692,7 @@ export default function MejorasPage() {
       {/* Header */}
       <div className="mb-8">
       <h1 className="text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
-        / MEJORAS
+        / MEJORAR
       </h1>
       </div>
 

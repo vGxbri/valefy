@@ -238,16 +238,6 @@ export default function MainPage() {
             <h2 className="text-3xl font-bold text-foreground flex items-center font-[Raleway] font-semibold italic tracking-widest">
               / CAJAS
             </h2>
-
-            <div className="flex items-center gap-4">
-              <button
-                className="px-3 py-1 text-sm bg-background/40 hover:bg-background/60 text-white/70 hover:text-white border border-white/10 rounded-md transition-colors"
-                title="Panel de administración para pruebas"
-                onClick={() => (window.location.href = "/admin")}
-              >
-                Admin
-              </button>
-            </div>
           </div>
 
           <div className="w-full overflow-hidden relative p-8">

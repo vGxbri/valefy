@@ -107,13 +107,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         profile &&
         profile.email
       ) {
-        let { data: usuario } = await supabase
+        let { data: usuario, error: searchError } = await supabase
           .from("usuarios")
           .select("*")
           .eq("correo", profile.email)
-          .single();
+          .maybeSingle();
 
         if (!usuario) {
+          // Usuario no existe, crear nuevo usuario OAuth
           const { data: nuevo, error: insertError } = await supabase
             .from("usuarios")
             .insert([
@@ -128,10 +129,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             .select()
             .single();
 
-          console.log("[OAuth] Resultado de inserción:", {
-            nuevo,
-            insertError,
-          });
           if (insertError || !nuevo) {
             throw new Error(
               "No se pudo crear el usuario OAuth en la tabla usuarios: " +
@@ -139,6 +136,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             );
           }
           usuario = nuevo;
+        } else {
+          // Usuario ya existe, verificar si necesita actualización para OAuth
+          if (!usuario.oauth) {
+            // Usuario existe pero no es OAuth, actualizar para permitir ambos métodos
+            const { data: updated, error: updateError } = await supabase
+              .from("usuarios")
+              .update({ oauth: true })
+              .eq("id", usuario.id)
+              .select()
+              .single();
+
+            if (updateError) {
+              console.error("[OAuth] Error al actualizar usuario para OAuth:", updateError);
+              throw new Error("No se pudo actualizar el usuario para OAuth");
+            }
+
+            usuario = updated || usuario;
+          }
         }
 
         token.id = usuario.id;
@@ -151,6 +166,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
+      }
+
+      // Verificar consistencia del token con la base de datos
+      if (token.id && token.email && !account && !user) {
+        // Verificar si el usuario del token existe en la base de datos
+        const { data: tokenUser, error: tokenCheckError } = await supabase
+          .from("usuarios")
+          .select("*")
+          .eq("id", token.id)
+          .maybeSingle();
+
+        if (tokenCheckError || !tokenUser) {
+          // Si el usuario del token no existe, buscar por email
+          const { data: emailUser, error: emailSearchError } = await supabase
+            .from("usuarios")
+            .select("*")
+            .eq("correo", token.email)
+            .maybeSingle();
+
+          if (emailUser) {
+            // Actualizar token con la información correcta
+            token.id = emailUser.id;
+            token.email = emailUser.correo;
+            token.name = emailUser.nombre_usuario;
+          } else {
+            // Token totalmente inconsistente, forzar re-login
+            throw new Error("Token inconsistente, necesario re-login");
+          }
+        }
       }
 
       return token;
