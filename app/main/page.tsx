@@ -232,7 +232,8 @@ export default function MainPage() {
 
   return (
     <>      
-      <div className="body-main-page flex flex-col gap-8 px-4 sm:px-8 md:px-12 lg:px-16 pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1">        {/* Sección de Cajas */}
+      <div className="body-main-page flex flex-col gap-8 px-4 sm:px-8 md:px-12 lg:px-16 pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1">        
+        {/* Sección de Cajas */}
         <div className="w-full">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold text-foreground flex items-center font-[Raleway] font-semibold italic tracking-widest">
@@ -266,6 +267,14 @@ export default function MainPage() {
                 >
                   {categorias.map((categoria, index) => {
                     const categoriaInfo = getCategoriaInfo(categoria);
+                    
+                    // Filtrar cajas disponibles para esta categoría
+                    const cajasDisponiblesEnCategoria = cajasPorCategoria[categoria]?.filter(caja => caja.esta_disponible) || [];
+
+                    // No renderizar la sección de categoría si no hay cajas disponibles
+                    if (cajasDisponiblesEnCategoria.length === 0) {
+                      return null;
+                    }
                     
                     return (
                       <motion.div 
@@ -302,8 +311,8 @@ export default function MainPage() {
                           </div>
                         )}
                         
-                        <div className="flex flex-wrap gap-4 justify-center items-center w-full">
-                          {cajasPorCategoria[categoria]?.map((caja) => {
+                        <div className="flex flex-wrap justify-center items-center w-full gap-2">
+                          {cajasDisponiblesEnCategoria.map((caja) => {
                             // Usar la función centralizada para extraer el tipo de caja
                             const tipoCaja = extraerTipoCaja(caja.nombre, caja.es_diaria);
 
@@ -326,7 +335,7 @@ export default function MainPage() {
                               <>
                                 <Link
                                   key={caja.id}
-                                  className="block w-full sm:w-1/2 md:w-1/3 lg:w-1/4"
+                                  className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-[22%]"
                                   href={rutaDinamica}
                                 >
                                   <StripeCard

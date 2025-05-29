@@ -882,16 +882,10 @@ export default function AdminPage() {
             </div>
             
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" onClick={loadInitialData}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Actualizar
-              </Button>
               <Link href="/main">
-                <Button variant="secondary" size="sm">
-                  <ChevronRight className="h-4 w-4 mr-2 rotate-180" />
-                  Volver al Inicio
-                </Button>
                 <Button variant="default" className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200">
+                <ChevronRight className="h-4 w-4 mr-2 rotate-180" />
+                Volver al Inicio
                 </Button>
               </Link>
             </div>
@@ -979,7 +973,7 @@ export default function AdminPage() {
                           <p className="text-sm font-medium text-white">{caja.nombre}</p>
                           <p className="text-xs text-white/60">{caja.precio} VP</p>
                         </div>
-                        <Badge variant={caja.esta_disponible ? "default" : "secondary"}>
+                        <Badge variant={caja.esta_disponible ? "default" : "secondary"} className="text-white/90">
                           {caja.esta_disponible ? "Disponible" : "No disponible"}
                         </Badge>
                       </div>
@@ -1028,43 +1022,9 @@ export default function AdminPage() {
                     placeholder="Buscar cajas..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-white/5 border-white/20 text-white"
+                    className="pl-10 bg-white/5 border-white/20 text-white rounded-2xl"
                   />
                 </div>
-                <Select value={boxFilter} onValueChange={setBoxFilter}>
-              <SelectTrigger className="w-full md:w-48 bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150">
-                <Filter className="h-4 w-4 mr-2 inline-block opacity-70" />
-                {/* Default filter: disponible */}
-                {boxFilter === "Disponibles"}
-                <SelectValue/>
-              </SelectTrigger>
-              <SelectContent className="bg-slate-800 text-white rounded-md shadow-lg border-slate-700">
-                <SelectItem 
-                  value="available"
-                  className="hover:bg-slate-700 rounded-md active:bg-slate-700"
-                >
-                  Disponibles
-                </SelectItem>
-                <SelectItem 
-                  value="unavailable"
-                  className="hover:bg-slate-700 rounded-md active:bg-slate-700"
-                >
-                  No Disponibles
-                </SelectItem>
-                <SelectItem 
-                  value="daily"
-                  className="hover:bg-slate-700 rounded-md active:bg-slate-700"
-                >
-                  Diarias
-                </SelectItem>
-                <SelectItem 
-                  value="student"
-                  className="hover:bg-slate-700 rounded-md active:bg-slate-700"
-                >
-                  Alumno
-                </SelectItem>
-              </SelectContent>
-            </Select>
               </div>
               <Button variant="default" className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
                 onClick={() => {
@@ -1076,7 +1036,7 @@ export default function AdminPage() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {filteredCajas.map((caja) => (
                 <Card key={caja.id} className="overflow-hidden">
                   <div className="relative h-48 flex items-center justify-center">
@@ -1089,26 +1049,10 @@ export default function AdminPage() {
                       className="object-cover"
                     />
                     <div className="absolute top-2 right-2">
-                      <Badge variant={caja.esta_disponible ? "default" : "secondary"}>
+                      <Badge variant={caja.esta_disponible ? "default" : "secondary"} className="text-white/90">
                         {caja.esta_disponible ? "Disponible" : "No disponible"}
                       </Badge>
                     </div>
-                    {caja.es_diaria && (
-                      <div className="absolute top-2 left-2">
-                        <Badge variant="outline">
-                          <Clock className="h-3 w-3 mr-1" />
-                          Diaria
-                        </Badge>
-                      </div>
-                    )}
-                    {caja.categoria === "alumno" && (
-                      <div className="absolute bottom-2 left-2">
-                        <Badge variant="outline" className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30">
-                          <Star className="h-3 w-3 mr-1" />
-                          Alumno
-                        </Badge>
-                      </div>
-                    )}
                   </div>
                   <CardContent className="p-4">
                     <div className="space-y-3">
@@ -1157,25 +1101,11 @@ export default function AdminPage() {
                     placeholder="Buscar skins..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-white/5 border-white/20 text-white"
+                    className="pl-10 bg-white/5 border-white/20 text-white rounded-2xl"
                   />
                 </div>
-                <Select value={skinFilter} onValueChange={setSkinFilter}>
-                  <SelectTrigger className="w-40 bg-white/5 border-white/20 text-white">
-                    <SelectValue placeholder="Filtrar por tier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los Tiers</SelectItem>
-                    <SelectItem value="legendary">Legendary</SelectItem>
-                    <SelectItem value="epic">Epic</SelectItem>
-                    <SelectItem value="rare">Rare</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
-              <Button className="bg-primary hover:bg-primary/80" disabled>
-                <Plus className="h-4 w-4 mr-2" />
-                Sincronizar API
-              </Button>
+              
             </div>
             <Card>
               <CardContent className="p-0">
@@ -1243,7 +1173,10 @@ export default function AdminPage() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-backgroundAlt/90 backdrop-blur-xl border border-white/10 rounded-2xl p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto"
+              className="bg-background border border-white/10 rounded-2xl backdrop-blur-xl 
+                         shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 
+                         hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-6 w-full max-w-6xl max-h-[90vh] 
+                         overflow-y-auto custom-scrollbar"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
@@ -1415,7 +1348,7 @@ export default function AdminPage() {
                       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary" />
                     </div>
                   ) : (
-                    <div className="max-h-96 overflow-y-auto">
+                    <div className="max-h-96 overflow-y-auto custom-scrollbar">
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {filteredBundles.map((bundle) => (
                           <div key={bundle.uuid} className="mb-2">
@@ -1506,15 +1439,86 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
+              {/* Skins Seleccionadas */}
+              {selectedSkins.length > 0 && (
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle className="text-white flex items-center justify-between">
+                      Skins Seleccionadas
+                      <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/40">
+                        {selectedSkins.length} skins
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-80 overflow-y-auto">
+                      {selectedSkins.map((skin) => (
+                        <div
+                          key={skin.id}
+                          className="relative p-2 rounded-lg bg-black/20 border border-white/10 hover:border-primary/40 transition-all group"
+                        >
+                          <button
+                            onClick={() => toggleSkinSelection(skin)}
+                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500/80 hover:bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            title="Quitar skin"
+                          >
+                            ×
+                          </button>
+                          <div className="aspect-square mb-2 bg-black/30 rounded overflow-hidden">
+                            {skin.imagen_url && (
+                              <Image
+                                src={skin.imagen_url}
+                                alt={skin.nombre}
+                                width={80}
+                                height={80}
+                                quality={100}
+                                className="object-contain w-full h-full"
+                              />
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-white truncate font-medium" title={skin.nombre}>
+                              {skin.nombre}
+                            </p>
+                            <p 
+                              className="text-xs font-semibold truncate" 
+                              style={{ color: skin.content_tier?.color || "#fff" }}
+                              title={skin.content_tier?.nombre}
+                            >
+                              {skin.content_tier?.nombre}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedSkins.length > 12 && (
+                      <div className="mt-3 text-center">
+                        <p className="text-xs text-white/60">
+                          Desplázate para ver más skins seleccionadas
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Botones de acción */}
-              <div className="flex justify-end gap-4 mt-6">
-                <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button 
+                  variant="secondary"
+                  className="!text-white/70 hover:!bg-white/10 active:!bg-white/20 transition-all duration-200 
+                             rounded-xl border border-transparent hover:border-white/10 active:scale-95 bg-transparent"
+                  onClick={() => setShowCreateModal(false)}
+                >
                   Cancelar
                 </Button>
                 <Button 
                   onClick={createCaja} 
+                  variant="default"
                   disabled={isCreating}
-                  className="bg-primary hover:bg-primary/80"
+                  className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg 
+                             shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 
+                             hover:to-red-600/30 active:scale-95 transition-all duration-200"
                 >
                   {isCreating ? "Creando..." : "Crear Caja"}
                 </Button>
@@ -1538,7 +1542,10 @@ export default function AdminPage() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-backgroundAlt/90 backdrop-blur-xl border border-white/10 rounded-2xl p-6 w-full max-w-2xl"
+              className="bg-background border border-white/10 rounded-2xl backdrop-blur-xl 
+                         shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 
+                         hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-6 w-full max-w-xl max-h-[90vh] 
+                         overflow-y-auto custom-scrollbar"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
@@ -1593,7 +1600,7 @@ export default function AdminPage() {
                   </div>
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-4 flex flex-col items-center justify-center">
                   <div className="w-32 h-32 relative bg-white/5 rounded-lg overflow-hidden">
                     <Image
                       src={editingCaja.imagen_url}
@@ -1629,14 +1636,21 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-4 mt-6">
-                <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button 
+                  variant="secondary"
+                  className="!text-white/70 hover:!bg-white/10 active:!bg-white/20 transition-all duration-200 
+                             rounded-xl border border-transparent hover:border-white/10 active:scale-95 bg-transparent"
+                  onClick={() => setShowEditModal(false)}
+                >
                   Cancelar
                 </Button>
                 <Button 
                   onClick={saveEditChanges} 
                   disabled={isUpdating}
-                  className="bg-primary hover:bg-primary/80"
+                  className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg 
+                             shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 
+                             hover:to-red-600/30 active:scale-95 transition-all duration-200"
                 >
                   {isUpdating ? "Guardando..." : "Guardar Cambios"}
                 </Button>

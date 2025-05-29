@@ -7,6 +7,7 @@ import {
   LogOut,
   Bell,
   Wallet,
+  ListChecks,
 } from "lucide-react";
 import {
   Modal,
@@ -102,9 +103,7 @@ export function AppSidebar() {
             <SidebarMenu className="flex flex-col gap-2 p-2">
               {items.map((item) => {
                 const isActive =
-                  pathname === item.url ||
-                  (item.url !== "/main" && pathname.startsWith(item.url));
-
+                  pathname === item.url || (item.url !== "/main" && pathname.startsWith(item.url));
                 return (
                   <SidebarMenuItem key={item.title}>
                     <Link
@@ -139,6 +138,21 @@ export function AppSidebar() {
                   <Wallet className="h-5 w-5 text-primary/80" />
                   <span className="text-base font-medium">Créditos: --</span>
                 </div>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <Link
+                  className={`group relative inline-flex items-center gap-3 px-5 py-3 font-medium rounded-xl overflow-hidden transition-all duration-300 ease-out w-full active:scale-95 active:shadow-inner ${
+                    pathname === "/main/misiones" || (pathname !== "/main" && pathname.startsWith("/main"))
+                      ? "bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 active:from-red-500/30 active:to-red-600/30"
+                      : "text-white/70 hover:bg-white/5 hover:text-white border border-transparent hover:border-white/10 active:bg-white/10"
+                  }`}
+                  href="/main/misiones"
+                >
+                  <ListChecks className="h-5 w-5 text-primary/80" />
+                  <span className="text-base font-medium">
+                    Misiones
+                  </span>
+                </Link>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
