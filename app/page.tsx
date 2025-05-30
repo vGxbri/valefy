@@ -10,11 +10,22 @@ import AuthModal from "../components/AuthModal";
 
 import { ImageCarousel } from "@/components/landing/ImageCarousel";
 import { Timeline } from "@/components/landing/Timeline";
-import { getWeaponSkins, getRandomSkins } from "@/lib/valorantApi";
+import { getWeaponSkins, getRandomSkins, filterSkinsByBundleWithIcon, getBestDisplayIcon, getContentTiers } from "@/lib/valorantApi";
 import { timelineData } from "@/components/landing/ProcessData";
 import Navbar from "@/components/landing/Navbar";
 // Fix: Update the import path for Footer
 import Footer from "@/components/Footer";
+
+// Interfaz para las skins con información del tier
+interface SkinWithTier {
+  skinIcon: string;
+  skinName: string;
+  contentTier: {
+    id: string;
+    nombre: string;
+    color: string;
+  };
+}
 
 export default function LandingPage() {
   const { data: session, status } = useSession(); // Obtener estado de la sesión
@@ -24,38 +35,56 @@ export default function LandingPage() {
   const [authModalView, setAuthModalView] = useState<"login" | "register">(
     "register",
   );
-  const [carouselImages1, setCarouselImages1] = useState<string[]>([]);
-  const [carouselImages2, setCarouselImages2] = useState<string[]>([]);
+  const [carouselSkins1, setCarouselSkins1] = useState<SkinWithTier[]>([]);
+  const [carouselSkins2, setCarouselSkins2] = useState<SkinWithTier[]>([]);
 
   // Cargar datos al montar el componente
   useEffect(() => {
     async function loadData() {
       try {
-        // Obtenemos todas las skins y filtramos las que no tienen icono o son "random favorite"
-        const allSkins = (await getWeaponSkins()).filter(
-          (skin) =>
-            skin.displayIcon &&
-            !skin.displayName.toLowerCase().includes("random favorite skin"),
-        );
+        // Obtenemos todas las skins y tiers
+        const [allSkins, allTiers] = await Promise.all([
+          getWeaponSkins(),
+          getContentTiers()
+        ]);
 
-        // Obtenemos skins aleatorias para el grid
-        const randomGridSkins = getRandomSkins(allSkins, 6);
+        // Aplicamos exactamente el mismo filtro que usa el catálogo y admin
+        const filteredSkins = await filterSkinsByBundleWithIcon(allSkins);
 
-        // Obtenemos skins aleatorias para los carruseles (diferentes a las del grid)
-        const randomCarouselSkins1 = getRandomSkins(allSkins, 8);
-        const randomCarouselSkins2 = getRandomSkins(allSkins, 8);
+        // Crear un mapa de tiers para búsquedas rápidas
+        const tierMap = new Map(allTiers.map(tier => [tier.uuid, tier]));
 
-        // Extraemos solo las URLs de los iconos para el carrusel
-        setCarouselImages1(
-          randomCarouselSkins1
-            .map((chroma) => chroma.displayIcon)
-            .filter((icon) => typeof icon === "string"),
-        );
-        setCarouselImages2(
-          randomCarouselSkins2
-            .map((chroma) => chroma.displayIcon)
-            .filter((icon) => typeof icon === "string"),
-        );
+        // Hacemos selección aleatoria manual y obtenemos información del tier
+        const shuffled1 = [...filteredSkins].sort(() => 0.5 - Math.random());
+        const shuffled2 = [...filteredSkins].sort(() => 0.5 - Math.random());
+        
+        const randomCarouselSkins1 = shuffled1.slice(0, Math.min(8, shuffled1.length));
+        const randomCarouselSkins2 = shuffled2.slice(0, Math.min(8, shuffled2.length));
+
+        // Convertir a formato con información del tier
+        const processSkinsWithTier = (skins: typeof randomCarouselSkins1): SkinWithTier[] => {
+          return skins
+            .map((skin) => {
+              const skinIcon = getBestDisplayIcon(skin);
+              if (!skinIcon) return null;
+
+              const tier = skin.contentTierUuid ? tierMap.get(skin.contentTierUuid) : null;
+              
+              return {
+                skinIcon,
+                skinName: skin.displayName,
+                contentTier: {
+                  id: skin.contentTierUuid || 'default',
+                  nombre: tier?.displayName || 'Standard',
+                  color: tier?.highlightColor ? `#${tier.highlightColor.substring(0, 6)}` : '#FFFFFF',
+                }
+              };
+            })
+            .filter((skin): skin is SkinWithTier => skin !== null);
+        };
+
+        setCarouselSkins1(processSkinsWithTier(randomCarouselSkins1));
+        setCarouselSkins2(processSkinsWithTier(randomCarouselSkins2));
       } catch (error) {
         console.error("Error al cargar datos:", error);
       }
@@ -136,13 +165,13 @@ export default function LandingPage() {
             <div className="mt-8 mb-4">
               <ImageCarousel
                 direction="left"
-                images={carouselImages1}
+                skins={carouselSkins1}
                 speed={10}
               />
               <div className="my-0" />
               <ImageCarousel
                 direction="right"
-                images={carouselImages2}
+                skins={carouselSkins2}
                 speed={10}
               />
             </div>

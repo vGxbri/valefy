@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added
 import { getWeaponSkins as fetchAllWeaponSkinsFromApi, getBestDisplayIcon, getContentTiers as fetchAllContentTiersFromApi, Skin as ValorantApiSkin, ContentTier as ValorantApiContentTier, getWeaponType, getWeaponSpecificStyles } from "@/lib/valorantApi";
 import { motion, AnimatePresence } from "framer-motion";
+import { createClient } from '@/utils/supabase/client';
+import { logSkinEliminada, type SkinEliminadaLog } from '@/lib/logUtils';
 
 // Componente de carga para el inventario
 const InventoryLoading = ({ className = "" }: { className?: string }) => (
@@ -271,9 +273,27 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
     console.log("Deleting items with IDs:", Array.from(selectedItems));
 
     try {
-      // Ahora cada selectedItem es directamente el ID de la base de datos
+      // Recopilar información de las skins antes de eliminarlas para el log
       const idsToDelete = Array.from(selectedItems);
+      const skinsToDelete = userSkins.filter(skin => idsToDelete.includes(skin.id));
       
+      // Preparar datos para el log
+      const logData: SkinEliminadaLog = {
+        usuario_id: userId,
+        skins_eliminadas: skinsToDelete.map(skin => ({
+          skin_id: skin.skin_id,
+          skin_nombre: skin.skinName,
+          inventario_id: skin.id
+        })),
+        motivo: 'manual',
+        contexto: {
+          origen: 'inventario_display',
+          cantidad_total: idsToDelete.length,
+          fecha_eliminacion: new Date().toISOString()
+        }
+      };
+      
+      // Eliminar de la base de datos
       const { error: deleteError } = await supabase
         .from('inventario_usuario')
         .delete()
@@ -284,6 +304,14 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
         setError("Error al eliminar skins: " + (deleteError.message || 'Error desconocido'));
       } else {
         console.log("Successfully deleted", idsToDelete.length, "skins");
+        
+        // Registrar el log (no interrumpir el flujo si falla)
+        const supabaseClient = createClient();
+        const logResult = await logSkinEliminada(logData);
+        if (!logResult.success) {
+          console.warn('Error al registrar log de skin eliminada:', logResult.error);
+        }
+        
         await fetchUserInventory();
         setSelectedItems(new Set());
         setError(null);

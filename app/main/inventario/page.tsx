@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react"; // Added for next-auth
+import { useSession } from "next-auth/react";
 import { createClient } from '@/utils/supabase/client';
 import InventoryDisplayComponent from "../../../components/InventoryDisplayComponent";
 import { Button } from "@/components/ui/button";

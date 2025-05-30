@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
+import { inicializarMisionesUsuario } from "@/lib/missionUtils";
 
 import { User } from "@/types/database";
 
@@ -74,6 +75,9 @@ export async function POST(request: Request) {
         { status: 500 },
       );
     }
+
+    // Llamar a la función para inicializar misiones del usuario
+    await inicializarMisionesUsuario(data[0].id);
 
     return NextResponse.json({ success: true, user: data[0] }, { status: 201 });
   } catch (error) {

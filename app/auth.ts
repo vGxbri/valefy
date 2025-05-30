@@ -5,6 +5,7 @@ import DiscordProvider from "next-auth/providers/discord";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createClient } from "@supabase/supabase-js";
 import bcryptjs from "bcryptjs";
+import { inicializarMisionesUsuario } from "@/lib/missionUtils";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,7 +43,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Buscar usuario en la tabla 'usuarios'
         const { data: user, error } = await supabase
           .from("usuarios")
-          .select("id, correo, nombre_usuario, password")
+          .select("id, correo, nombre_usuario, password, oauth")
           .eq("correo", credentials.email)
           .single();
 
@@ -57,6 +58,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           typeof user.password !== "string" ||
           !user.password
         ) {
+          // Verificar si es una cuenta OAuth sin contraseña
+          if (user && !user.password && user.oauth) {
+            console.log("[authorize] Intento de login con credenciales en cuenta OAuth");
+            return null;
+          }
+          
           console.log(
             "[authorize] Usuario no encontrado o password inválido en la base de datos",
           );
@@ -136,6 +143,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             );
           }
           usuario = nuevo;
+          inicializarMisionesUsuario(usuario.id);
         } else {
           // Usuario ya existe, verificar si necesita actualización para OAuth
           if (!usuario.oauth) {
@@ -153,6 +161,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }
 
             usuario = updated || usuario;
+            inicializarMisionesUsuario(usuario.id);
           }
         }
 

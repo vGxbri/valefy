@@ -1,5 +1,6 @@
 // lib/boxUtils.ts
 import { SupabaseClient } from "@supabase/supabase-js";
+import { logCajaAbierta, type CajaAbiertaLog } from "./logUtils";
 
 /**
  * Extrae el tipo de caja a partir del nombre de la caja de manera consistente
@@ -310,5 +311,69 @@ export async function getTierData(
   } catch (error) {
     console.error("Excepción al obtener datos del tier:", error);
     return null;
+  }
+}
+
+/**
+ * Procesa la apertura completa de una caja con logging
+ * @param userId ID del usuario
+ * @param cajaId ID de la caja
+ * @param skins Array de skins disponibles
+ * @param probabilidades Array de probabilidades por tier
+ * @param supabase Cliente de Supabase
+ * @param costoCaja Costo en VP de la caja
+ * @param metodoPago Método de pago utilizado
+ * @returns Un objeto con la skin seleccionada y el resultado de la operación
+ */
+export async function processBoxOpeningWithLog(
+  userId: string,
+  cajaId: string,
+  skins: Skin[],
+  probabilidades: TierProbabilidad[],
+  supabase: SupabaseClient,
+  costoCaja: number,
+  metodoPago: string = 'vp',
+): Promise<{
+  selectedSkin: Skin | null;
+  inventoryOperationType: "added" | "error";
+  error?: any;
+}> {
+  try {
+    // Procesar apertura de caja normalmente
+    const result = await processBoxOpening(userId, cajaId, skins, probabilidades, supabase);
+    
+    // Si fue exitoso, registrar el log
+    if (result.selectedSkin && result.inventoryOperationType === "added") {
+      const tierData = await getTierData(supabase, result.selectedSkin.content_tier?.uuid_api || null);
+      
+      const logData: CajaAbiertaLog = {
+        usuario_id: userId,
+        caja_id: cajaId,
+        skins_conseguidas: [{
+          skin_id: result.selectedSkin.id,
+          skin_nombre: result.selectedSkin.nombre,
+          tier_id: result.selectedSkin.content_tier?.uuid_api || 'unknown',
+          tier_nombre: tierData?.nombre || 'Unknown',
+          tier_color: tierData?.color || '#FFFFFF'
+        }],
+        costo: costoCaja,
+        metodo_pago: metodoPago
+      };
+      
+      // Registrar el log (no interrumpir el flujo si falla)
+      const logResult = await logCajaAbierta(logData);
+      if (!logResult.success) {
+        console.warn('Error al registrar log de caja abierta:', logResult.error);
+      }
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("Error al procesar la apertura de la caja con logging:", error);
+    return {
+      selectedSkin: null,
+      inventoryOperationType: "error",
+      error,
+    };
   }
 }

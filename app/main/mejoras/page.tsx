@@ -20,6 +20,8 @@ import {
 } from "@/lib/valorantApi";
 import { extractBundleName } from '@/lib/utils';
 import CircularRoulette from "@/components/CircularRoulette";
+import { createClient } from '@/utils/supabase/client';
+import { logSkinMejorada, type SkinMejoradaLog } from '@/lib/logUtils';
 
 // Definición del ContentTier de Supabase (ya existente y correcta)
 type SupabaseContentTier = {
@@ -512,10 +514,26 @@ export default function MejorasPage() {
       setIsNewSkin(skinIsNew);
       setShowResultModal(true);
 
-      // Recargar inventario para mostrar la nueva skin
-      setTimeout(() => {
-        loadUserInventory();
-      }, 1000);
+      // Registrar el log de mejora exitosa
+      const logData: SkinMejoradaLog = {
+        usuario_id: userId as string,
+        exitoso: true,
+        probabilidad_calculada: 100.0, // 5 skins = 100% de éxito
+        skin_objetivo_id: randomSkin.uuid || undefined,
+        skin_objetivo_nombre: randomSkin.displayName,
+        skins_descartadas: selectedSkins.map(skin => ({
+          skin_id: skin.skin_id || skin.uuid,
+          skin_nombre: skin.nombre,
+          inventario_id: skin.inventoryIds?.[0] || skin.id
+        })),
+        tier_objetivo_id: randomSkin.contentTierUuid || undefined,
+        cantidad_skins_usadas: selectedSkins.length
+      };
+
+      const logResult = await logSkinMejorada(logData);
+      if (!logResult.success) {
+        console.warn('Error al registrar log de mejora exitosa:', logResult.error);
+      }
 
       toast.success("¡Mejora realizada exitosamente!");
       
@@ -557,6 +575,11 @@ export default function MejorasPage() {
   };
 
   const handleRouletteWin = async () => {
+    if (!userId) {
+      toast.error("Error: Usuario no identificado");
+      return;
+    }
+
     try {
       // Obtener una skin aleatoria de tier superior
       const randomSkin = await getRandomRewardSkin();
@@ -621,6 +644,27 @@ export default function MejorasPage() {
       setIsNewSkin(skinIsNew);
       setShowResultModal(true);
 
+      // Registrar el log de mejora exitosa
+      const logData: SkinMejoradaLog = {
+        usuario_id: userId as string,
+        exitoso: true,
+        probabilidad_calculada: successPercentage,
+        skin_objetivo_id: randomSkin.uuid || undefined,
+        skin_objetivo_nombre: randomSkin.displayName,
+        skins_descartadas: selectedSkins.map(skin => ({
+          skin_id: skin.skin_id || skin.uuid,
+          skin_nombre: skin.nombre,
+          inventario_id: skin.inventoryIds?.[0] || skin.id
+        })),
+        tier_objetivo_id: randomSkin.contentTierUuid || undefined,
+        cantidad_skins_usadas: selectedSkins.length
+      };
+
+      const logResult = await logSkinMejorada(logData);
+      if (!logResult.success) {
+        console.warn('Error al registrar log de mejora exitosa:', logResult.error);
+      }
+
       setTimeout(() => {
         loadUserInventory();
       }, 1000);
@@ -633,6 +677,11 @@ export default function MejorasPage() {
   };
 
   const handleRouletteLose = async () => {
+    if (!userId) {
+      toast.error("Error: Usuario no identificado");
+      return;
+    }
+
     try {
       // Solo eliminar las skins seleccionadas sin dar recompensa
       const selectedInventoryIds = selectedSkins.flatMap(skin => skin.inventoryIds || []);
@@ -657,6 +706,25 @@ export default function MejorasPage() {
       // Cerrar modal y mostrar mensaje
       setShowRouletteModal(false);
       toast.error("La mejora ha fallado. Has perdido las skins seleccionadas.");
+
+      // Registrar el log de mejora fallida
+      const logData: SkinMejoradaLog = {
+        usuario_id: userId as string,
+        exitoso: false,
+        probabilidad_calculada: successPercentage,
+        skin_objetivo_nombre: 'Mejora fallida',
+        skins_descartadas: selectedSkins.map(skin => ({
+          skin_id: skin.skin_id || skin.uuid,
+          skin_nombre: skin.nombre,
+          inventario_id: skin.inventoryIds?.[0] || skin.id
+        })),
+        cantidad_skins_usadas: selectedSkins.length
+      };
+
+      const logResult = await logSkinMejorada(logData);
+      if (!logResult.success) {
+        console.warn('Error al registrar log de mejora fallida:', logResult.error);
+      }
 
       setTimeout(() => {
         loadUserInventory();
@@ -703,12 +771,7 @@ export default function MejorasPage() {
             <div>
               <h2 className="text-2xl font-bold text-white mb-2">Skins Seleccionadas</h2>
               <p className="text-slate-400">Selecciona hasta {maxSelectedSkins} skins para mejorar</p>
-              {selectedSkins.length > 0 && (
-                <p className="text-sm text-primary mt-1">
-                  Tier actual: {selectedSkins[0].content_tier?.nombre || "Desconocido"}
-                </p>
-                )}
-              </div>
+            </div>
             <div className="flex flex-col items-end mt-4 md:mt-0">
               <div className="text-right mb-4">
                 <div className="text-3xl font-bold text-red-500">{successPercentage}%</div>
@@ -762,7 +825,7 @@ export default function MejorasPage() {
                       aria-label={`Deseleccionar ${skin.nombre}`}
                       type="button"
                     >
-                      <X className="w-12 h-12 text-primary" />
+                      <X className="w-12 h-12 text-white" />
                     </button>
                     {/* Imagen de fondo del tier */}
                     {skin.content_tier?.uuid_api && skin.content_tier.uuid_api !== 'default' && (

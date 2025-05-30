@@ -1,5 +1,132 @@
 # Memory - Cambios Importantes del Sistema
 
+## Migración Completa de Tablas de Logs - ✅ COMPLETADO
+- **Fecha**: Actual
+- **Problema**: Las tablas del esquema `logs` no estaban accesibles desde la API REST de Supabase
+- **Solución**: Migrar todas las tablas de logs al esquema `public` con prefijo `logs_`
+
+### Migración Realizada
+1. **logs.caja_abierta** → **public.logs_caja_abierta**
+2. **logs.skin_eliminada** → **public.logs_skin_eliminada** 
+3. **logs.skin_mejorada** → **public.logs_skin_mejorada**
+4. **logs.historial_recompensas** → **public.logs_historial_recompensas** (antes public.historial_recompensas)
+5. **logs.actividad_usuario** (vista) → **public.logs_actividad_usuario** (tabla)
+
+### Archivos Actualizados
+- **`lib/logUtils.ts`**: ✅ Todas las referencias actualizadas
+- **`app/main/misiones/page.tsx`**: ✅ Actualizado para usar logs_historial_recompensas
+- **Otros archivos**: ✅ Verificados sin referencias a esquema logs
+
+## Implementación Funcional de las Funciones de Logging - ✅ COMPLETADO
+
+### 1. logCajaAbierta() - ✅ IMPLEMENTADO
+- **Ubicación**: Se ejecuta automáticamente en `processBoxOpeningWithLog()` en `lib/boxUtils.ts`
+- **Usado en**: `components/BoxComponent.tsx` 
+- **Funcionamiento**: 
+  - Registra automáticamente cada apertura de caja en `logs_caja_abierta`
+  - Incluye información de la skin obtenida, tier, costo y método de pago
+  - Se ejecuta tanto para cajas simples como múltiples
+
+### 2. logSkinMejorada() - ⚠️ PARCIALMENTE IMPLEMENTADO
+- **Ubicación**: `app/main/mejoras/page.tsx`
+- **Estado**: Integrado en `handleDirectImprovement`, `handleRouletteWin`, `handleRouletteLose`
+- **Problema**: Errores de tipo TypeScript persistentes (string | null vs string)
+- **Funcionamiento**: 
+  - Registra intentos de mejora exitosos y fallidos
+  - Incluye probabilidad, skins descartadas, y resultado
+
+## Datos que se registran ahora automáticamente:
+
+### Al abrir cajas:
+- Tabla: `logs_caja_abierta`
+- Tabla: `logs_actividad_usuario` (tipo: 'caja_abierta')
+
+### Al completar misiones:
+- Tabla: `logs_historial_recompensas`
+- Tabla: `logs_actividad_usuario` (tipo: 'mision_completada')
+
+### Al mejorar skins (parcial):
+- Tabla: `logs_skin_mejorada` (con errores de tipo)
+
+## Estado de Funcionalidad:
+- ✅ **logs_caja_abierta**: Totalmente funcional
+- ✅ **logs_historial_recompensas**: Totalmente funcional  
+- ✅ **logs_actividad_usuario**: Totalmente funcional
+- ⚠️ **logs_skin_mejorada**: Implementado pero con errores de tipo
+- ❌ **logs_skin_eliminada**: Aún no implementado en ningún flujo
+
+## Próximos pasos sugeridos:
+1. Arreglar los tipos en la función de mejora de skins
+2. Implementar logging de eliminación de skins si existe esa funcionalidad
+
+## Sistema de Logs y Misiones Automáticas - ✅ COMPLETADO
+- **Fecha**: Actual
+- **Implementación**: Schema de logs migrado y sistema de misiones automáticas
+
+### Schema de Logs Migrado
+1. **logs_caja_abierta**: Registra cada apertura de caja con skins obtenidas, costo y método de pago
+2. **logs_skin_eliminada**: Registra eliminaciones de skins con contexto y motivo
+3. **logs_skin_mejorada**: Registra intentos de mejora (reemplaza public.mejoras)
+4. **logs_historial_recompensas**: Historial de recompensas de misiones
+5. **logs_actividad_usuario**: Log de actividad general (nueva tabla)
+
+### Funciones Utilitarias (lib/logUtils.ts) - ✅ ACTUALIZADAS
+- `logCajaAbierta()`: Registra apertura de cajas → **logs_caja_abierta**
+- `logSkinEliminada()`: Registra eliminación de skins → **logs_skin_eliminada**
+- `logSkinMejorada()`: Registra mejoras de skins → **logs_skin_mejorada**
+- `getEstadisticasUsuario()`: Estadísticas completas del usuario → **todas las tablas logs_**
+
+### Funciones de Misiones (lib/missionUtils.ts)
+- `inicializarMisionesUsuario()`: Crea progreso inicial para todas las misiones activas
+- `verificarMisionesDisponibles()`: Verifica misiones listas para reclamar
+- `procesarMisionLogin()`: Procesa misión de login diario
+- `actualizarProgresoMision()`: Actualiza progreso basado en actividades
+
+### Integración Automática
+1. **Registro de usuarios**: Se inicializan misiones automáticamente en:
+   - `/api/auth/register` (usuarios normales)
+   - `app/auth.ts` (usuarios OAuth)
+2. **Login**: Se procesa misión de login diario automáticamente
+3. **Sidebar**: Muestra indicador de misiones disponibles para reclamar
+4. **BoxUtils**: Función `processBoxOpeningWithLog()` registra logs automáticamente
+5. **Inventario**: Registro automático al eliminar skins
+
+### Archivos Modificados
+- `app/auth.ts`: Inicialización de misiones OAuth
+- `app/api/auth/register/route.ts`: Inicialización de misiones registro
+- **`app/main/misiones/page.tsx`**: ✅ Actualizado para usar logs_historial_recompensas
+- `components/app-sidebar.tsx`: Indicador de misiones disponibles
+- `components/InventoryDisplayComponent.tsx`: Logging de eliminación
+- **`lib/boxUtils.ts`**: Función con logging integrado usando logs_caja_abierta
+- **`lib/logUtils.ts`**: ✅ Todas las referencias actualizadas a tablas logs_
+
+### Estado del Sistema
+- ✅ Schema logs migrado completamente al esquema public
+- ✅ Todas las tablas accesibles desde API REST
+- ✅ Funciones utilitarias actualizadas y funcionales
+- ✅ Misiones se inicializan automáticamente
+- ✅ Indicador en sidebar funcionando
+- ✅ Logging integrado en operaciones principales
+- ✅ Sistema de recompensas de misiones completamente funcional
+
+### Problemas Resueltos
+- ❌ Error 404 al acceder a logs.historial_recompensas → ✅ Resuelto con logs_historial_recompensas
+- ❌ Falla en inserción de logs → ✅ Resuelto con migración completa
+- ❌ Error al actualizar saldo de VP → ✅ Resuelto con mejor manejo de errores
+- ❌ Logs de actividad inaccesibles → ✅ Resuelto con logs_actividad_usuario
+
+## Fix Autenticación OAuth vs Credenciales - ✅ COMPLETADO
+- **Fecha**: Actual
+- **Problema**: Los usuarios OAuth tienen `password: null`, pero si intentaban iniciar sesión con credenciales normales, el servidor daba error genérico
+- **Solución**: 
+  - Añadido campo `oauth` al SELECT del query de usuarios en `CredentialsProvider` y endpoint `/api/auth/login`
+  - Validación específica para detectar cuando un usuario OAuth intenta usar credenciales
+  - Error más descriptivo: "Esta cuenta fue creada con Google/Discord. Por favor, inicia sesión usando el mismo método."
+  - Código de error específico: `type: "oauth_account"`
+- **Archivos modificados**:
+  - `app/auth.ts`: Añadido campo `oauth` al SELECT y validación en CredentialsProvider
+  - `app/api/auth/login/route.ts`: Añadido campo `oauth` al SELECT y validación específica
+
 ## Cambio de Estructura de Base de Datos - Eliminación de Columna `cantidad`
 
 ### Decisión Tomada

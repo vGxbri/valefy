@@ -15,6 +15,7 @@ import {
   processBoxOpening,
   selectRandomSkinByProbability,
   getTierData,
+  processBoxOpeningWithLog,
 } from "@/lib/boxUtils";
 
 // Estilos globales para animaciones
@@ -473,12 +474,14 @@ export default function BoxComponent({
           const spinItemsArray: Skin[][] = [];
 
           for (let i = 0; i < numberOfBoxes; i++) {
-            const openingResult = await processBoxOpening(
+            const openingResult = await processBoxOpeningWithLog(
               userId,
               caja.id,
               cajaSkins as any,
               probabilidades as any,
               supabase,
+              caja.precio,
+              'vp'
             );
 
             if (openingResult.selectedSkin) {
@@ -499,12 +502,14 @@ export default function BoxComponent({
           }
         } else {
           // Modo caja única
-          const openingResult = await processBoxOpening(
+          const openingResult = await processBoxOpeningWithLog(
             userId,
             caja.id,
             cajaSkins as any,
             probabilidades as any,
             supabase,
+            caja.precio,
+            'vp'
           );
 
           if (openingResult.selectedSkin) {

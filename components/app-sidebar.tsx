@@ -1,5 +1,40 @@
 "use client";
 
+import * as React from "react";
+import { useState, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
+import { createClient } from '@/utils/supabase/client';
+import { verificarMisionesDisponibles, procesarMisionLogin } from "@/lib/missionUtils";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+  SidebarFooter,
+} from "@/components/ui/sidebar";
+import {
+  Modal,
+  ModalContent,
+  ModalBody,
+  ModalHeader,
+  ModalFooter,
+  useDisclosure,
+  Button,
+} from "@nextui-org/react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
   Boxes,
@@ -8,37 +43,9 @@ import {
   Bell,
   Wallet,
   ListChecks,
+  BookOpen,
+  Coins
 } from "lucide-react";
-import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Button,
-  useDisclosure,
-} from "@heroui/react";
-import { useState } from "react";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
-import { signOut } from "next-auth/react";
-import { BookOpen } from "lucide-react";
-
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
 
 const items = [
   {
@@ -63,10 +70,94 @@ const items = [
   },
 ];
 
+// Componente para mostrar créditos del usuario
+function CreditosDisplay() {
+  const { data: nextAuthSession, status: nextAuthStatus } = useSession();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState<boolean>(true);
+  const [saldo, setSaldo] = useState<number>(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState<boolean>(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (nextAuthStatus === "loading") {
+      setIsLoadingSession(true);
+      setUserId(null);
+    } else if (nextAuthStatus === "unauthenticated") {
+      setIsLoadingSession(false);
+      setUserId(null);
+    } else if (nextAuthStatus === "authenticated") {
+      if (nextAuthSession?.user?.id) {
+        setUserId(nextAuthSession.user.id as string);
+      } else {
+        setUserId(null);
+      }
+      setIsLoadingSession(false);
+    }
+  }, [nextAuthSession, nextAuthStatus]);
+
+  useEffect(() => {
+    if (userId) {
+      cargarSaldo();
+    }
+  }, [userId]);
+
+  const cargarSaldo = async () => {
+    if (!userId) return;
+    
+    try {
+      setIsLoadingBalance(true);
+      const { data: usuario, error } = await supabase
+        .from("usuarios")
+        .select("saldo")
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        console.error("Error al cargar saldo:", error);
+        return;
+      }
+
+      setSaldo(usuario?.saldo || 0);
+    } catch (error) {
+      console.error("Error al cargar saldo:", error);
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
+
+  if (isLoadingSession || isLoadingBalance) {
+    return (
+      <div className="group relative inline-flex items-center gap-3 px-5 py-3 font-medium rounded-xl overflow-hidden transition-all duration-300 ease-out w-full active:scale-95 active:shadow-inner text-white/70 hover:bg-white/5 hover:text-white border border-transparent hover:border-white/10 active:bg-white/10">
+        <Wallet className="h-5 w-5 text-primary/80" />
+        <span className="text-base font-medium">Cargando...</span>
+      </div>
+    );
+  }
+
+  if (!userId) {
+    return (
+      <div className="group relative inline-flex items-center gap-3 px-5 py-3 font-medium rounded-xl overflow-hidden transition-all duration-300 ease-out w-full active:scale-95 active:shadow-inner text-white/70 hover:bg-white/5 hover:text-white border border-transparent hover:border-white/10 active:bg-white/10">
+        <Wallet className="h-5 w-5 text-primary/80" />
+        <span className="text-base font-medium">Sin sesión</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group relative inline-flex items-center gap-3 px-5 py-3 font-medium rounded-xl overflow-hidden transition-all duration-300 ease-out w-full active:scale-95 active:shadow-inner text-white/70 hover:bg-white/5 hover:text-white border border-transparent hover:border-white/10 active:bg-white/10">
+      <Wallet className="h-5 w-5 text-primary/80" />
+      <span className="text-base font-medium">
+        Créditos: {saldo.toLocaleString()} VP
+      </span>
+    </div>
+  );
+}
+
 export function AppSidebar() {
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const pathname = usePathname();
-  const [notifications] = useState([
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const [notifications, setNotifications] = useState([
     {
       id: 1,
       title: "Nuevo intercambio",
@@ -80,6 +171,30 @@ export function AppSidebar() {
       time: "Hace 1 hora",
     },
   ]);
+  const [misionesDisponibles, setMisionesDisponibles] = useState(0);
+  const { data: session, status } = useSession();
+
+  // Efecto para verificar misiones disponibles y procesar login
+  useEffect(() => {
+    const verificarYProcesarMisiones = async () => {
+      if (status === "authenticated" && session?.user?.id) {
+        try {
+          // Procesar misión de login
+          await procesarMisionLogin(session.user.id);
+          
+          // Verificar misiones disponibles
+          const resultado = await verificarMisionesDisponibles(session.user.id);
+          if (resultado.success) {
+            setMisionesDisponibles(resultado.cantidad);
+          }
+        } catch (error) {
+          console.error("Error al verificar misiones:", error);
+        }
+      }
+    };
+
+    verificarYProcesarMisiones();
+  }, [session, status]);
 
   return (
     <Sidebar className="fixed left-4 top-4 z-50 h-[calc(100vh-32px)] w-64 flex-col items-center rounded-2xl border border-white/10 bg-backgroundAlt/10 backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)]">
@@ -134,15 +249,12 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="flex flex-col gap-2 p-2">
               <SidebarMenuItem>
-                <div className="group relative inline-flex items-center gap-3 px-5 py-3 font-medium rounded-xl overflow-hidden transition-all duration-300 ease-out w-full active:scale-95 active:shadow-inner text-white/70 hover:bg-white/5 hover:text-white border border-transparent hover:border-white/10 active:bg-white/10">
-                  <Wallet className="h-5 w-5 text-primary/80" />
-                  <span className="text-base font-medium">Créditos: --</span>
-                </div>
+                <CreditosDisplay />
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <Link
                   className={`group relative inline-flex items-center gap-3 px-5 py-3 font-medium rounded-xl overflow-hidden transition-all duration-300 ease-out w-full active:scale-95 active:shadow-inner ${
-                    pathname === "/main/misiones" || (pathname !== "/main" && pathname.startsWith("/main"))
+                    pathname === "/main/misiones"
                       ? "bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 active:from-red-500/30 active:to-red-600/30"
                       : "text-white/70 hover:bg-white/5 hover:text-white border border-transparent hover:border-white/10 active:bg-white/10"
                   }`}

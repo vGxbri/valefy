@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     // Verificar si el usuario existe primero
     const { data: user, error: userError } = await supabase
       .from("usuarios")
-      .select("id, correo, nombre_usuario, password")
+      .select("id, correo, nombre_usuario, password, oauth")
       .eq("correo", email)
       .single();
 
@@ -53,6 +53,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Credenciales inválidas" },
         { status: 401 },
+      );
+    }
+
+    // Verificar si es una cuenta OAuth sin contraseña
+    if (!user.password && user.oauth) {
+      console.log("Intento de login con credenciales en cuenta OAuth:", email);
+
+      return NextResponse.json(
+        { 
+          error: "Esta cuenta fue creada con Google/Discord. Por favor, inicia sesión usando el mismo método.",
+          type: "oauth_account"
+        },
+        { status: 400 },
       );
     }
 
