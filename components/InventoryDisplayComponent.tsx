@@ -312,6 +312,24 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
           console.warn('Error al registrar log de skin eliminada:', logResult.error);
         }
         
+        // 🎯 PROCESAR MISIÓN DE ELIMINACIÓN DE SKINS
+        try {
+          const misionResponse = await fetch('/api/misiones/procesar-actividad', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tipoActividad: 'skin_eliminada',
+              cantidad: idsToDelete.length
+            })
+          });
+
+          if (!misionResponse.ok) {
+            console.warn('Error al procesar misión de eliminación de skins:', await misionResponse.text());
+          }
+        } catch (missionError) {
+          console.warn('Error al procesar misión de eliminación de skins:', missionError);
+        }
+        
         await fetchUserInventory();
         setSelectedItems(new Set());
         setError(null);

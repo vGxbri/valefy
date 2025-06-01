@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { incrementarSaldoLocal } from "@/lib/saldoUtils";
 
 // Mapeo de iconos
 const ICONOS_MAP: Record<string, any> = {
@@ -114,7 +115,7 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(true);
   const [totalVP, setTotalVP] = useState(0);
   const [completadas, setCompletadas] = useState(0);
-  const [activeTab, setActiveTab] = useState("todas");
+  const [activeTab, setActiveTab] = useState("reclamar");
   const supabase = createClient();
 
   useEffect(() => {
@@ -216,6 +217,34 @@ export default function Page() {
     }
   };
 
+  // 🔧 FUNCIÓN PARA INICIALIZAR MISIONES MANUALMENTE
+  const inicializarMisionesManual = async () => {
+    if (!session?.user?.id) return;
+
+    try {
+      const response = await fetch('/api/misiones/inicializar-manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: session.user.id })
+      });
+
+      const resultado = await response.json();
+
+      if (resultado.success) {
+        toast.success("¡Misiones inicializadas correctamente!");
+        cargarMisiones();
+        cargarEstadisticas();
+        // Emitir evento de misiones actualizadas
+        window.dispatchEvent(new CustomEvent('misionesActualizadas'));
+      } else {
+        toast.error("Error al inicializar misiones: " + resultado.message);
+      }
+    } catch (error) {
+      console.error("Error al inicializar misiones:", error);
+      toast.error("Error al inicializar misiones");
+    }
+  };
+
   const reclamarRecompensa = async (misionUsuario: MisionUsuario) => {
     if (!session?.user?.id || misionUsuario.completada) return;
 
@@ -276,6 +305,9 @@ export default function Page() {
           console.error("Error al actualizar saldo:", saldoUpdateError);
           throw saldoUpdateError;
         }
+
+        // 🎯 ACTUALIZAR SALDO CON EVENTO SIMPLE
+        incrementarSaldoLocal(misionUsuario.mision.recompensa_vp);
       }
 
       toast.success(`¡Recompensa reclamada! +${misionUsuario.mision.recompensa_vp} VP`);
@@ -284,67 +316,23 @@ export default function Page() {
       cargarMisiones();
       cargarEstadisticas();
 
+      // 🎯 EMITIR EVENTO DE MISIONES ACTUALIZADAS
+      window.dispatchEvent(new CustomEvent('misionesActualizadas'));
+
     } catch (error) {
       console.error("Error al reclamar recompensa:", error);
       toast.error("Error al reclamar la recompensa");
     }
   };
 
-  const procesarMisionLogin = async () => {
-    if (!session?.user?.id) return;
-
-    try {
-      // Buscar misión de login diario
-      const { data: misionLogin, error } = await supabase
-        .from("misiones")
-        .select("id")
-        .eq("nombre", "Login Diario")
-        .eq("activa", true)
-        .single();
-
-      if (!misionLogin || error) return;
-
-      // Verificar si ya se completó hoy
-      const hoy = new Date().toISOString().split('T')[0];
-      const { data: completadaHoy } = await supabase
-        .from("misiones_usuario")
-        .select("*")
-        .eq("usuario_id", session.user.id)
-        .eq("mision_id", misionLogin.id)
-        .gte("fecha_completada", hoy)
-        .single();
-
-      if (completadaHoy) return; // Ya completada hoy
-
-      // Actualizar progreso
-      await supabase
-        .from("misiones_usuario")
-        .update({
-          progreso: { actual: 1, objetivo: 1 }
-        })
-        .eq("usuario_id", session.user.id)
-        .eq("mision_id", misionLogin.id);
-
-    } catch (error) {
-      console.error("Error al procesar misión login:", error);
-    }
-  };
-
-  // Procesar login al cargar la página
-  useEffect(() => {
-    if (status === "authenticated" && session?.user?.id) {
-      procesarMisionLogin();
-    }
-  }, [session, status]);
-
   const filtrarMisiones = (misiones: MisionUsuario[]) => {
     switch (activeTab) {
-      case "disponibles":
+      case "reclamar":
         return misiones.filter(m => !m.completada && m.progreso.actual >= m.progreso.objetivo);
+      case "disponibles":
+        return misiones.filter(m => !m.completada);
       case "completadas":
         return misiones.filter(m => m.completada);
-      case "diarias":
-        return misiones.filter(m => m.mision.tipo === "diaria");
       default:
         return misiones;
     }
@@ -400,6 +388,16 @@ export default function Page() {
           <h1 className="text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
             / MISIONES
           </h1>
+          {/* Botón de inicialización manual (solo si no hay misiones) */}
+          {misiones.length === 0 && !isLoading && (
+            <Button
+              onClick={inicializarMisionesManual}
+              className="rounded-xl bg-gradient-to-r from-blue-500/20 to-blue-600/20 text-white shadow-lg shadow-blue-900/20 border border-blue-500/20 hover:bg-gradient-to-r hover:from-blue-500/30 hover:to-blue-600/30"
+            >
+              <Target className="h-4 w-4 mr-2" />
+              Inicializar Misiones
+            </Button>
+          )}
         </div>
 
         {/* Stats Grid */}
@@ -431,17 +429,17 @@ export default function Page() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="mb-8">
             <TabsList className="grid w-full grid-cols-3 bg-backgroundAlt/20 backdrop-blur-xl border border-white/10 rounded-2xl px-1 py-0">
-              <TabsTrigger value="disponibles" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl">
+              <TabsTrigger value="reclamar" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl">
                 <Gift className="h-4 w-4" />
+                Reclamar
+              </TabsTrigger>
+              <TabsTrigger value="disponibles" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl">
+                <Target className="h-4 w-4" />
                 Disponibles
               </TabsTrigger>
               <TabsTrigger value="completadas" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl">
                 <CheckCircle2 className="h-4 w-4" />
                 Completadas
-              </TabsTrigger>
-              <TabsTrigger value="diarias" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl">
-                <Calendar className="h-4 w-4" />
-                Diarias
               </TabsTrigger>
             </TabsList>
           </div>
@@ -489,10 +487,6 @@ export default function Page() {
                           </p>
                         </div>
                       </div>
-                      
-                      <span className={`px-2 py-1 rounded-xl text-xs border ${getTipoBadgeColor(misionUsuario.mision.tipo)}`}>
-                        {misionUsuario.mision.tipo}
-                      </span>
                     </div>
 
                     {/* Progreso */}
@@ -559,10 +553,14 @@ export default function Page() {
                 <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-backgroundAlt/20 to-background/40 backdrop-blur-xl border border-white/10 p-12 shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)]">
                   <CircleOff className="h-16 w-16 text-white/80 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-white mb-2">
-                    No hay misiones en esta categoría
+                    {activeTab === "reclamar" && "No hay misiones para reclamar"}
+                    {activeTab === "disponibles" && "No hay misiones disponibles"}
+                    {activeTab === "completadas" && "No hay misiones completadas"}
                   </h3>
                   <p className="text-white/60">
-                    Intenta cambiar de filtro o vuelve más tarde.
+                    {activeTab === "reclamar" && "Completa algunas actividades para desbloquear recompensas."}
+                    {activeTab === "disponibles" && "Todas las misiones han sido completadas."}
+                    {activeTab === "completadas" && "Aún no has completado ninguna misión."}
                   </p>
                   <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-primary/10 blur-2xl" />
                 </div>

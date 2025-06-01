@@ -535,6 +535,24 @@ export default function MejorasPage() {
         console.warn('Error al registrar log de mejora exitosa:', logResult.error);
       }
 
+      // 🎯 PROCESAR MISIÓN DE MEJORA
+      try {
+        const misionResponse = await fetch('/api/misiones/procesar-actividad', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipoActividad: 'mejora_realizada',
+            cantidad: 1
+          })
+        });
+
+        if (!misionResponse.ok) {
+          console.warn('Error al procesar misión de mejora:', await misionResponse.text());
+        }
+      } catch (missionError) {
+        console.warn('Error al procesar misión de mejora:', missionError);
+      }
+
       toast.success("¡Mejora realizada exitosamente!");
       
     } catch (error) {
@@ -663,6 +681,24 @@ export default function MejorasPage() {
       const logResult = await logSkinMejorada(logData);
       if (!logResult.success) {
         console.warn('Error al registrar log de mejora exitosa:', logResult.error);
+      }
+
+      // 🎯 PROCESAR MISIÓN DE MEJORA
+      try {
+        const misionResponse = await fetch('/api/misiones/procesar-actividad', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipoActividad: 'mejora_realizada',
+            cantidad: 1
+          })
+        });
+
+        if (!misionResponse.ok) {
+          console.warn('Error al procesar misión de mejora:', await misionResponse.text());
+        }
+      } catch (missionError) {
+        console.warn('Error al procesar misión de mejora:', missionError);
       }
 
       setTimeout(() => {

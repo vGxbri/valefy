@@ -64,7 +64,162 @@ export type TierProbabilidad = {
   content_tier?: ContentTier;
 };
 
+// Cache para probabilidades pre-calculadas
+const probabilityCache = new Map<string, { skin: Skin; probability: number; tierName: string }[]>();
+const CACHE_EXPIRY = 60000; // 1 minuto
+const cacheTimestamps = new Map<string, number>();
 
+/**
+ * Pre-calcula las probabilidades para un conjunto de skins y tiers
+ * @param skins Array de skins disponibles
+ * @param probabilidades Array de probabilidades por tier
+ * @returns Array de objetos con skin y probabilidad individual
+ */
+function precalculateProbabilities(
+  skins: Skin[],
+  probabilidades: TierProbabilidad[]
+): { skin: Skin; probability: number; tierName: string }[] {
+  const skinProbabilities: { skin: Skin; probability: number; tierName: string }[] = [];
+
+  // Para cada tier, calcular la probabilidad individual de cada skin
+  for (const tierProb of probabilidades) {
+    // Encontrar todas las skins de este tier usando uuid_api
+    const skinsInTier = skins.filter(skin => 
+      skin.content_tier_id === tierProb.content_tier?.uuid_api
+    );
+    
+    if (skinsInTier.length > 0) {
+      // Dividir la probabilidad del tier entre todas las skins de ese tier
+      const individualProbability = tierProb.probabilidad / skinsInTier.length;
+      
+      // Agregar cada skin con su probabilidad individual
+      for (const skin of skinsInTier) {
+        skinProbabilities.push({
+          skin,
+          probability: individualProbability,
+          tierName: tierProb.content_tier?.nombre || 'Unknown'
+        });
+      }
+    }
+  }
+
+  return skinProbabilities;
+}
+
+/**
+ * Selecciona una skin aleatoria basada en probabilidades con caché optimizado
+ * @param skins Array de skins disponibles
+ * @param probabilidades Array de probabilidades por tier
+ * @param showLogs Si mostrar logs detallados (por defecto false)
+ * @returns La skin seleccionada aleatoriamente
+ */
+export function selectRandomSkinByProbability(
+  skins: Skin[],
+  probabilidades: TierProbabilidad[],
+  showLogs: boolean = false,
+): Skin | null {
+  if (!skins.length || !probabilidades.length) {
+    return null;
+  }
+
+  try {
+    // Crear clave de caché basada en los IDs de skins y tiers
+    const cacheKey = `${skins.map(s => s.id).sort().join(',')}|${probabilidades.map(p => p.id).sort().join(',')}`;
+    const now = Date.now();
+    
+    // Verificar si tenemos datos en caché y si no han expirado
+    let skinProbabilities = probabilityCache.get(cacheKey);
+    const cacheTime = cacheTimestamps.get(cacheKey);
+    
+    if (!skinProbabilities || !cacheTime || (now - cacheTime) > CACHE_EXPIRY) {
+      // Pre-calcular y cachear las probabilidades
+      skinProbabilities = precalculateProbabilities(skins, probabilidades);
+      probabilityCache.set(cacheKey, skinProbabilities);
+      cacheTimestamps.set(cacheKey, now);
+    }
+
+    if (skinProbabilities.length === 0) {
+      return null;
+    }
+
+    // Calcular la suma total para normalización (solo una vez)
+    const totalProbability = skinProbabilities.reduce((sum, item) => sum + item.probability, 0);
+
+    // Generar número aleatorio
+    const randomNum = Math.random();
+    let accumulatedProbability = 0;
+
+    // Seleccionar skin basada en probabilidades individuales
+    for (const item of skinProbabilities) {
+      const normalizedProbability = item.probability / totalProbability;
+      accumulatedProbability += normalizedProbability;
+      
+      if (randomNum <= accumulatedProbability) {
+        return item.skin;
+      }
+    }
+
+    // Fallback: devolver la última skin si algo salió mal
+    return skinProbabilities[skinProbabilities.length - 1]?.skin || null;
+  } catch (error) {
+    console.error("Error al seleccionar skin aleatoria:", error);
+    return null;
+  }
+}
+
+/**
+ * Optimización para generar múltiples skins aleatorias de una vez
+ * @param skins Array de skins disponibles
+ * @param probabilidades Array de probabilidades por tier
+ * @param count Número de skins a generar
+ * @returns Array de skins seleccionadas
+ */
+export function selectMultipleRandomSkins(
+  skins: Skin[],
+  probabilidades: TierProbabilidad[],
+  count: number
+): Skin[] {
+  if (!skins.length || !probabilidades.length || count <= 0) {
+    return [];
+  }
+
+  const results: Skin[] = [];
+  
+  // Pre-calcular las probabilidades una sola vez
+  const cacheKey = `${skins.map(s => s.id).sort().join(',')}|${probabilidades.map(p => p.id).sort().join(',')}`;
+  let skinProbabilities = probabilityCache.get(cacheKey);
+  
+  if (!skinProbabilities) {
+    skinProbabilities = precalculateProbabilities(skins, probabilidades);
+    probabilityCache.set(cacheKey, skinProbabilities);
+    cacheTimestamps.set(cacheKey, Date.now());
+  }
+
+  if (skinProbabilities.length === 0) {
+    return [];
+  }
+
+  const totalProbability = skinProbabilities.reduce((sum, item) => sum + item.probability, 0);
+
+  // Generar múltiples selecciones de una vez
+  for (let i = 0; i < count; i++) {
+    const randomNum = Math.random();
+    let accumulatedProbability = 0;
+
+    for (const item of skinProbabilities) {
+      const normalizedProbability = item.probability / totalProbability;
+      accumulatedProbability += normalizedProbability;
+      
+      if (randomNum <= accumulatedProbability) {
+        // Crear una copia con ID único para la ruleta
+        results.push({ ...item.skin, id: `${item.skin.id}-${i}` });
+        break;
+      }
+    }
+  }
+
+  return results;
+}
 
 /**
  * Añade una skin al inventario del usuario como una nueva fila.
@@ -120,77 +275,6 @@ export async function addSkinToInventory(
   } catch (error) {
     console.error("Error general en addSkinToInventory:", error);
     return { success: false, error, operationType: "error" };
-  }
-}
-
-/**
- * Selecciona una skin aleatoria basada en las probabilidades individuales de cada skin
- * @param skins Array de skins disponibles
- * @param probabilidades Array de probabilidades por tier
- * @param showLogs Si mostrar logs detallados (por defecto false)
- * @returns La skin seleccionada aleatoriamente
- */
-export function selectRandomSkinByProbability(
-  skins: Skin[],
-  probabilidades: TierProbabilidad[],
-  showLogs: boolean = false,
-): Skin | null {
-  if (!skins.length || !probabilidades.length) {
-    return null;
-  }
-
-  try {
-    // Crear un array con cada skin y su probabilidad individual
-    const skinProbabilities: { skin: Skin; probability: number; tierName: string }[] = [];
-
-    // Para cada tier, calcular la probabilidad individual de cada skin
-    for (const tierProb of probabilidades) {
-      // Encontrar todas las skins de este tier usando uuid_api
-      const skinsInTier = skins.filter(skin => 
-        skin.content_tier_id === tierProb.content_tier?.uuid_api
-      );
-      
-      if (skinsInTier.length > 0) {
-        // Dividir la probabilidad del tier entre todas las skins de ese tier
-        const individualProbability = tierProb.probabilidad / skinsInTier.length;
-        
-        // Agregar cada skin con su probabilidad individual
-        for (const skin of skinsInTier) {
-          skinProbabilities.push({
-            skin,
-            probability: individualProbability,
-            tierName: tierProb.content_tier?.nombre || 'Unknown'
-          });
-        }
-      }
-    }
-
-    if (skinProbabilities.length === 0) {
-      return null;
-    }
-
-    // Calcular la suma total para normalización
-    const totalProbability = skinProbabilities.reduce((sum, item) => sum + item.probability, 0);
-
-    // Generar número aleatorio
-    const randomNum = Math.random();
-    let accumulatedProbability = 0;
-
-    // Seleccionar skin basada en probabilidades individuales
-    for (const item of skinProbabilities) {
-      const normalizedProbability = item.probability / totalProbability;
-      accumulatedProbability += normalizedProbability;
-      
-      if (randomNum <= accumulatedProbability) {
-        return item.skin;
-      }
-    }
-
-    // Fallback: devolver la última skin si algo salió mal
-    return skinProbabilities[skinProbabilities.length - 1]?.skin || null;
-  } catch (error) {
-    console.error("Error al seleccionar skin aleatoria:", error);
-    return null;
   }
 }
 
@@ -337,8 +421,55 @@ export async function processBoxOpeningWithLog(
   selectedSkin: Skin | null;
   inventoryOperationType: "added" | "error";
   error?: any;
+  saldoInsuficiente?: boolean;
 }> {
   try {
+    // 💰 VERIFICAR Y DESCONTAR SALDO SI LA CAJA TIENE COSTO
+    if (costoCaja > 0) {
+      // Obtener saldo actual del usuario
+      const { data: usuario, error: saldoError } = await supabase
+        .from("usuarios")
+        .select("saldo")
+        .eq("id", userId)
+        .single();
+
+      if (saldoError) {
+        console.error("Error al obtener saldo del usuario:", saldoError);
+        return {
+          selectedSkin: null,
+          inventoryOperationType: "error",
+          error: "Error al verificar saldo del usuario"
+        };
+      }
+
+      const saldoActual = usuario?.saldo || 0;
+      
+      // Verificar si tiene suficiente saldo
+      if (saldoActual < costoCaja) {
+        return {
+          selectedSkin: null,
+          inventoryOperationType: "error",
+          error: "Saldo insuficiente",
+          saldoInsuficiente: true
+        };
+      }
+
+      // Descontar el costo de la caja
+      const { error: updateSaldoError } = await supabase
+        .from("usuarios")
+        .update({ saldo: saldoActual - costoCaja })
+        .eq("id", userId);
+
+      if (updateSaldoError) {
+        console.error("Error al actualizar saldo del usuario:", updateSaldoError);
+        return {
+          selectedSkin: null,
+          inventoryOperationType: "error",
+          error: "Error al procesar el pago"
+        };
+      }
+    }
+
     // Procesar apertura de caja normalmente
     const result = await processBoxOpening(userId, cajaId, skins, probabilidades, supabase);
     
@@ -364,6 +495,27 @@ export async function processBoxOpeningWithLog(
       const logResult = await logCajaAbierta(logData);
       if (!logResult.success) {
         console.warn('Error al registrar log de caja abierta:', logResult.error);
+      }
+
+      // 🎯 PROCESAR MISIONES AUTOMÁTICAMENTE
+      try {
+        // 1. Misión de apertura de caja individual
+        const misionResponse = await fetch('/api/misiones/procesar-actividad', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipoActividad: 'caja_abierta',
+            cantidad: 1
+          })
+        });
+
+        if (!misionResponse.ok) {
+          console.warn('Error al procesar misión de caja abierta:', await misionResponse.text());
+        }
+        
+      } catch (missionError) {
+        // No interrumpir el flujo si hay error en las misiones
+        console.warn('Error al procesar misiones automáticamente:', missionError);
       }
     }
     

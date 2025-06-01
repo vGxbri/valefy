@@ -215,6 +215,7 @@ export default function SpinnerAnimation({
   const itemStyle = orientation === "horizontal"
     ? { width: `${ITEM_WIDTH_CAROUSEL}px` }
     : { height: `${ITEM_HEIGHT_CAROUSEL}px`, width: "100%" };
+
   return (
     <div className="text-center mb-8 relative max-w-6xl mx-auto">
       <div className={orientation === "horizontal" ? "w-full py-6 relative" : "w-full relative flex justify-center h-full"}>

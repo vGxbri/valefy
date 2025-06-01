@@ -150,6 +150,7 @@ export default function BoxComponent({
     initialProbabilidades,
   );
   const [isOpening, setIsOpening] = useState(false);
+  const [isPreparingBox, setIsPreparingBox] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinItems, setSpinItems] = useState<Skin[]>([]);
   const [nextUpdate, setNextUpdate] = useState<string | null>(null);
@@ -440,6 +441,7 @@ export default function BoxComponent({
       !caja.esta_disponible ||
       isOpening ||
       isSpinning ||
+      isPreparingBox ||
       (caja.es_diaria && dailyOpened)
     ) {
       if (caja && caja.es_diaria && dailyOpened)
@@ -453,6 +455,7 @@ export default function BoxComponent({
     }
 
     setIsOpening(true);
+    setIsPreparingBox(true);
 
     try {
       if (!supabase) {
@@ -462,6 +465,7 @@ export default function BoxComponent({
       if (probabilidades.length === 0) {
         console.error("No se encontraron probabilidades para esta caja");
         setIsOpening(false);
+        setIsPreparingBox(false);
         return;
       }
 
@@ -495,10 +499,12 @@ export default function BoxComponent({
             setMultipleResults(results);
             setMultipleSpinItems(spinItemsArray);
             setCompletedSpinners(Array(numberOfBoxes).fill(false));
+            setIsPreparingBox(false); // Desactivar el spinner de preparación
             setIsSpinning(true);
           } else {
             console.error("Error al seleccionar skins");
             setIsOpening(false);
+            setIsPreparingBox(false);
           }
         } else {
           // Modo caja única
@@ -516,19 +522,23 @@ export default function BoxComponent({
             const items = generateSpinItems(openingResult.selectedSkin as Skin);
             setResultSkinForSpin(openingResult.selectedSkin as Skin);
             setSpinItems(items);
+            setIsPreparingBox(false); // Desactivar el spinner de preparación
             setIsSpinning(true);
           } else {
             console.error("Error al seleccionar skin:", openingResult.error);
             setIsOpening(false);
+            setIsPreparingBox(false);
           }
         }
       } else {
         console.error("Error al abrir la caja, el usuario no está autenticado");
         setIsOpening(false);
+        setIsPreparingBox(false);
       }
     } catch (error: any) {
       console.error("Error al abrir la caja:", error);
       setIsOpening(false);
+      setIsPreparingBox(false);
     }
   };
 
@@ -614,6 +624,7 @@ export default function BoxComponent({
     setMultipleSpinItems([]);
     setCompletedSpinners([]);
     setIsOpening(false);
+    setIsPreparingBox(false);
   };
 
   // useEffect para actualizar previousNumberOfBoxes después de las animaciones
@@ -689,17 +700,20 @@ export default function BoxComponent({
   }
 
   // Estados de renderizado - transiciones mejoradas
-  const showMultipleResults = multipleResults.length > 0 && !isSpinning && !isOpening;
-  const showSingleResult = !!resultSkin && !isSpinning && !isOpening;
+  const showMultipleResults = multipleResults.length > 0 && !isSpinning && !isOpening && !isPreparingBox;
+  const showSingleResult = !!resultSkin && !isSpinning && !isOpening && !isPreparingBox;
   const showSpinners = isSpinning;
-  const showInitialView = !isSpinning && !showSingleResult && !showMultipleResults && !isOpening;
+  const showPreparingSpinner = isPreparingBox && !isSpinning;
+  const showInitialView = !isSpinning && !showSingleResult && !showMultipleResults && !isOpening && !isPreparingBox;
 
   // Log para debugging
   console.log('🔄 Render state:', {
     isSpinning,
+    isPreparingBox,
     showSingleResult,
     showMultipleResults,
     showSpinners,
+    showPreparingSpinner,
     showInitialView,
     resultSkin: !!resultSkin,
     multipleResultsLength: multipleResults.length
@@ -1119,6 +1133,20 @@ export default function BoxComponent({
           </motion.div>
         )}
 
+        {/* Vista de preparación - Spinner de carga antes de mostrar los spinners */}
+        {showPreparingSpinner && (
+          <motion.div 
+            key="preparing-spinner"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="w-full h-full flex items-center justify-center"
+          >
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
+          </motion.div>
+        )}
+
         {/* Vista inicial */}
         {showInitialView && (
           <motion.div 
@@ -1242,16 +1270,16 @@ export default function BoxComponent({
                                   text-white hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30
                                   active:scale-95 transition-all duration-300 min-w-[200px] md:min-w-[280px] shadow-2xl shadow-red-900/20
                                   border-2 border-red-500/20 hover:border-red-500/60
-                                  ${(!isOpening && !isSpinning && (!caja.es_diaria || !dailyOpened) && caja.esta_disponible) 
+                                  ${(!isOpening && !isSpinning && !isPreparingBox && (!caja.es_diaria || !dailyOpened) && caja.esta_disponible) 
                                     ? 'hover:shadow-primary/50 hover:-translate-y-1' 
                                     : 'opacity-60 cursor-not-allowed'}`}
-                      disabled={isOpening || isSpinning || (caja.es_diaria && dailyOpened) || !caja.esta_disponible}
+                      disabled={isOpening || isSpinning || isPreparingBox || (caja.es_diaria && dailyOpened) || !caja.esta_disponible}
                       onClick={openBox}
                     >
-                      {isOpening || isSpinning ? (
+                      {isOpening || isSpinning || isPreparingBox ? (
                         <span className="flex items-center justify-center gap-3">
                           <span className="animate-spin h-5 w-5 border-2 border-white/30 border-t-white rounded-full"></span>
-                          Cargando...
+                          {isPreparingBox ? 'Preparando...' : 'Cargando...'}
                         </span>
                       ) : caja.es_diaria && dailyOpened ? (
                         "YA ABIERTA HOY"

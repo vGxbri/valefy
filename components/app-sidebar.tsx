@@ -44,7 +44,8 @@ import {
   Wallet,
   ListChecks,
   BookOpen,
-  Coins
+  Coins,
+  CircleAlert
 } from "lucide-react";
 
 const items = [
@@ -102,6 +103,26 @@ function CreditosDisplay() {
     }
   }, [userId]);
 
+  // 🎯 ESCUCHAR EVENTOS DE ACTUALIZACIÓN DE SALDO
+  useEffect(() => {
+    const handleSaldoActualizado = () => {
+      cargarSaldo();
+    };
+
+    const handleSaldoIncrementado = (event: CustomEvent) => {
+      const { cantidad } = event.detail;
+      setSaldo(prev => prev + cantidad);
+    };
+
+    window.addEventListener('saldoActualizado', handleSaldoActualizado);
+    window.addEventListener('saldoIncrementado', handleSaldoIncrementado as EventListener);
+
+    return () => {
+      window.removeEventListener('saldoActualizado', handleSaldoActualizado);
+      window.removeEventListener('saldoIncrementado', handleSaldoIncrementado as EventListener);
+    };
+  }, []);
+
   const cargarSaldo = async () => {
     if (!userId) return;
     
@@ -148,7 +169,7 @@ function CreditosDisplay() {
     <div className="group relative inline-flex items-center gap-3 px-5 py-3 font-medium rounded-xl overflow-hidden transition-all duration-300 ease-out w-full active:scale-95 active:shadow-inner text-white/70 hover:bg-white/5 hover:text-white border border-transparent hover:border-white/10 active:bg-white/10">
       <Wallet className="h-5 w-5 text-primary/80" />
       <span className="text-base font-medium">
-        Créditos: {saldo.toLocaleString()} VP
+        {saldo.toLocaleString()} VP
       </span>
     </div>
   );
@@ -196,6 +217,28 @@ export function AppSidebar() {
     verificarYProcesarMisiones();
   }, [session, status]);
 
+  // 🎯 ESCUCHAR ACTUALIZACIONES DE MISIONES
+  useEffect(() => {
+    const handleMisionesActualizadas = async () => {
+      if (status === "authenticated" && session?.user?.id) {
+        try {
+          const resultado = await verificarMisionesDisponibles(session.user.id);
+          if (resultado.success) {
+            setMisionesDisponibles(resultado.cantidad);
+          }
+        } catch (error) {
+          console.error("Error al verificar misiones:", error);
+        }
+      }
+    };
+
+    window.addEventListener('misionesActualizadas', handleMisionesActualizadas);
+
+    return () => {
+      window.removeEventListener('misionesActualizadas', handleMisionesActualizadas);
+    };
+  }, [session, status]);
+
   return (
     <Sidebar className="fixed left-4 top-4 z-50 h-[calc(100vh-32px)] w-64 flex-col items-center rounded-2xl border border-white/10 bg-backgroundAlt/10 backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)]">
       <div className="flex flex-col items-center w-full py-6 gap-3 border-b border-white/5 relative rounded-t-2xl overflow-hidden bg-gradient-to-b from-white/5 to-transparent">
@@ -237,6 +280,24 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+              <SidebarMenuItem>
+                <Link
+                  className={`group relative inline-flex items-center gap-3 px-5 py-3 font-medium rounded-xl overflow-hidden transition-all duration-300 ease-out w-full active:scale-95 active:shadow-inner ${
+                    pathname === "/main/misiones"
+                      ? "bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 active:from-red-500/30 active:to-red-600/30"
+                      : "text-white/70 hover:bg-white/5 hover:text-white border border-transparent hover:border-white/10 active:bg-white/10"
+                  }`}
+                  href="/main/misiones"
+                >
+                  <ListChecks className="h-5 w-5 text-primary/80" />
+                  <span className="text-base font-medium flex items-center gap-2">
+                    Misiones
+                    {misionesDisponibles > 0 && (
+                      <CircleAlert className="h-4 w-4 text-red-500" />
+                    )}
+                  </span>
+                </Link>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -251,22 +312,6 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <CreditosDisplay />
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <Link
-                  className={`group relative inline-flex items-center gap-3 px-5 py-3 font-medium rounded-xl overflow-hidden transition-all duration-300 ease-out w-full active:scale-95 active:shadow-inner ${
-                    pathname === "/main/misiones"
-                      ? "bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 active:from-red-500/30 active:to-red-600/30"
-                      : "text-white/70 hover:bg-white/5 hover:text-white border border-transparent hover:border-white/10 active:bg-white/10"
-                  }`}
-                  href="/main/misiones"
-                >
-                  <ListChecks className="h-5 w-5 text-primary/80" />
-                  <span className="text-base font-medium">
-                    Misiones
-                  </span>
-                </Link>
-              </SidebarMenuItem>
-
               <SidebarMenuItem>
                 <Popover>
                   <PopoverTrigger asChild>
