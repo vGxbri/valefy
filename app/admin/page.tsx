@@ -240,6 +240,7 @@ export default function AdminPage() {
   const [isLoadingBundles, setIsLoadingBundles] = useState(false);
   const [loadingBundleUuid, setLoadingBundleUuid] = useState<string | null>(null);
   const [bundleSearchTerm, setBundleSearchTerm] = useState("");
+  const [skinSearchTerm, setSkinSearchTerm] = useState("");
   const [pendingSkinLoads, setPendingSkinLoads] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -771,6 +772,16 @@ export default function AdminPage() {
   const filteredBundles = bundles.filter(bundle =>
     bundle.displayName.toLowerCase().includes(bundleSearchTerm.toLowerCase())
   );
+
+  // Función para filtrar skins dentro de un bundle
+  const getFilteredSkinsForBundle = (bundleUuid: string): Skin[] => {
+    const bundleSkins = skinsByBundle[bundleUuid] || [];
+    if (!skinSearchTerm) return bundleSkins;
+    
+    return bundleSkins.filter(skin =>
+      skin?.nombre?.toLowerCase().includes(skinSearchTerm.toLowerCase())
+    );
+  };
 
   // Función para ver detalles de una caja
   const viewCaja = async (caja: Caja) => {
@@ -1331,6 +1342,12 @@ export default function AdminPage() {
                       onChange={(e) => setBundleSearchTerm(e.target.value)}
                       className="max-w-md bg-white/5 border-white/20 text-white"
                     />
+                    <Input
+                      placeholder="Buscar skins/armas..."
+                      value={skinSearchTerm}
+                      onChange={(e) => setSkinSearchTerm(e.target.value)}
+                      className="max-w-md bg-white/5 border-white/20 text-white"
+                    />
                     {bundles.length > 0 && (
                       <Button variant="outline" onClick={toggleAllBundles}>
                         {filteredBundles.length > 0 && filteredBundles.every(b => expandedBundles.includes(b.uuid)) 
@@ -1374,7 +1391,12 @@ export default function AdminPage() {
                               <div className="flex-1">
                                 <h3 className="text-sm font-medium text-white">{bundle.displayName}</h3>
                                 <p className="text-xs text-white/60">
-                                  {skinsByBundle[bundle.uuid]?.length || 0} skins
+                                  {getFilteredSkinsForBundle(bundle.uuid).length} skins
+                                  {skinSearchTerm && (
+                                    <span className="text-white/40">
+                                      {' '}de {skinsByBundle[bundle.uuid]?.length || 0}
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                               <div className={`transition-transform ${expandedBundles.includes(bundle.uuid) ? "rotate-90" : ""}`}>
@@ -1390,43 +1412,49 @@ export default function AdminPage() {
                                   </div>
                                 ) : (
                                   <div className="grid grid-cols-2 gap-2">
-                                    {(skinsByBundle[bundle.uuid] || []).map((skin) => (
-                                      <div
-                                        key={skin.id}
-                                        className={`p-2 rounded cursor-pointer transition-all ${
-                                          selectedSkins.some(s => s.id === skin.id)
-                                            ? "bg-primary/20 border border-primary/70"
-                                            : "bg-black/20 border border-white/10 hover:bg-black/40"
-                                        }`}
-                                        onClick={() => toggleSkinSelection(skin)}
-                                        role="button"
-                                        tabIndex={0}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault();
-                                            toggleSkinSelection(skin);
-                                          }
-                                        }}
-                                        aria-pressed={selectedSkins.some(s => s.id === skin.id)}
-                                        aria-label={`${selectedSkins.some(s => s.id === skin.id) ? 'Deseleccionar' : 'Seleccionar'} skin ${skin.nombre}`}
-                                      >
-                                        <div className="aspect-square mb-1 bg-black/30 rounded overflow-hidden">
-                                          {skin.imagen_url && (
-                                            <Image
-                                              src={skin.imagen_url}
-                                              alt={skin.nombre}
-                                              width={80}
-                                              height={80}
-                                              quality={100}
-                                              className="object-contain w-full h-full"
-                                            />
-                                          )}
+                                    {getFilteredSkinsForBundle(bundle.uuid).length > 0 ? (
+                                      getFilteredSkinsForBundle(bundle.uuid).map((skin) => (
+                                        <div
+                                          key={skin.id}
+                                          className={`p-2 rounded cursor-pointer transition-all ${
+                                            selectedSkins.some(s => s.id === skin.id)
+                                              ? "bg-primary/20 border border-primary/70"
+                                              : "bg-black/20 border border-white/10 hover:bg-black/40"
+                                          }`}
+                                          onClick={() => toggleSkinSelection(skin)}
+                                          role="button"
+                                          tabIndex={0}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                              e.preventDefault();
+                                              toggleSkinSelection(skin);
+                                            }
+                                          }}
+                                          aria-pressed={selectedSkins.some(s => s.id === skin.id)}
+                                          aria-label={`${selectedSkins.some(s => s.id === skin.id) ? 'Deseleccionar' : 'Seleccionar'} skin ${skin.nombre}`}
+                                        >
+                                          <div className="aspect-square mb-1 bg-black/30 rounded overflow-hidden">
+                                            {skin.imagen_url && (
+                                              <Image
+                                                src={skin.imagen_url}
+                                                alt={skin.nombre}
+                                                width={80}
+                                                height={80}
+                                                quality={100}
+                                                className="object-contain w-full h-full"
+                                              />
+                                            )}
+                                          </div>
+                                          <p className="text-xs text-white truncate" style={{ color: skin.content_tier?.color || "white" }}>
+                                            {skin.nombre}
+                                          </p>
                                         </div>
-                                        <p className="text-xs text-white truncate" style={{ color: skin.content_tier?.color || "white" }}>
-                                          {skin.nombre}
-                                        </p>
+                                      ))
+                                    ) : (
+                                      <div className="col-span-2 text-center py-4 text-white/60 text-sm">
+                                        {skinSearchTerm ? `No hay skins que coincidan con "${skinSearchTerm}"` : 'No hay skins disponibles'}
                                       </div>
-                                    ))}
+                                    )}
                                   </div>
                                 )}
                               </div>
