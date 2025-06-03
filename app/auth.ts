@@ -5,7 +5,7 @@ import DiscordProvider from "next-auth/providers/discord";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createClient } from "@supabase/supabase-js";
 import bcryptjs from "bcryptjs";
-import { inicializarMisionesUsuario } from "@/lib/missionUtils";
+import { inicializarMisionesUsuario, procesarMisionLogin } from "@/lib/missionUtils";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -143,7 +143,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             );
           }
           usuario = nuevo;
-          inicializarMisionesUsuario(usuario.id);
+          
+          // 🎯 INICIALIZAR MISIONES PARA USUARIO NUEVO
+          try {
+            await inicializarMisionesUsuario(usuario.id);
+          } catch (missionError) {
+            console.warn("⚠️ Error al inicializar misiones para usuario OAuth:", missionError);
+          }
         } else {
           // Usuario ya existe, verificar si necesita actualización para OAuth
           if (!usuario.oauth) {
@@ -161,7 +167,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }
 
             usuario = updated || usuario;
-            inicializarMisionesUsuario(usuario.id);
+          }
+          
+          // 🎯 PROCESAR MISIÓN DE LOGIN PARA USUARIO EXISTENTE
+          try {
+            await procesarMisionLogin(usuario.id);
+          } catch (missionError) {
+            console.warn("⚠️ Error al procesar misión de login OAuth:", missionError);
           }
         }
 
@@ -175,6 +187,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
+        
+        // 🎯 PROCESAR MISIÓN DE LOGIN PARA CREDENTIALS
+        if (user.id) {
+          try {
+            await procesarMisionLogin(user.id);
+          } catch (missionError) {
+            console.warn("⚠️ Error al procesar misión de login credentials:", missionError);
+          }
+        }
       }
 
       // Verificar consistencia del token con la base de datos

@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import bcryptjs from "bcryptjs";
 
 import { signIn } from "@/app/auth";
+import { procesarMisionLogin } from "@/lib/missionUtils";
 
 // Inicializar el cliente de Supabase con las variables de entorno
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -96,6 +97,15 @@ export async function POST(request: NextRequest) {
       }
 
       console.log("Inicio de sesión exitoso para:", email);
+
+      // 🎯 PROCESAR MISIÓN DE LOGIN
+      try {
+        await procesarMisionLogin(user.id);
+        console.log("✅ Misión de login procesada para:", user.id);
+      } catch (missionError) {
+        console.warn("⚠️ Error al procesar misión de login:", missionError);
+        // No fallar el login por errores de misiones
+      }
 
       return NextResponse.json(
         {

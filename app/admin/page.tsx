@@ -217,6 +217,15 @@ export default function AdminPage() {
   const [editingCaja, setEditingCaja] = useState<Caja | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Estados adicionales para edición completa
+  const [editProbabilidades, setEditProbabilidades] = useState<TierProbabilidad[]>([]);
+  const [editSelectedSkins, setEditSelectedSkins] = useState<Skin[]>([]);
+  const [editExpandedBundles, setEditExpandedBundles] = useState<string[]>([]);
+  const [editBundleSearchTerm, setEditBundleSearchTerm] = useState("");
+  const [editSkinSearchTerm, setEditSkinSearchTerm] = useState("");
+  const [editPendingSkinLoads, setEditPendingSkinLoads] = useState<Set<string>>(new Set());
+  const [isLoadingEditData, setIsLoadingEditData] = useState(false);
+
   // Estado para nueva caja
   const [nuevaCaja, setNuevaCaja] = useState<NuevaCaja>({
     nombre: "",
@@ -259,7 +268,7 @@ export default function AdminPage() {
         const isLoadingThisSpecificBundle = loadingBundleUuid === bundle.uuid;
 
         if (!hasFormattedSkins && !isAlreadyPending && !isLoadingThisSpecificBundle) {
-          setPendingSkinLoads(prev => new Set(prev).add(bundle.uuid));
+          setPendingSkinLoads((prev: Set<string>) => new Set(prev).add(bundle.uuid));
           loadSkinsForBundle(bundle);
         }
       }
@@ -565,7 +574,7 @@ export default function AdminPage() {
       setCreateError("Error al cargar skins del bundle");
     } finally {
       setLoadingBundleUuid(null);
-      setPendingSkinLoads(prev => {
+      setPendingSkinLoads((prev: Set<string>) => {
         const next = new Set(prev);
         next.delete(bundle.uuid);
         return next;
@@ -793,29 +802,265 @@ export default function AdminPage() {
   const editCaja = async (caja: Caja) => {
     setSelectedCajaForEdit(caja);
     setEditingCaja({ ...caja });
+    setIsLoadingEditData(true);
     setShowEditModal(true);
+    
+    try {
+      await Promise.all([
+        loadEditProbabilidades(caja.id),
+        loadEditSkins(caja.id),
+        loadBundlesForEdit()
+      ]);
+    } catch (error) {
+      console.error("Error al cargar datos de edición:", error);
+      toast.error("Error al cargar datos de la caja");
+    } finally {
+      setIsLoadingEditData(false);
+    }
   };
 
-  // Función para manejar cambios en la edición
-  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!editingCaja) return;
-    const { name, value, type, checked } = e.target;
-    setEditingCaja(prev => prev ? {
-      ...prev,
-      [name]: type === "checkbox" ? checked : (name === "precio" ? parseFloat(value) || 0 : value)
-    } : null);
+  // Función para cargar probabilidades existentes de la caja
+  const loadEditProbabilidades = async (cajaId: string) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    try {
+      // Cargar todas las probabilidades existentes de la caja
+      const { data: existingProbs, error: probsError } = await supabase
+        .from("tier_probabilidades")
+        .select(`
+          *,
+          content_tiers(*)
+        `)
+        .eq("caja_id", cajaId);
+
+      if (probsError) throw probsError;
+
+      // Cargar todos los tiers disponibles
+      const { data: allTiers, error: tiersError } = await supabase
+        .from("content_tiers")
+        .select("*");
+
+      if (tiersError) throw tiersError;
+
+      // Crear array de probabilidades con todos los tiers
+      const probsArray = (allTiers || []).map(tier => {
+        const existingProb = existingProbs?.find(p => p.content_tier_id === tier.id);
+        return {
+          caja_id: cajaId,
+          content_tier_id: String(tier.id),
+          probabilidad: existingProb?.probabilidad || 0,
+          cantidad_skins: existingProb?.cantidad_skins || 0,
+          content_tier: {
+            id: String(tier.uuid_api),
+            nombre: String(tier.nombre || "Sin nombre"),
+            uuid: String(tier.uuid_api),
+            color: String(tier.color || "#FFFFFF"),
+          },
+        } as TierProbabilidad;
+      });
+
+      setEditProbabilidades(probsArray);
+    } catch (error) {
+      console.error("Error al cargar probabilidades:", error);
+    }
+  };
+
+  // Función para cargar skins existentes de la caja
+  const loadEditSkins = async (cajaId: string) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    try {
+      const { data: existingSkins, error: skinsError } = await supabase
+        .from("cajas_skins")
+        .select(`
+          skin_id,
+          skin_nombre,
+          content_tier_id,
+          content_tiers!inner(*)
+        `)
+        .eq("caja_id", cajaId);
+
+      if (skinsError) throw skinsError;
+
+      if (existingSkins && existingSkins.length > 0) {
+        // Convertir a formato Skin
+        const formattedSkins: Skin[] = existingSkins.map(skin => ({
+          id: String(skin.skin_id),
+          uuid: String(skin.skin_id), // Agregar uuid que es requerido
+          nombre: String(skin.skin_nombre),
+          imagen_url: `/skins/${skin.skin_id}.png`, // Imagen por defecto
+          content_tier_id: (skin.content_tiers as any)?.uuid_api || "",
+          content_tier: {
+            id: String((skin.content_tiers as any)?.uuid_api || ""),
+            nombre: String((skin.content_tiers as any)?.nombre || ""),
+            color: String((skin.content_tiers as any)?.color || "#FFFFFF"),
+            uuid_api: String((skin.content_tiers as any)?.uuid_api || ""),
+          }
+        }));
+
+        setEditSelectedSkins(formattedSkins);
+      } else {
+        setEditSelectedSkins([]);
+      }
+    } catch (error) {
+      console.error("Error al cargar skins:", error);
+    }
+  };
+
+  // Función para cargar bundles en modo edición
+  const loadBundlesForEdit = async () => {
+    if (bundles.length === 0) {
+      await loadBundles();
+    }
+  };
+
+  // Función para manejar cambios en probabilidades de edición
+  const handleEditProbabilidadChange = (tierId: string, value: number) => {
+    setEditProbabilidades(prev =>
+      prev.map(prob =>
+        prob.content_tier_id === tierId ? { ...prob, probabilidad: value } : prob
+      )
+    );
+  };
+
+  // Toggle selección de skin en edición
+  const toggleEditSkinSelection = (skin: Skin) => {
+    if (editSelectedSkins.some(s => s.id === skin.id)) {
+      setEditSelectedSkins(editSelectedSkins.filter(s => s.id !== skin.id));
+    } else {
+      setEditSelectedSkins([...editSelectedSkins, skin]);
+    }
+  };
+
+  // Sincronizar cantidad_skins según skins seleccionadas en edición
+  useEffect(() => {
+    setEditProbabilidades(prevProbs =>
+      prevProbs.map(prob => {
+        const skinsCount = editSelectedSkins.filter(skin =>
+          String(skin.content_tier_id) === String(prob.content_tier?.uuid)
+        ).length;
+        return { ...prob, cantidad_skins: skinsCount };
+      })
+    );
+  }, [editSelectedSkins]);
+
+  // Función para cargar skins de un bundle en modo edición
+  const loadSkinsForBundleEdit = async (bundle: Bundle) => {
+    const hasFormattedSkins = skinsByBundle[bundle.uuid] && 
+                              skinsByBundle[bundle.uuid].length > 0 && 
+                              skinsByBundle[bundle.uuid][0].content_tier_id;
+
+    if (hasFormattedSkins) {
+      if (editExpandedBundles.includes(bundle.uuid)) {
+        setEditExpandedBundles(editExpandedBundles.filter((id) => id !== bundle.uuid));
+      } else {
+        setEditExpandedBundles([...editExpandedBundles, bundle.uuid]);
+      }
+      return;
+    }
+
+    setLoadingBundleUuid(bundle.uuid);
+    try {
+      const bundleSkins = skinsByBundle[bundle.uuid] || [];
+      const supabase = getSupabaseClient();
+      if (!supabase) throw new Error("No se pudo conectar a la base de datos");
+
+      const { data: allSupabaseTiersData, error: contentTiersError } = await supabase
+        .from("content_tiers")
+        .select("uuid_api");
+
+      if (contentTiersError) throw new Error("Error al cargar content_tiers");
+
+      const validTierUuidsFromSupabase = new Set(allSupabaseTiersData?.map(t => t.uuid_api) || []);
+      const formattedSkins: Skin[] = [];
+
+      for (const skin of bundleSkins) {
+        if ("content_tier_id" in skin && skin.content_tier_id) {
+          if (validTierUuidsFromSupabase.has(skin.content_tier_id)) {
+            formattedSkins.push(skin as Skin);
+          }
+          continue;
+        }
+
+        const valorantApiSkin = skin as unknown as ValorantApiSkin;
+        if (valorantApiSkin.contentTierUuid && validTierUuidsFromSupabase.has(valorantApiSkin.contentTierUuid)) {
+          const tierDataForFormatting = await getTierData(supabase, valorantApiSkin.contentTierUuid);
+          if (tierDataForFormatting) {
+            const formattedSkin = formatSkinForApp(valorantApiSkin, tierDataForFormatting);
+            formattedSkins.push(formattedSkin);
+          }
+        }
+      }
+
+      setSkinsByBundle((prev) => ({ ...prev, [bundle.uuid]: formattedSkins }));
+      if (!editExpandedBundles.includes(bundle.uuid)) {
+        setEditExpandedBundles([...editExpandedBundles, bundle.uuid]);
+      }
+    } catch (error: any) {
+      console.error("Error al cargar skins del bundle:", error);
+      toast.error("Error al cargar skins del bundle");
+    } finally {
+      setLoadingBundleUuid(null);
+      setEditPendingSkinLoads((prev: Set<string>) => {
+        const next = new Set(prev);
+        next.delete(bundle.uuid);
+        return next;
+      });
+    }
+  };
+
+  // Función para expandir/contraer todos los bundles en edición
+  const toggleAllBundlesEdit = () => {
+    const filteredBundlesEdit = bundles.filter(bundle =>
+      bundle.displayName.toLowerCase().includes(editBundleSearchTerm.toLowerCase())
+    );
+    const allFilteredBundleIds = filteredBundlesEdit.map(b => b.uuid);
+    const areAllCurrentlyVisibleExpanded = allFilteredBundleIds.length > 0 && 
+      allFilteredBundleIds.every(id => editExpandedBundles.includes(id));
+
+    if (areAllCurrentlyVisibleExpanded) {
+      setEditExpandedBundles(prev => prev.filter(id => !allFilteredBundleIds.includes(id)));
+    } else {
+      const bundlesToExpandIds = filteredBundlesEdit
+        .filter(b => !editExpandedBundles.includes(b.uuid))
+        .map(b => b.uuid);
+      setEditExpandedBundles(prev => Array.from(new Set([...prev, ...bundlesToExpandIds])));
+    }
+  };
+
+  // Función para filtrar skins dentro de un bundle en edición
+  const getFilteredSkinsForBundleEdit = (bundleUuid: string): Skin[] => {
+    const bundleSkins = skinsByBundle[bundleUuid] || [];
+    if (!editSkinSearchTerm) return bundleSkins;
+    
+    return bundleSkins.filter(skin =>
+      skin?.nombre?.toLowerCase().includes(editSkinSearchTerm.toLowerCase())
+    );
   };
 
   // Función para guardar cambios de edición
   const saveEditChanges = async () => {
     if (!editingCaja) return;
 
+    if (editProbabilidades.reduce((sum, p) => sum + p.probabilidad, 0) !== 1) {
+      toast.error("La suma de probabilidades debe ser exactamente 1 (100%)");
+      return;
+    }
+
+    if (editSelectedSkins.length === 0) {
+      toast.error("Debes tener al menos una skin en la caja");
+      return;
+    }
+
     setIsUpdating(true);
     try {
       const supabase = getSupabaseClient();
       if (!supabase) throw new Error("No se pudo conectar a la base de datos");
 
-      const { error } = await supabase
+      // 1. Actualizar información básica de la caja
+      const { error: updateError } = await supabase
         .from("cajas")
         .update({
           nombre: editingCaja.nombre,
@@ -828,12 +1073,82 @@ export default function AdminPage() {
         })
         .eq("id", editingCaja.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // 2. Eliminar probabilidades existentes
+      const { error: deleteProbsError } = await supabase
+        .from("tier_probabilidades")
+        .delete()
+        .eq("caja_id", editingCaja.id);
+
+      if (deleteProbsError) throw deleteProbsError;
+
+      // 3. Insertar nuevas probabilidades
+      const probsToInsert = editProbabilidades
+        .filter(prob => prob.probabilidad > 0)
+        .map(prob => ({
+          caja_id: editingCaja.id,
+          content_tier_id: prob.content_tier_id,
+          probabilidad: prob.probabilidad,
+          cantidad_skins: prob.cantidad_skins,
+        }));
+
+      if (probsToInsert.length > 0) {
+        const { error: insertProbsError } = await supabase
+          .from("tier_probabilidades")
+          .insert(probsToInsert);
+        if (insertProbsError) throw insertProbsError;
+      }
+
+      // 4. Eliminar skins existentes
+      const { error: deleteSkinsError } = await supabase
+        .from("cajas_skins")
+        .delete()
+        .eq("caja_id", editingCaja.id);
+
+      if (deleteSkinsError) throw deleteSkinsError;
+
+      // 5. Obtener mapeo de tier UUIDs a IDs de Supabase
+      const { data: allTiersData, error: allTiersError } = await supabase
+        .from("content_tiers")
+        .select("id, uuid_api");
+
+      if (allTiersError) throw allTiersError;
+      
+      const uuidApiToSupabaseIdMap = new Map(allTiersData?.map(tier => [tier.uuid_api, tier.id]) || []);
+
+      // 6. Insertar nuevas skins
+      const skinsToInsert = editSelectedSkins
+        .map(skin => {
+          const supabaseTierId = uuidApiToSupabaseIdMap.get(skin.content_tier_id);
+          if (!supabaseTierId) return null;
+          return {
+            caja_id: editingCaja.id,
+            skin_id: skin.id,
+            content_tier_id: supabaseTierId,
+            skin_nombre: skin.nombre,
+          };
+        })
+        .filter(Boolean);
+
+      if (skinsToInsert.length > 0) {
+        const { error: insertSkinsError } = await supabase
+          .from("cajas_skins")
+          .insert(skinsToInsert as any);
+        if (insertSkinsError) throw insertSkinsError;
+      }
 
       toast.success("Caja actualizada correctamente");
       setShowEditModal(false);
       setEditingCaja(null);
       setSelectedCajaForEdit(null);
+      
+      // Reset estados de edición
+      setEditProbabilidades([]);
+      setEditSelectedSkins([]);
+      setEditExpandedBundles([]);
+      setEditBundleSearchTerm("");
+      setEditSkinSearchTerm("");
       
       // Recargar datos
       await loadInitialData();
@@ -843,6 +1158,16 @@ export default function AdminPage() {
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  // Función para manejar cambios en la edición
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!editingCaja) return;
+    const { name, value, type, checked } = e.target;
+    setEditingCaja(prev => prev ? {
+      ...prev,
+      [name]: type === "checkbox" ? checked : (name === "precio" ? parseFloat(value) || 0 : value)
+    } : null);
   };
 
   // Función para expandir/contraer todos los bundles
@@ -1572,7 +1897,7 @@ export default function AdminPage() {
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-background border border-white/10 rounded-2xl backdrop-blur-xl 
                          shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 
-                         hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-6 w-full max-w-xl max-h-[90vh] 
+                         hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-6 w-full max-w-6xl max-h-[90vh] 
                          overflow-y-auto custom-scrollbar"
               onClick={(e) => e.stopPropagation()}
             >
@@ -1583,106 +1908,366 @@ export default function AdminPage() {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="edit-nombre" className="text-white">Nombre</Label>
-                    <Input
-                      id="edit-nombre"
-                      name="nombre"
-                      value={editingCaja.nombre}
-                      onChange={handleEditChange}
-                      className="bg-white/5 border-white/20 text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-precio" className="text-white">Precio (VP)</Label>
-                    <Input
-                      id="edit-precio"
-                      name="precio"
-                      type="number"
-                      value={editingCaja.precio}
-                      onChange={handleEditChange}
-                      className="bg-white/5 border-white/20 text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-imagen_url" className="text-white">URL de imagen</Label>
-                    <Input
-                      id="edit-imagen_url"
-                      name="imagen_url"
-                      value={editingCaja.imagen_url}
-                      onChange={handleEditChange}
-                      className="bg-white/5 border-white/20 text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-categoria" className="text-white">Categoría</Label>
-                    <Input
-                      id="edit-categoria"
-                      name="categoria"
-                      value={editingCaja.categoria || ""}
-                      onChange={handleEditChange}
-                      className="bg-white/5 border-white/20 text-white"
-                    />
-                  </div>
+              {isLoadingEditData ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary" />
                 </div>
-                
-                <div className="space-y-4 flex flex-col items-center justify-center">
-                  <div className="w-32 h-32 relative bg-white/5 rounded-lg overflow-hidden">
-                    <Image
-                      src={editingCaja.imagen_url}
-                      alt={editingCaja.nombre}
-                      fill
-                      className="object-contain"
-                    />
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="edit-esta_disponible"
-                        name="esta_disponible"
-                        checked={editingCaja.esta_disponible}
-                        onChange={handleEditChange}
-                        className="w-4 h-4"
-                      />
-                      <Label htmlFor="edit-esta_disponible" className="text-white">Disponible</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="edit-es_diaria"
-                        name="es_diaria"
-                        checked={editingCaja.es_diaria}
-                        onChange={handleEditChange}
-                        className="w-4 h-4"
-                      />
-                      <Label htmlFor="edit-es_diaria" className="text-white">Es caja diaria</Label>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Información de la caja */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-white">Información de la Caja</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <Label htmlFor="edit-nombre" className="text-white">Nombre</Label>
+                          <Input
+                            id="edit-nombre"
+                            name="nombre"
+                            value={editingCaja.nombre}
+                            onChange={handleEditChange}
+                            className="bg-white/5 border-white/20 text-white"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="edit-precio" className="text-white">Precio (VP)</Label>
+                          <Input
+                            id="edit-precio"
+                            name="precio"
+                            type="number"
+                            value={editingCaja.precio}
+                            onChange={handleEditChange}
+                            className="bg-white/5 border-white/20 text-white"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="edit-imagen_url" className="text-white">URL de imagen</Label>
+                          <Input
+                            id="edit-imagen_url"
+                            name="imagen_url"
+                            value={editingCaja.imagen_url}
+                            onChange={handleEditChange}
+                            className="bg-white/5 border-white/20 text-white"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="edit-categoria" className="text-white">Categoría</Label>
+                          <Input
+                            id="edit-categoria"
+                            name="categoria"
+                            value={editingCaja.categoria || ""}
+                            onChange={handleEditChange}
+                            className="bg-white/5 border-white/20 text-white"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="edit-categoria_titulo" className="text-white">Título de categoría</Label>
+                          <Input
+                            id="edit-categoria_titulo"
+                            name="categoria_titulo"
+                            value={editingCaja.categoria_titulo || ""}
+                            onChange={handleEditChange}
+                            className="bg-white/5 border-white/20 text-white"
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="edit-esta_disponible"
+                            name="esta_disponible"
+                            checked={editingCaja.esta_disponible}
+                            onChange={handleEditChange}
+                            className="w-4 h-4"
+                          />
+                          <Label htmlFor="edit-esta_disponible" className="text-white">Disponible</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="edit-es_diaria"
+                            name="es_diaria"
+                            checked={editingCaja.es_diaria}
+                            onChange={handleEditChange}
+                            className="w-4 h-4"
+                          />
+                          <Label htmlFor="edit-es_diaria" className="text-white">Es caja diaria</Label>
+                        </div>
+                      </CardContent>
+                    </Card>
 
-              <div className="flex justify-end gap-2 mt-6">
-                <Button 
-                  variant="secondary"
-                  className="!text-white/70 hover:!bg-white/10 active:!bg-white/20 transition-all duration-200 
-                             rounded-xl border border-transparent hover:border-white/10 active:scale-95 bg-transparent"
-                  onClick={() => setShowEditModal(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={saveEditChanges} 
-                  disabled={isUpdating}
-                  className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg 
-                             shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 
-                             hover:to-red-600/30 active:scale-95 transition-all duration-200"
-                >
-                  {isUpdating ? "Guardando..." : "Guardar Cambios"}
-                </Button>
-              </div>
+                    {/* Probabilidades */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-white">Probabilidades por Tier</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {editProbabilidades.map((prob) => (
+                            <div key={prob.content_tier_id} className="grid grid-cols-7 gap-2 items-center">
+                              <div className="col-span-3 flex items-center">
+                                <div
+                                  className="w-3 h-3 rounded-full mr-2"
+                                  style={{ backgroundColor: prob.content_tier?.color || "#fff" }}
+                                />
+                                <span className="text-white text-sm">{prob.content_tier?.nombre}</span>
+                              </div>
+                              <div className="col-span-2">
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  max="1"
+                                  value={prob.probabilidad}
+                                  onChange={(e) => handleEditProbabilidadChange(prob.content_tier_id, parseFloat(e.target.value))}
+                                  disabled={prob.cantidad_skins === 0}
+                                  className="bg-white/5 border-white/20 text-white text-sm"
+                                />
+                              </div>
+                              <div className="col-span-2 text-xs text-white/80 text-center">
+                                {prob.cantidad_skins} skin{prob.cantidad_skins === 1 ? "" : "s"}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-between mt-4 pt-2 border-t border-white/10">
+                          <span className="text-white">Total:</span>
+                          <span className={
+                            Math.abs(editProbabilidades.reduce((sum, p) => sum + p.probabilidad, 0) - 1) < 0.001
+                              ? "text-green-400"
+                              : "text-red-400"
+                          }>
+                            {(editProbabilidades.reduce((sum, p) => sum + p.probabilidad, 0) * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Selección de Skins */}
+                  <Card className="mt-6">
+                    <CardHeader>
+                      <CardTitle className="text-white">Selección de Skins</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="mb-4 flex gap-4 items-center">
+                        <Input
+                          placeholder="Buscar bundles..."
+                          value={editBundleSearchTerm}
+                          onChange={(e) => setEditBundleSearchTerm(e.target.value)}
+                          className="max-w-md bg-white/5 border-white/20 text-white"
+                        />
+                        <Input
+                          placeholder="Buscar skins/armas..."
+                          value={editSkinSearchTerm}
+                          onChange={(e) => setEditSkinSearchTerm(e.target.value)}
+                          className="max-w-md bg-white/5 border-white/20 text-white"
+                        />
+                        {bundles.length > 0 && (
+                          <Button variant="outline" onClick={toggleAllBundlesEdit}>
+                            {bundles.filter(bundle =>
+                              bundle.displayName.toLowerCase().includes(editBundleSearchTerm.toLowerCase())
+                            ).length > 0 && bundles.filter(bundle =>
+                              bundle.displayName.toLowerCase().includes(editBundleSearchTerm.toLowerCase())
+                            ).every(b => editExpandedBundles.includes(b.uuid)) 
+                              ? "Contraer Todos" 
+                              : "Expandir Todos"}
+                          </Button>
+                        )}
+                        <div className="ml-auto text-white/70">
+                          {editSelectedSkins.length} skins seleccionadas
+                        </div>
+                      </div>
+
+                      <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {bundles.filter(bundle =>
+                            bundle.displayName.toLowerCase().includes(editBundleSearchTerm.toLowerCase())
+                          ).map((bundle) => (
+                            <div key={bundle.uuid} className="mb-2">
+                              <div
+                                className="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-white/5 border border-white/10 hover:border-primary/40"
+                                onClick={() => loadSkinsForBundleEdit(bundle)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    loadSkinsForBundleEdit(bundle);
+                                  }
+                                }}
+                              >
+                                <Image
+                                  src={bundle.displayIcon}
+                                  alt={bundle.displayName}
+                                  width={32}
+                                  height={32}
+                                  className="rounded"
+                                />
+                                <div className="flex-1">
+                                  <h3 className="text-sm font-medium text-white">{bundle.displayName}</h3>
+                                  <p className="text-xs text-white/60">
+                                    {getFilteredSkinsForBundleEdit(bundle.uuid).length} skins
+                                    {editSkinSearchTerm && (
+                                      <span className="text-white/40">
+                                        {' '}de {skinsByBundle[bundle.uuid]?.length || 0}
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                                <div className={`transition-transform ${editExpandedBundles.includes(bundle.uuid) ? "rotate-90" : ""}`}>
+                                  <ChevronRight className="h-4 w-4 text-white/60" />
+                                </div>
+                              </div>
+
+                              {editExpandedBundles.includes(bundle.uuid) && (
+                                <div className="mt-2 p-2 bg-black/20 rounded-lg border border-white/5">
+                                  {loadingBundleUuid === bundle.uuid ? (
+                                    <div className="text-center py-4">
+                                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary mx-auto" />
+                                    </div>
+                                  ) : (
+                                    <div className="grid grid-cols-2 gap-2">
+                                      {getFilteredSkinsForBundleEdit(bundle.uuid).length > 0 ? (
+                                        getFilteredSkinsForBundleEdit(bundle.uuid).map((skin) => (
+                                          <div
+                                            key={skin.id}
+                                            className={`p-2 rounded cursor-pointer transition-all ${
+                                              editSelectedSkins.some(s => s.id === skin.id)
+                                                ? "bg-primary/20 border border-primary/70"
+                                                : "bg-black/20 border border-white/10 hover:bg-black/40"
+                                            }`}
+                                            onClick={() => toggleEditSkinSelection(skin)}
+                                            role="button"
+                                            tabIndex={0}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                toggleEditSkinSelection(skin);
+                                              }
+                                            }}
+                                            aria-pressed={editSelectedSkins.some(s => s.id === skin.id)}
+                                            aria-label={`${editSelectedSkins.some(s => s.id === skin.id) ? 'Deseleccionar' : 'Seleccionar'} skin ${skin.nombre}`}
+                                          >
+                                            <div className="aspect-square mb-1 bg-black/30 rounded overflow-hidden">
+                                              {skin.imagen_url && (
+                                                <Image
+                                                  src={skin.imagen_url}
+                                                  alt={skin.nombre}
+                                                  width={80}
+                                                  height={80}
+                                                  quality={100}
+                                                  className="object-contain w-full h-full"
+                                                />
+                                              )}
+                                            </div>
+                                            <p className="text-xs text-white truncate" style={{ color: skin.content_tier?.color || "white" }}>
+                                              {skin.nombre}
+                                            </p>
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <div className="col-span-2 text-center py-4 text-white/60 text-sm">
+                                          {editSkinSearchTerm ? `No hay skins que coincidan con "${editSkinSearchTerm}"` : 'No hay skins disponibles'}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Skins Seleccionadas */}
+                  {editSelectedSkins.length > 0 && (
+                    <Card className="mt-6">
+                      <CardHeader>
+                        <CardTitle className="text-white flex items-center justify-between">
+                          Skins Seleccionadas
+                          <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/40">
+                            {editSelectedSkins.length} skins
+                          </Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-80 overflow-y-auto">
+                          {editSelectedSkins.map((skin) => (
+                            <div
+                              key={skin.id}
+                              className="relative p-2 rounded-lg bg-black/20 border border-white/10 hover:border-primary/40 transition-all group"
+                            >
+                              <button
+                                onClick={() => toggleEditSkinSelection(skin)}
+                                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500/80 hover:bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                title="Quitar skin"
+                              >
+                                ×
+                              </button>
+                              <div className="aspect-square mb-2 bg-black/30 rounded overflow-hidden">
+                                {skin.imagen_url && (
+                                  <Image
+                                    src={skin.imagen_url}
+                                    alt={skin.nombre}
+                                    width={80}
+                                    height={80}
+                                    quality={100}
+                                    className="object-contain w-full h-full"
+                                  />
+                                )}
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs text-white truncate font-medium" title={skin.nombre}>
+                                  {skin.nombre}
+                                </p>
+                                <p 
+                                  className="text-xs font-semibold truncate" 
+                                  style={{ color: skin.content_tier?.color || "#fff" }}
+                                  title={skin.content_tier?.nombre}
+                                >
+                                  {skin.content_tier?.nombre}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {editSelectedSkins.length > 12 && (
+                          <div className="mt-3 text-center">
+                            <p className="text-xs text-white/60">
+                              Desplázate para ver más skins seleccionadas
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Botones de acción */}
+                  <div className="flex justify-end gap-2 mt-6">
+                    <Button 
+                      variant="secondary"
+                      className="!text-white/70 hover:!bg-white/10 active:!bg-white/20 transition-all duration-200 
+                                 rounded-xl border border-transparent hover:border-white/10 active:scale-95 bg-transparent"
+                      onClick={() => setShowEditModal(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      onClick={saveEditChanges} 
+                      disabled={isUpdating}
+                      className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg 
+                                 shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 
+                                 hover:to-red-600/30 active:scale-95 transition-all duration-200"
+                    >
+                      {isUpdating ? "Guardando..." : "Guardar Cambios"}
+                    </Button>
+                  </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}

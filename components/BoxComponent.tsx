@@ -17,6 +17,11 @@ import {
   getTierData,
   processBoxOpeningWithLog,
 } from "@/lib/boxUtils";
+import {
+  actualizarProgresoMision,
+  procesarMisionMultiApertura,
+  procesarSkinConseguida
+} from "@/lib/missionUtils";
 
 // Estilos globales para animaciones
 const globalStyles = `
@@ -492,10 +497,19 @@ export default function BoxComponent({
               results.push(openingResult.selectedSkin as Skin);
               const items = generateSpinItems(openingResult.selectedSkin as Skin);
               spinItemsArray.push(items);
+              
+              // 🎯 PROCESAR MISIONES - Skin conseguida para cada skin
+              await procesarSkinConseguida(userId, openingResult.selectedSkin);
             }
           }
 
           if (results.length > 0) {
+            // 🎯 PROCESAR MISIONES - Cajas abiertas múltiples
+            await actualizarProgresoMision(userId, 'caja_abierta', numberOfBoxes);
+            
+            // 🎯 PROCESAR MISIONES - Multi-apertura
+            await procesarMisionMultiApertura(userId, numberOfBoxes);
+            
             setMultipleResults(results);
             setMultipleSpinItems(spinItemsArray);
             setCompletedSpinners(Array(numberOfBoxes).fill(false));
@@ -519,6 +533,12 @@ export default function BoxComponent({
           );
 
           if (openingResult.selectedSkin) {
+            // 🎯 PROCESAR MISIONES - Caja abierta única
+            await actualizarProgresoMision(userId, 'caja_abierta', 1);
+            
+            // 🎯 PROCESAR MISIONES - Skin conseguida
+            await procesarSkinConseguida(userId, openingResult.selectedSkin);
+            
             const items = generateSpinItems(openingResult.selectedSkin as Skin);
             setResultSkinForSpin(openingResult.selectedSkin as Skin);
             setSpinItems(items);
