@@ -514,6 +514,13 @@ export default function MejorasPage() {
       setIsNewSkin(skinIsNew);
       setShowResultModal(true);
 
+      // 🎯 OBTENER EL ID DE SUPABASE DEL TIER PARA EL LOG
+      let tierObjetivoId: string | undefined = undefined;
+      if (randomSkin.contentTierUuid && allSupabaseTiers) {
+        const tierEncontrado = allSupabaseTiers.find(tier => tier.uuid_api === randomSkin.contentTierUuid);
+        tierObjetivoId = tierEncontrado?.id;
+      }
+
       // Registrar el log de mejora exitosa
       const logData: SkinMejoradaLog = {
         usuario_id: userId as string,
@@ -526,7 +533,7 @@ export default function MejorasPage() {
           skin_nombre: skin.nombre,
           inventario_id: skin.inventoryIds?.[0] || skin.id
         })),
-        tier_objetivo_id: randomSkin.contentTierUuid || undefined,
+        tier_objetivo_id: tierObjetivoId, // 🎯 USAR ID DE SUPABASE
         cantidad_skins_usadas: selectedSkins.length
       };
 
@@ -548,6 +555,9 @@ export default function MejorasPage() {
 
         if (!misionResponse.ok) {
           console.warn('Error al procesar misión de mejora:', await misionResponse.text());
+        } else {
+          // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - MISIONES
+          window.dispatchEvent(new CustomEvent('misionesActualizadas'));
         }
       } catch (missionError) {
         console.warn('Error al procesar misión de mejora:', missionError);
@@ -662,6 +672,13 @@ export default function MejorasPage() {
       setIsNewSkin(skinIsNew);
       setShowResultModal(true);
 
+      // 🎯 OBTENER EL ID DE SUPABASE DEL TIER PARA EL LOG
+      let tierObjetivoId: string | undefined = undefined;
+      if (randomSkin.contentTierUuid && allSupabaseTiers) {
+        const tierEncontrado = allSupabaseTiers.find(tier => tier.uuid_api === randomSkin.contentTierUuid);
+        tierObjetivoId = tierEncontrado?.id;
+      }
+
       // Registrar el log de mejora exitosa
       const logData: SkinMejoradaLog = {
         usuario_id: userId as string,
@@ -674,7 +691,7 @@ export default function MejorasPage() {
           skin_nombre: skin.nombre,
           inventario_id: skin.inventoryIds?.[0] || skin.id
         })),
-        tier_objetivo_id: randomSkin.contentTierUuid || undefined,
+        tier_objetivo_id: tierObjetivoId, // 🎯 USAR ID DE SUPABASE
         cantidad_skins_usadas: selectedSkins.length
       };
 
@@ -696,6 +713,9 @@ export default function MejorasPage() {
 
         if (!misionResponse.ok) {
           console.warn('Error al procesar misión de mejora:', await misionResponse.text());
+        } else {
+          // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - MISIONES
+          window.dispatchEvent(new CustomEvent('misionesActualizadas'));
         }
       } catch (missionError) {
         console.warn('Error al procesar misión de mejora:', missionError);

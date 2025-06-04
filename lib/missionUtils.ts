@@ -2,6 +2,28 @@ import { createClient } from '@/utils/supabase/client';
 
 const supabase = createClient();
 
+// Función helper para obtener progreso actual según el tipo de misión
+const obtenerProgresoActualPorTipo = (estadisticas: any, tipo: string, tierUuid?: string): number => {
+  switch (tipo) {
+    case 'caja_abierta':
+      return estadisticas.cajasAbiertas;
+    case 'skin_eliminada':
+      return estadisticas.skinsEliminadas;
+    case 'mejora_realizada':
+      return estadisticas.mejorasRealizadas;
+    case 'conseguir_skin':
+      return estadisticas.skinsConseguidas;
+    case 'completar_misiones':
+      return estadisticas.misionesCompletadas;
+    case 'aniversario':
+      return estadisticas.diasDesdeRegistro;
+    case 'conseguir_skin_tier':
+      return tierUuid ? (estadisticas.skinsPorTier[tierUuid] || 0) : 0;
+    default:
+      return 0;
+  }
+};
+
 // Función para inicializar misiones para un usuario
 export async function inicializarMisionesUsuario(userId: string) {
   try {
@@ -52,13 +74,26 @@ export async function inicializarMisionesUsuario(userId: string) {
     // Crear progreso inicial para cada misión (solo las que debe tener disponibles inicialmente)
     const misionesParaInicializar = await obtenerMisionesDisponiblesParaUsuario(userId, misiones);
     
+    // Obtener estadísticas para calcular progreso real
+    const estadisticas = await obtenerEstadisticasUsuario(userId);
+    
     const misionesUsuario = misionesParaInicializar.map(mision => {
       const objetivoDefault = mision.condicion?.cantidad || 1;
+      const tipo = mision.condicion?.tipo;
+      const tierUuid = mision.condicion?.tier_uuid;
+      
+      // Calcular progreso real basado en estadísticas
+      let progresoActual = 0;
+      if (tipo && ['caja_abierta', 'skin_eliminada', 'mejora_realizada', 'conseguir_skin', 'completar_misiones', 'aniversario', 'conseguir_skin_tier'].includes(tipo)) {
+        progresoActual = obtenerProgresoActualPorTipo(estadisticas, tipo, tierUuid);
+        // Limitar el progreso al objetivo para evitar excesos
+        progresoActual = Math.min(progresoActual, objetivoDefault);
+      }
       
       return {
         usuario_id: userId,
         mision_id: mision.id,
-        progreso: { actual: 0, objetivo: objetivoDefault },
+        progreso: { actual: progresoActual, objetivo: objetivoDefault },
         completada: false
       };
     });
@@ -123,12 +158,29 @@ async function sincronizarMisionesNuevas(userId: string) {
     const misionesParaAñadir = misionesDisponibles.filter(mision => !misionesQueYaTiene.has(mision.id));
 
     if (misionesParaAñadir.length > 0) {
-      const nuevasMisiones = misionesParaAñadir.map(mision => ({
-        usuario_id: userId,
-        mision_id: mision.id,
-        progreso: { actual: 0, objetivo: mision.condicion?.cantidad || 1 },
-        completada: false
-      }));
+      // Obtener estadísticas para calcular progreso real
+      const estadisticas = await obtenerEstadisticasUsuario(userId);
+      
+      const nuevasMisiones = misionesParaAñadir.map(mision => {
+        const objetivoDefault = mision.condicion?.cantidad || 1;
+        const tipo = mision.condicion?.tipo;
+        const tierUuid = mision.condicion?.tier_uuid;
+        
+        // Calcular progreso real basado en estadísticas
+        let progresoActual = 0;
+        if (tipo && ['caja_abierta', 'skin_eliminada', 'mejora_realizada', 'conseguir_skin', 'completar_misiones', 'aniversario', 'conseguir_skin_tier'].includes(tipo)) {
+          progresoActual = obtenerProgresoActualPorTipo(estadisticas, tipo, tierUuid);
+          // Limitar el progreso al objetivo para evitar excesos
+          progresoActual = Math.min(progresoActual, objetivoDefault);
+        }
+        
+        return {
+          usuario_id: userId,
+          mision_id: mision.id,
+          progreso: { actual: progresoActual, objetivo: objetivoDefault },
+          completada: false
+        };
+      });
 
       await supabase
         .from("misiones_usuario")
@@ -148,7 +200,7 @@ async function obtenerMisionesDisponiblesParaUsuario(userId: string, misiones: a
   // Obtener estadísticas actuales del usuario desde los logs
   const estadisticas = await obtenerEstadisticasUsuario(userId);
   
-  // Obtener misiones ya completadas por el usuario
+  // Obtener misiones ya completadas por el usuario con más detalle
   const { data: misionesCompletadas } = await supabase
     .from("misiones_usuario")
     .select(`
@@ -162,6 +214,8 @@ async function obtenerMisionesDisponiblesParaUsuario(userId: string, misiones: a
   
   // Agrupar misiones completadas por tipo para facilitar búsqueda
   const misionesCompletadasPorTipo: Record<string, number[]> = {};
+  const misionesCompletadasPorTierTipo: Record<string, Record<string, number[]>> = {};
+  
   if (misionesCompletadas) {
     for (const misionCompleta of misionesCompletadas) {
       const mision = misionCompleta.mision as any;
@@ -173,46 +227,78 @@ async function obtenerMisionesDisponiblesParaUsuario(userId: string, misiones: a
         misionesCompletadasPorTipo[tipo] = [];
       }
       misionesCompletadasPorTipo[tipo].push(cantidad);
+      
+      // Para misiones por tier, también agrupar por tier específico
+      if (tipo === 'conseguir_skin_tier' && condicion.tier_uuid) {
+        if (!misionesCompletadasPorTierTipo[tipo]) {
+          misionesCompletadasPorTierTipo[tipo] = {};
+        }
+        if (!misionesCompletadasPorTierTipo[tipo][condicion.tier_uuid]) {
+          misionesCompletadasPorTierTipo[tipo][condicion.tier_uuid] = [];
+        }
+        misionesCompletadasPorTierTipo[tipo][condicion.tier_uuid].push(cantidad);
+      }
     }
   }
   
-  // Agrupar misiones por tipo para facilitar verificación de progresión
+  // Agrupar misiones por tipo y tier para facilitar verificación de progresión
   const misionesPorTipo: Record<string, any[]> = {};
   for (const mision of misiones) {
     const tipo = mision.condicion?.tipo;
     if (tipo) {
-      if (!misionesPorTipo[tipo]) {
-        misionesPorTipo[tipo] = [];
+      // Para misiones de tier, usar una clave única que incluya el tier
+      const claveTipo = tipo === 'conseguir_skin_tier' 
+        ? `${tipo}_${mision.condicion.tier_uuid}` 
+        : tipo;
+      
+      if (!misionesPorTipo[claveTipo]) {
+        misionesPorTipo[claveTipo] = [];
       }
-      misionesPorTipo[tipo].push(mision);
+      misionesPorTipo[claveTipo].push(mision);
     }
   }
   
+  // Procesar cada tipo de misión por separado
+  const tiposProgresivos = ['caja_abierta', 'skin_eliminada', 'mejora_realizada', 'conseguir_skin', 'completar_misiones', 'aniversario'];
+  
   for (const mision of misiones) {
     const condicion = mision.condicion;
+    const tipo = condicion.tipo;
     
-    // Misiones que siempre están disponibles
-    if (['registro', 'login'].includes(condicion.tipo)) {
+    // Misiones que siempre están disponibles (únicas y no progresivas)
+    if (['registro', 'login'].includes(tipo)) {
       misionesDisponibles.push(mision);
       continue;
     }
     
     // Misiones multi-apertura (siempre disponibles pero no repetibles)
-    if (condicion.tipo === 'abrir_multiples') {
-      misionesDisponibles.push(mision);
-      continue;
-    }
-    
-    // Misiones de aniversario (siempre disponibles)
-    if (condicion.tipo === 'aniversario') {
+    if (tipo === 'abrir_multiples') {
       misionesDisponibles.push(mision);
       continue;
     }
     
     // Para misiones progresivas, verificar si es la siguiente que debería estar disponible
-    const misionesDelMismoTipo = misionesPorTipo[condicion.tipo] || [];
-    if (esMisionProgresivaSiguienteDisponible(mision, estadisticas, misionesCompletadasPorTipo, misionesDelMismoTipo)) {
-      misionesDisponibles.push(mision);
+    if (tiposProgresivos.includes(tipo)) {
+      const claveTipo = tipo;
+      const misionesDelTipo = misionesPorTipo[claveTipo] || [];
+      
+      const esLaSiguiente = esMisionProgresivaSiguiente(mision, estadisticas, misionesCompletadasPorTipo, misionesDelTipo);
+      
+      if (esLaSiguiente) {
+        misionesDisponibles.push(mision);
+      }
+    }
+    
+    // Para misiones de conseguir skins por tier (progresivas por cada tier)
+    if (tipo === 'conseguir_skin_tier') {
+      const claveTipo = `${tipo}_${condicion.tier_uuid}`;
+      const misionesDelTipo = misionesPorTipo[claveTipo] || [];
+      
+      const esLaSiguiente = esMisionProgresivaSiguientePorTier(mision, estadisticas, misionesCompletadasPorTierTipo, misionesDelTipo);
+      
+      if (esLaSiguiente) {
+        misionesDisponibles.push(mision);
+      }
     }
   }
   
@@ -220,7 +306,7 @@ async function obtenerMisionesDisponiblesParaUsuario(userId: string, misiones: a
 }
 
 // Función para verificar si una misión progresiva es la siguiente disponible
-function esMisionProgresivaSiguienteDisponible(mision: any, estadisticas: any, misionesCompletadasPorTipo: Record<string, number[]>, misionesDelMismoTipo: any[]): boolean {
+function esMisionProgresivaSiguiente(mision: any, estadisticas: any, misionesCompletadasPorTipo: Record<string, number[]>, misionesDelMismoTipo: any[]): boolean {
   const condicion = mision.condicion;
   const cantidadObjetivo = condicion.cantidad;
   const tipo = condicion.tipo;
@@ -240,11 +326,11 @@ function esMisionProgresivaSiguienteDisponible(mision: any, estadisticas: any, m
     case 'conseguir_skin':
       estadisticaActual = estadisticas.skinsConseguidas;
       break;
-    case 'conseguir_skin_tier':
-      estadisticaActual = estadisticas.skinsPorTier[condicion.tier_uuid] || 0;
-      break;
     case 'completar_misiones':
       estadisticaActual = estadisticas.misionesCompletadas;
+      break;
+    case 'aniversario':
+      estadisticaActual = estadisticas.diasDesdeRegistro;
       break;
     default:
       return false;
@@ -258,34 +344,61 @@ function esMisionProgresivaSiguienteDisponible(mision: any, estadisticas: any, m
     return false;
   }
   
-  // Si no ha alcanzado el objetivo, no puede completarla aún
-  if (estadisticaActual < cantidadObjetivo) {
-    return false;
-  }
-  
   // Obtener todas las cantidades objetivo de misiones del mismo tipo (ordenadas)
   const todasLasCantidades = misionesDelMismoTipo
-    .filter(m => m.condicion.tipo === tipo && (tipo !== 'conseguir_skin_tier' || m.condicion.tier_uuid === condicion.tier_uuid))
     .map(m => m.condicion.cantidad)
     .sort((a, b) => a - b);
   
-  // Verificar progresión estricta
+  // LÓGICA CLAVE: Solo mostrar la SIGUIENTE misión en la secuencia
   if (cantidadesCompletadas.length === 0) {
-    // Si no ha completado ninguna, debe ser la primera en la secuencia (la de menor cantidad)
+    // Si no ha completado ninguna, mostrar solo la primera (menor cantidad)
     const primeraCantidad = Math.min(...todasLasCantidades);
-    return cantidadObjetivo === primeraCantidad;
+    const resultado = cantidadObjetivo === primeraCantidad;
+    return resultado;
+  } else {
+    // Si ya completó algunas, mostrar solo la siguiente inmediata
+    const ultimaCantidadCompletada = Math.max(...cantidadesCompletadas);
+    const siguienteCantidad = todasLasCantidades.find(cantidad => cantidad > ultimaCantidadCompletada);
+    
+    return cantidadObjetivo === siguienteCantidad;
+  }
+}
+
+// Función específica para misiones de conseguir skins por tier (progresivas por cada tier)
+function esMisionProgresivaSiguientePorTier(mision: any, estadisticas: any, misionesCompletadasPorTierTipo: Record<string, Record<string, number[]>>, misionesDelMismoTipo: any[]): boolean {
+  const condicion = mision.condicion;
+  const cantidadObjetivo = condicion.cantidad;
+  const tipo = condicion.tipo;
+  const tierUuid = condicion.tier_uuid;
+  
+  const estadisticaActual = estadisticas.skinsPorTier[tierUuid] || 0;
+  
+  // Obtener cantidades completadas específicamente para este tier
+  const cantidadesCompletadas = (misionesCompletadasPorTierTipo[tipo]?.[tierUuid] || []).sort((a, b) => a - b);
+  
+  // Si ya completó esta cantidad específica, no mostrarla
+  if (cantidadesCompletadas.includes(cantidadObjetivo)) {
+    return false;
   }
   
-  // Encontrar la mayor cantidad ya completada
-  const ultimaCantidadCompletada = Math.max(...cantidadesCompletadas);
+  // Obtener todas las cantidades objetivo de misiones del mismo tier (ordenadas)
+  const todasLasCantidades = misionesDelMismoTipo
+    .filter(m => m.condicion.tier_uuid === tierUuid)
+    .map(m => m.condicion.cantidad)
+    .sort((a, b) => a - b);
   
-  // Esta misión debe ser exactamente la siguiente en la secuencia
-  const siguienteCantidadEnSecuencia = todasLasCantidades.find(cantidad => 
-    cantidad > ultimaCantidadCompletada && !cantidadesCompletadas.includes(cantidad)
-  );
-  
-  // Solo está disponible si es exactamente la siguiente en la secuencia
-  return cantidadObjetivo === siguienteCantidadEnSecuencia;
+  // LÓGICA CLAVE: Solo mostrar la SIGUIENTE misión en la secuencia para este tier
+  if (cantidadesCompletadas.length === 0) {
+    // Si no ha completado ninguna de este tier, mostrar solo la primera
+    const primeraCantidad = Math.min(...todasLasCantidades);
+    return cantidadObjetivo === primeraCantidad;
+  } else {
+    // Si ya completó algunas de este tier, mostrar solo la siguiente inmediata
+    const ultimaCantidadCompletada = Math.max(...cantidadesCompletadas);
+    const siguienteCantidad = todasLasCantidades.find(cantidad => cantidad > ultimaCantidadCompletada);
+    
+    return cantidadObjetivo === siguienteCantidad;
+  }
 }
 
 // Función para obtener estadísticas actuales del usuario
@@ -355,13 +468,17 @@ async function obtenerEstadisticasUsuario(userId: string) {
       .select("*", { count: "exact", head: true })
       .eq("usuario_id", userId);
 
+    // Obtener días desde el registro
+    const diasDesdeRegistro = await obtenerDiasDesdeRegistro(userId);
+
     return {
       cajasAbiertas: cajasAbiertas || 0,
       skinsEliminadas,
       mejorasRealizadas: mejorasRealizadas || 0,
       skinsConseguidas,
       skinsPorTier,
-      misionesCompletadas: misionesCompletadas || 0
+      misionesCompletadas: misionesCompletadas || 0,
+      diasDesdeRegistro
     };
   } catch (error) {
     console.error("Error al obtener estadísticas:", error);
@@ -371,8 +488,56 @@ async function obtenerEstadisticasUsuario(userId: string) {
       mejorasRealizadas: 0,
       skinsConseguidas: 0,
       skinsPorTier: {},
-      misionesCompletadas: 0
+      misionesCompletadas: 0,
+      diasDesdeRegistro: 0
     };
+  }
+}
+
+// Función para calcular días desde el registro del usuario
+async function obtenerDiasDesdeRegistro(userId: string): Promise<number> {
+  try {
+    // Intentar obtener la fecha de creación del usuario desde la tabla usuarios
+    const { data: usuario, error } = await supabase
+      .from("usuarios")
+      .select("created_at")
+      .eq("id", userId)
+      .single();
+
+    if (error || !usuario?.created_at) {
+      // Si no hay created_at en usuarios, usar la fecha del primer log como fallback
+      const { data: primerLog, error: logError } = await supabase
+        .from("logs_caja_abierta")
+        .select("created_at")
+        .eq("usuario_id", userId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .single();
+
+      if (logError || !primerLog?.created_at) {
+        // Si no hay logs, asumir que es un usuario nuevo
+        return 0;
+      }
+
+      // Calcular días desde el primer log
+      const fechaRegistro = new Date(primerLog.created_at);
+      const fechaActual = new Date();
+      const diferenciaTiempo = fechaActual.getTime() - fechaRegistro.getTime();
+      const diasDiferencia = Math.floor(diferenciaTiempo / (1000 * 3600 * 24));
+      
+      return Math.max(0, diasDiferencia);
+    }
+
+    // Calcular días desde created_at
+    const fechaRegistro = new Date(usuario.created_at);
+    const fechaActual = new Date();
+    const diferenciaTiempo = fechaActual.getTime() - fechaRegistro.getTime();
+    const diasDiferencia = Math.floor(diferenciaTiempo / (1000 * 3600 * 24));
+    
+    return Math.max(0, diasDiferencia);
+  } catch (error) {
+    console.error("Error al calcular días desde registro:", error);
+    return 0;
   }
 }
 
@@ -425,6 +590,18 @@ export async function verificarMisionesDisponibles(userId: string): Promise<{
 // Función para procesar misión de login
 export async function procesarMisionLogin(userId: string) {
   try {
+    // Verificar que el usuario existe en la tabla usuarios
+    const { data: usuarioExiste, error: checkUserError } = await supabase
+      .from("usuarios")
+      .select("id")
+      .eq("id", userId)
+      .single();
+
+    if (checkUserError || !usuarioExiste) {
+      console.log(`⚠️ Usuario ${userId} no existe en la tabla usuarios, saltando procesamiento de login`);
+      return { success: false, error: "Usuario no encontrado en tabla usuarios" };
+    }
+
     // Buscar misión de login diario
     const { data: misionLogin, error } = await supabase
       .from("misiones")
@@ -634,13 +811,11 @@ async function actualizarProgresoMisionIndividual(misionUsuario: any, cantidad: 
 
   if (updateError) {
     console.error(`Error al actualizar misión ${mision.nombre}:`, updateError);
-  } else {
-    console.log(`✅ Progreso actualizado: ${mision.nombre} (${nuevoProgreso}/${objetivo})`);
   }
 }
 
 // Función para verificar y crear nuevas misiones progresivas disponibles
-async function verificarYCrearMisionesProgresivas(userId: string) {
+export async function verificarYCrearMisionesProgresivas(userId: string) {
   try {
     const estadisticas = await obtenerEstadisticasUsuario(userId);
     
@@ -659,7 +834,7 @@ async function verificarYCrearMisionesProgresivas(userId: string) {
 
     if (usuarioError) return;
 
-    // Obtener misiones ya completadas por el usuario para verificar progresión
+    // Obtener misiones ya completadas por el usuario con más detalle
     const { data: misionesCompletadas, error: completadasError } = await supabase
       .from("misiones_usuario")
       .select(`
@@ -673,8 +848,10 @@ async function verificarYCrearMisionesProgresivas(userId: string) {
 
     if (completadasError) return;
 
-    // Agrupar misiones completadas por tipo
+    // Agrupar misiones completadas por tipo y por tier
     const misionesCompletadasPorTipo: Record<string, number[]> = {};
+    const misionesCompletadasPorTierTipo: Record<string, Record<string, number[]>> = {};
+    
     if (misionesCompletadas) {
       for (const misionCompleta of misionesCompletadas) {
         const mision = misionCompleta.mision as any;
@@ -686,6 +863,17 @@ async function verificarYCrearMisionesProgresivas(userId: string) {
           misionesCompletadasPorTipo[tipo] = [];
         }
         misionesCompletadasPorTipo[tipo].push(cantidad);
+        
+        // Para misiones por tier, también agrupar por tier específico
+        if (tipo === 'conseguir_skin_tier' && condicion.tier_uuid) {
+          if (!misionesCompletadasPorTierTipo[tipo]) {
+            misionesCompletadasPorTierTipo[tipo] = {};
+          }
+          if (!misionesCompletadasPorTierTipo[tipo][condicion.tier_uuid]) {
+            misionesCompletadasPorTierTipo[tipo][condicion.tier_uuid] = [];
+          }
+          misionesCompletadasPorTierTipo[tipo][condicion.tier_uuid].push(cantidad);
+        }
       }
     }
 
@@ -694,16 +882,76 @@ async function verificarYCrearMisionesProgresivas(userId: string) {
     // Encontrar misiones progresivas que ahora debería tener disponibles
     const nuevasMisionesDisponibles = [];
     
+    // Agrupar misiones por tipo para verificación
+    const misionesPorTipo: Record<string, any[]> = {};
+    for (const mision of todasLasMisiones) {
+      const tipo = mision.condicion?.tipo;
+      if (tipo) {
+        const claveTipo = tipo === 'conseguir_skin_tier' 
+          ? `${tipo}_${mision.condicion.tier_uuid}` 
+          : tipo;
+        
+        if (!misionesPorTipo[claveTipo]) {
+          misionesPorTipo[claveTipo] = [];
+        }
+        misionesPorTipo[claveTipo].push(mision);
+      }
+    }
+    
+    const tiposProgresivos = ['caja_abierta', 'skin_eliminada', 'mejora_realizada', 'conseguir_skin', 'completar_misiones', 'aniversario'];
+    
     for (const mision of todasLasMisiones) {
       if (misionesQueYaTiene.has(mision.id)) continue;
       
-      if (esMisionProgresivaSiguienteDisponible(mision, estadisticas, misionesCompletadasPorTipo, todasLasMisiones)) {
+      const condicion = mision.condicion;
+      const tipo = condicion.tipo;
+      const objetivo = condicion.cantidad || 1;
+      
+      // Misiones multi-apertura (siempre disponibles y no repetibles)
+      if (tipo === 'abrir_multiples') {
         nuevasMisionesDisponibles.push({
           usuario_id: userId,
           mision_id: mision.id,
-          progreso: { actual: 0, objetivo: mision.condicion?.cantidad || 1 },
+          progreso: { actual: 0, objetivo: objetivo },
           completada: false
         });
+        continue;
+      }
+      
+      // Verificar misiones progresivas normales
+      if (tiposProgresivos.includes(tipo)) {
+        const claveTipo = tipo;
+        const misionesDelTipo = misionesPorTipo[claveTipo] || [];
+        
+        if (esMisionProgresivaSiguiente(mision, estadisticas, misionesCompletadasPorTipo, misionesDelTipo)) {
+          const progresoActual = obtenerProgresoActualPorTipo(estadisticas, tipo);
+          const progresoLimitado = Math.min(progresoActual, objetivo);
+          
+          nuevasMisionesDisponibles.push({
+            usuario_id: userId,
+            mision_id: mision.id,
+            progreso: { actual: progresoLimitado, objetivo: objetivo },
+            completada: false
+          });
+        }
+      }
+      
+      // Verificar misiones progresivas por tier
+      if (tipo === 'conseguir_skin_tier') {
+        const claveTipo = `${tipo}_${condicion.tier_uuid}`;
+        const misionesDelTipo = misionesPorTipo[claveTipo] || [];
+        
+        if (esMisionProgresivaSiguientePorTier(mision, estadisticas, misionesCompletadasPorTierTipo, misionesDelTipo)) {
+          const progresoActual = obtenerProgresoActualPorTipo(estadisticas, tipo, condicion.tier_uuid);
+          const progresoLimitado = Math.min(progresoActual, objetivo);
+          
+          nuevasMisionesDisponibles.push({
+            usuario_id: userId,
+            mision_id: mision.id,
+            progreso: { actual: progresoLimitado, objetivo: objetivo },
+            completada: false
+          });
+        }
       }
     }
 
@@ -712,7 +960,7 @@ async function verificarYCrearMisionesProgresivas(userId: string) {
         .from("misiones_usuario")
         .insert(nuevasMisionesDisponibles);
       
-      console.log(`🎯 Creadas ${nuevasMisionesDisponibles.length} nuevas misiones progresivas`);
+      console.log(`✅ Creadas ${nuevasMisionesDisponibles.length} nuevas misiones progresivas con progreso real para usuario ${userId}`);
     }
   } catch (error) {
     console.error("Error al verificar misiones progresivas:", error);
@@ -776,8 +1024,33 @@ export async function procesarMisionRegistro(userId: string) {
       .single();
 
     if (progresoExistente && !checkError) {
-      console.log("Misión de bienvenida ya existe para este usuario");
-      return { success: true, message: "Misión de registro ya procesada" };
+      // 🎯 VERIFICAR SI EL PROGRESO YA ESTÁ COMPLETO
+      const progreso = progresoExistente.progreso || { actual: 0, objetivo: 1 };
+      
+      if (progreso.actual >= progreso.objetivo) {
+        console.log("Misión de bienvenida ya completada para este usuario");
+        return { success: true, message: "Misión de registro ya procesada y completada" };
+      }
+      
+      // 🎯 SI EXISTE PERO NO ESTÁ COMPLETA, ACTUALIZAR EL PROGRESO
+      console.log("Misión de bienvenida existe pero no está completa, actualizando progreso...");
+      const { error: updateError } = await supabase
+        .from("misiones_usuario")
+        .update({
+          progreso: { actual: 1, objetivo: 1 }
+        })
+        .eq("id", progresoExistente.id);
+
+      if (updateError) {
+        console.error("Error al actualizar progreso de bienvenida:", updateError);
+        return { success: false, error: updateError };
+      }
+      
+      return { 
+        success: true, 
+        message: "Misión de bienvenida actualizada y lista para reclamar",
+        listoParaReclamar: true
+      };
     }
 
     // Crear progreso completado inmediatamente para registro
@@ -797,7 +1070,6 @@ export async function procesarMisionRegistro(userId: string) {
       return { success: false, error: insertError };
     }
     
-    console.log("✅ Misión de bienvenida creada y lista para reclamar");
     return { 
       success: true, 
       message: "Misión de bienvenida creada y lista para reclamar",
@@ -812,28 +1084,37 @@ export async function procesarMisionRegistro(userId: string) {
 // Función para procesar misión de multi-apertura
 export async function procesarMisionMultiApertura(userId: string, cantidadCajasAbiertas: number) {
   try {
-    console.log(`🎯 Procesando multi-apertura: ${cantidadCajasAbiertas} cajas`);
+    console.log(`🎯 Procesando multi-apertura: ${cantidadCajasAbiertas} cajas para usuario ${userId}`);
     
     // Buscar todas las misiones de multi-apertura que aplican
     const { data: misionesMulti, error } = await supabase
       .from("misiones")
-      .select("id, nombre, condicion, recompensa_vp")
+      .select("id, nombre, condicion, recompensa_vp, tipo")
       .eq("activa", true)
-      .like("condicion", '%abrir_multiples%');
+      .contains("condicion", { tipo: "abrir_multiples" });
 
-    if (error || !misionesMulti) {
-      console.log("No se encontraron misiones de Multi-Apertura activas");
-      return { success: false, error: "Misiones no encontradas" };
+    if (error) {
+      console.error("Error al obtener misiones de multi-apertura:", error);
+      return { success: false, error: error };
     }
 
+    if (!misionesMulti || misionesMulti.length === 0) {
+      console.log("No se encontraron misiones de Multi-Apertura activas");
+      return { success: true, message: "No hay misiones de multi-apertura activas" };
+    }
+
+    console.log(`📋 Encontradas ${misionesMulti.length} misiones de multi-apertura activas`);
     let misionesActualizadas = 0;
 
     for (const misionMulti of misionesMulti) {
       const condicion = misionMulti.condicion;
-      const cantidadRequerida = condicion.minimo_por_sesion || condicion.cantidad;
+      const cantidadRequerida = condicion.minimo_por_sesion || condicion.cantidad || 2;
+      
+      console.log(`🔍 Evaluando misión ${misionMulti.nombre}: requiere ${cantidadRequerida}, abrió ${cantidadCajasAbiertas}`);
       
       // Solo procesar si se cumple el mínimo requerido
       if (cantidadCajasAbiertas < cantidadRequerida) {
+        console.log(`❌ No cumple el mínimo requerido para ${misionMulti.nombre}`);
         continue;
       }
 
@@ -847,6 +1128,7 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
 
       if (progresoError && progresoError.code === 'PGRST116') {
         // Crear progreso si no existe - completar inmediatamente para multi-apertura
+        console.log(`📝 Creando nueva entrada para misión ${misionMulti.nombre}`);
         const objetivoDefault = condicion.cantidad || 1;
         const { data: nuevoProgreso, error: insertError } = await supabase
           .from("misiones_usuario")
@@ -865,33 +1147,72 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
         }
         
         misionesActualizadas++;
-        console.log(`✅ Nueva misión multi-apertura completada: ${misionMulti.nombre}`);
-      } else if (progresoMision && !progresoMision.completada) {
-        // Si existe pero no está completada, completarla ahora (no repetible)
-        const objetivoDefault = condicion.cantidad || 1;
+        console.log(`✅ Misión ${misionMulti.nombre} creada y lista para reclamar`);
         
-        const { error: updateError } = await supabase
-          .from("misiones_usuario")
-          .update({
-            progreso: { 
-              actual: objetivoDefault, 
-              objetivo: objetivoDefault 
-            }
-          })
-          .eq("id", progresoMision.id);
+      } else if (progresoMision) {
+        console.log(`🔄 Misión ${misionMulti.nombre} ya existe. Completada: ${progresoMision.completada}, Tipo: ${misionMulti.tipo}`);
+        
+        // Si la misión es repetible y ya está completada, resetearla para que pueda reclamarse de nuevo
+        if (misionMulti.tipo === 'repetible' && progresoMision.completada) {
+          const objetivoDefault = condicion.cantidad || 1;
+          
+          const { error: resetError } = await supabase
+            .from("misiones_usuario")
+            .update({
+              progreso: { actual: objetivoDefault, objetivo: objetivoDefault },
+              completada: false, // Resetear para que pueda ser reclamada de nuevo
+              fecha_completada: null
+            })
+            .eq("id", progresoMision.id);
 
-        if (!updateError) {
-          misionesActualizadas++;
-          console.log(`✅ Multi-apertura completada: ${misionMulti.nombre}`);
+          if (!resetError) {
+            misionesActualizadas++;
+            console.log(`🔄 Misión repetible ${misionMulti.nombre} reseteada y lista para reclamar`);
+          } else {
+            console.error("Error al resetear misión repetible:", resetError);
+          }
+          
+        } else if (!progresoMision.completada) {
+          // Si existe pero no está completada, completarla ahora
+          const objetivoDefault = condicion.cantidad || 1;
+          const progresoActual = progresoMision.progreso?.actual || 0;
+          
+          // Solo actualizar si no está ya en el objetivo
+          if (progresoActual < objetivoDefault) {
+            const { error: updateError } = await supabase
+              .from("misiones_usuario")
+              .update({
+                progreso: { 
+                  actual: objetivoDefault, 
+                  objetivo: objetivoDefault 
+                }
+              })
+              .eq("id", progresoMision.id);
+
+            if (!updateError) {
+              misionesActualizadas++;
+              console.log(`✅ Misión ${misionMulti.nombre} completada y lista para reclamar`);
+            } else {
+              console.error("Error al actualizar progreso:", updateError);
+            }
+          } else {
+            console.log(`ℹ️ Misión ${misionMulti.nombre} ya tiene progreso completo`);
+          }
+        } else {
+          console.log(`ℹ️ Misión ${misionMulti.nombre} ya está completada y no es repetible`);
         }
+      } else {
+        console.error(`Error inesperado al obtener progreso de misión ${misionMulti.nombre}:`, progresoError);
       }
-      // Si ya está completada, no hacer nada (no repetible)
     }
 
+    console.log(`🎯 Multi-apertura procesada: ${misionesActualizadas} misiones actualizadas`);
     return { 
       success: true, 
       message: `${misionesActualizadas} misiones de multi-apertura procesadas`,
-      misionesActualizadas
+      misionesActualizadas,
+      cantidadCajasAbiertas,
+      misionesEvaluadas: misionesMulti.length
     };
   } catch (error) {
     console.error("Error al procesar misiones de multi-apertura:", error);

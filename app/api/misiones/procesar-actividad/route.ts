@@ -26,8 +26,8 @@ export async function POST(request: NextRequest) {
         // Procesar apertura normal
         resultado = await actualizarProgresoMision(session.user.id, 'caja_abierta', cantidad);
         
-        // Si se abrieron 5+ cajas, procesar multi-apertura
-        if (cantidad >= 5) {
+        // Si se abrieron 2+ cajas, procesar multi-apertura
+        if (cantidad >= 2) {
           const multiResultado = await procesarMisionMultiApertura(session.user.id, cantidad);
           resultado.multiApertura = multiResultado;
         }
@@ -39,6 +39,10 @@ export async function POST(request: NextRequest) {
 
       case 'mejora_realizada':
         resultado = await actualizarProgresoMision(session.user.id, 'mejora_realizada', cantidad);
+        break;
+
+      case 'mision_completada':
+        resultado = await actualizarProgresoMision(session.user.id, 'mision_completada', cantidad);
         break;
 
       case 'registro_completado':
@@ -55,13 +59,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       resultado,
-      mensaje: `Actividad ${tipoActividad} procesada correctamente`
+      mensaje: `Actividad ${tipoActividad} procesada correctamente`,
+      tipoActividad,
+      cantidad,
+      userId: session.user.id
     });
 
   } catch (error) {
     console.error('Error al procesar actividad de misión:', error);
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
+      { success: false, error: 'Error interno del servidor', details: error },
       { status: 500 }
     );
   }

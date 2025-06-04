@@ -116,6 +116,7 @@ export default function Page() {
   const [totalVP, setTotalVP] = useState(0);
   const [completadas, setCompletadas] = useState(0);
   const [activeTab, setActiveTab] = useState("reclamar");
+  const [tabInicialDeterminado, setTabInicialDeterminado] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -125,64 +126,44 @@ export default function Page() {
     }
   }, [session, status]);
 
+  // Función para determinar el tab inicial basado en misiones disponibles
+  const determinarTabInicial = (misionesData: MisionUsuario[]) => {
+    const misionesParaReclamar = misionesData.filter(mision => {
+      const progreso = mision.progreso || { actual: 0, objetivo: 1 };
+      return !mision.completada && progreso.actual >= progreso.objetivo;
+    });
+
+    return misionesParaReclamar.length > 0 ? 'reclamar' : 'disponibles';
+  };
+
   const cargarMisiones = async () => {
     if (!session?.user?.id) return;
 
     try {
       setIsLoading(true);
 
-      // Obtener todas las misiones activas
-      const { data: todasMisiones, error: misionesError } = await supabase
-        .from("misiones")
-        .select("*")
-        .eq("activa", true)
-        .order("orden");
+      // Usar el endpoint que ya aplica la lógica de misiones progresivas
+      const response = await fetch('/api/misiones/usuario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: session.user.id })
+      });
 
-      if (misionesError) throw misionesError;
+      const resultado = await response.json();
 
-      // Obtener progreso del usuario para cada misión
-      const misionesConProgreso: MisionUsuario[] = [];
-
-      for (const mision of todasMisiones || []) {
-        let { data: progreso, error: progresoError } = await supabase
-          .from("misiones_usuario")
-          .select("*")
-          .eq("usuario_id", session.user.id)
-          .eq("mision_id", mision.id)
-          .single();
-
-        if (progresoError && progresoError.code !== 'PGRST116') {
-          console.error("Error al cargar progreso:", progresoError);
-          continue;
-        }
-
-        // Si no existe progreso, crear uno
-        if (!progreso) {
-          const objetivoDefault = mision.condicion?.cantidad || 1;
-          const { data: nuevoProgreso, error: insertError } = await supabase
-            .from("misiones_usuario")
-            .insert({
-              usuario_id: session.user.id,
-              mision_id: mision.id,
-              progreso: { actual: 0, objetivo: objetivoDefault }
-            })
-            .select()
-            .single();
-
-          if (insertError) {
-            console.error("Error al crear progreso:", insertError);
-            continue;
-          }
-          progreso = nuevoProgreso;
-        }
-
-        misionesConProgreso.push({
-          ...progreso,
-          mision
-        });
+      if (!resultado.success) {
+        throw new Error(resultado.error || "Error al cargar misiones");
       }
 
-      setMisiones(misionesConProgreso);
+      const misionesData = resultado.misiones || [];
+      setMisiones(misionesData);
+      
+      // Determinar tab inicial solo en la primera carga
+      if (!tabInicialDeterminado && misionesData.length > 0) {
+        const tabInicial = determinarTabInicial(misionesData);
+        setActiveTab(tabInicial);
+        setTabInicialDeterminado(true);
+      }
     } catch (error) {
       console.error("Error al cargar misiones:", error);
       toast.error("Error al cargar las misiones");
@@ -214,34 +195,6 @@ export default function Page() {
       setCompletadas(completadasCount || 0);
     } catch (error) {
       console.error("Error al cargar estadísticas:", error);
-    }
-  };
-
-  // 🔧 FUNCIÓN PARA INICIALIZAR MISIONES MANUALMENTE
-  const inicializarMisionesManual = async () => {
-    if (!session?.user?.id) return;
-
-    try {
-      const response = await fetch('/api/misiones/inicializar-manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: session.user.id })
-      });
-
-      const resultado = await response.json();
-
-      if (resultado.success) {
-        toast.success("¡Misiones inicializadas correctamente!");
-        cargarMisiones();
-        cargarEstadisticas();
-        // Emitir evento de misiones actualizadas
-        window.dispatchEvent(new CustomEvent('misionesActualizadas'));
-      } else {
-        toast.error("Error al inicializar misiones: " + resultado.message);
-      }
-    } catch (error) {
-      console.error("Error al inicializar misiones:", error);
-      toast.error("Error al inicializar misiones");
     }
   };
 
@@ -310,6 +263,21 @@ export default function Page() {
         incrementarSaldoLocal(misionUsuario.mision.recompensa_vp);
       }
 
+      // 🎯 PROCESAR ACTIVIDAD DE MISIÓN COMPLETADA PARA ACTIVAR MISIONES PROGRESIVAS
+      try {
+        await fetch('/api/misiones/procesar-actividad', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            tipoActividad: 'mision_completada',
+            cantidad: 1
+          })
+        });
+      } catch (actividadError) {
+        console.warn("Error al procesar actividad de misión completada:", actividadError);
+        // No fallar el proceso principal por esto
+      }
+
       toast.success(`¡Recompensa reclamada! +${misionUsuario.mision.recompensa_vp} VP`);
 
       // Recargar datos
@@ -318,6 +286,9 @@ export default function Page() {
 
       // 🎯 EMITIR EVENTO DE MISIONES ACTUALIZADAS
       window.dispatchEvent(new CustomEvent('misionesActualizadas'));
+
+      // 🎯 EMITIR EVENTO DE SALDO ACTUALIZADO PARA SIDEBAR
+      window.dispatchEvent(new CustomEvent('saldoActualizado'));
 
     } catch (error) {
       console.error("Error al reclamar recompensa:", error);
@@ -328,9 +299,12 @@ export default function Page() {
   const filtrarMisiones = (misiones: MisionUsuario[]) => {
     switch (activeTab) {
       case "reclamar":
-        return misiones.filter(m => !m.completada && m.progreso.actual >= m.progreso.objetivo);
+        return misiones.filter(m => {
+          const progreso = m.progreso || { actual: 0, objetivo: 1 };
+          return !m.completada && progreso.actual >= progreso.objetivo;
+        });
       case "disponibles":
-        return misiones.filter(m => !m.completada);
+        return misiones.filter(m => !m.completada && (m.progreso?.actual ?? 0) < (m.progreso?.objetivo ?? 1));
       case "completadas":
         return misiones.filter(m => m.completada);
       default:
@@ -388,16 +362,6 @@ export default function Page() {
           <h1 className="text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
             / MISIONES
           </h1>
-          {/* Botón de inicialización manual (solo si no hay misiones) */}
-          {misiones.length === 0 && !isLoading && (
-            <Button
-              onClick={inicializarMisionesManual}
-              className="rounded-xl bg-gradient-to-r from-blue-500/20 to-blue-600/20 text-white shadow-lg shadow-blue-900/20 border border-blue-500/20 hover:bg-gradient-to-r hover:from-blue-500/30 hover:to-blue-600/30"
-            >
-              <Target className="h-4 w-4 mr-2" />
-              Inicializar Misiones
-            </Button>
-          )}
         </div>
 
         {/* Stats Grid */}
@@ -435,7 +399,7 @@ export default function Page() {
               </TabsTrigger>
               <TabsTrigger value="disponibles" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl">
                 <Target className="h-4 w-4" />
-                Disponibles
+                En progreso
               </TabsTrigger>
               <TabsTrigger value="completadas" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl">
                 <CheckCircle2 className="h-4 w-4" />
@@ -554,12 +518,12 @@ export default function Page() {
                   <CircleOff className="h-16 w-16 text-white/80 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-white mb-2">
                     {activeTab === "reclamar" && "No hay misiones para reclamar"}
-                    {activeTab === "disponibles" && "No hay misiones disponibles"}
+                    {activeTab === "disponibles" && "No hay misiones en progreso"}
                     {activeTab === "completadas" && "No hay misiones completadas"}
                   </h3>
                   <p className="text-white/60">
                     {activeTab === "reclamar" && "Completa algunas actividades para desbloquear recompensas."}
-                    {activeTab === "disponibles" && "Todas las misiones han sido completadas."}
+                    {activeTab === "disponibles" && "Completa actividades para avanzar en tus misiones activas."}
                     {activeTab === "completadas" && "Aún no has completado ninguna misión."}
                   </p>
                   <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-primary/10 blur-2xl" />

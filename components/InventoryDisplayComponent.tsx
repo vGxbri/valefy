@@ -325,6 +325,9 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
 
           if (!misionResponse.ok) {
             console.warn('Error al procesar misión de eliminación de skins:', await misionResponse.text());
+          } else {
+            // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - MISIONES
+            window.dispatchEvent(new CustomEvent('misionesActualizadas'));
           }
         } catch (missionError) {
           console.warn('Error al procesar misión de eliminación de skins:', missionError);

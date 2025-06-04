@@ -22,6 +22,7 @@ import {
   procesarMisionMultiApertura,
   procesarSkinConseguida
 } from "@/lib/missionUtils";
+import { emitirActualizacionSaldo } from "@/lib/saldoUtils";
 
 // Estilos globales para animaciones
 const globalStyles = `
@@ -504,11 +505,29 @@ export default function BoxComponent({
           }
 
           if (results.length > 0) {
-            // 🎯 PROCESAR MISIONES - Cajas abiertas múltiples
-            await actualizarProgresoMision(userId, 'caja_abierta', numberOfBoxes);
+            // 🎯 PROCESAR MISIONES - Cajas abiertas múltiples y multi-apertura
+            try {
+              const misionResponse = await fetch('/api/misiones/procesar-actividad', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tipoActividad: 'caja_abierta',
+                  cantidad: numberOfBoxes
+                })
+              });
+
+              if (!misionResponse.ok) {
+                console.warn('Error al procesar misiones de apertura múltiple:', await misionResponse.text());
+              } else {
+                // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - MISIONES
+                window.dispatchEvent(new CustomEvent('misionesActualizadas'));
+              }
+            } catch (missionError) {
+              console.warn('Error al procesar misiones automáticamente:', missionError);
+            }
             
-            // 🎯 PROCESAR MISIONES - Multi-apertura
-            await procesarMisionMultiApertura(userId, numberOfBoxes);
+            // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP (por haber gastado VP)
+            window.dispatchEvent(new CustomEvent('saldoActualizado'));
             
             setMultipleResults(results);
             setMultipleSpinItems(spinItemsArray);
@@ -534,10 +553,28 @@ export default function BoxComponent({
 
           if (openingResult.selectedSkin) {
             // 🎯 PROCESAR MISIONES - Caja abierta única
-            await actualizarProgresoMision(userId, 'caja_abierta', 1);
+            try {
+              const misionResponse = await fetch('/api/misiones/procesar-actividad', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tipoActividad: 'caja_abierta',
+                  cantidad: 1
+                })
+              });
+
+              if (!misionResponse.ok) {
+                console.warn('Error al procesar misión de caja abierta:', await misionResponse.text());
+              } else {
+                // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - MISIONES
+                window.dispatchEvent(new CustomEvent('misionesActualizadas'));
+              }
+            } catch (missionError) {
+              console.warn('Error al procesar misiones automáticamente:', missionError);
+            }
             
-            // 🎯 PROCESAR MISIONES - Skin conseguida
-            await procesarSkinConseguida(userId, openingResult.selectedSkin);
+            // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP (por haber gastado VP)
+            window.dispatchEvent(new CustomEvent('saldoActualizado'));
             
             const items = generateSpinItems(openingResult.selectedSkin as Skin);
             setResultSkinForSpin(openingResult.selectedSkin as Skin);

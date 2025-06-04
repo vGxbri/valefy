@@ -468,6 +468,12 @@ export async function processBoxOpeningWithLog(
           error: "Error al procesar el pago"
         };
       }
+
+      // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP (después de gastar VP)
+      // Solo disparar si estamos en el navegador
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('saldoActualizado'));
+      }
     }
 
     // Procesar apertura de caja normalmente
@@ -511,6 +517,12 @@ export async function processBoxOpeningWithLog(
 
         if (!misionResponse.ok) {
           console.warn('Error al procesar misión de caja abierta:', await misionResponse.text());
+        } else {
+          // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - MISIONES
+          // Solo disparar si estamos en el navegador
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('misionesActualizadas'));
+          }
         }
         
       } catch (missionError) {

@@ -164,18 +164,15 @@ export default function CajaPage() {
             );
 
             tipoACaja.set(tipoNormalizado, caja);
-            console.log(
-              `Caja '${caja.nombre}' mapeada a tipo '${tipoNormalizado}'`,
-            );
           });
         }
+
+        console.log(`🎯 DEBUG: Buscando tipo: '${tipoParamNormalizado}'`);
+        console.log(`🎯 DEBUG: Tipos disponibles en Map:`, Array.from(tipoACaja.keys()));
 
         // Verificar si el tipo solicitado existe directamente
         if (tipoParamNormalizado && tipoACaja.has(tipoParamNormalizado)) {
           setTipoValidado(tipoParamNormalizado);
-          console.log(
-            `Tipo de caja válido (coincidencia directa): ${tipoParamNormalizado}`,
-          );
 
           return;
         }
@@ -193,23 +190,52 @@ export default function CajaPage() {
           // Calcular puntuación de coincidencia
           let puntuacion = 0;
 
-          // Coincidencia exacta tiene la mayor puntuación
-          if (tipo === tipoParamNormalizado) {
+          // Función helper para normalizar texto (remover tildes, etc.)
+          const normalizeText = (text: string) => {
+            return text.toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "") // Remover tildes
+              .replace(/\s+/g, "-") // Espacios a guiones
+              .trim();
+          };
+
+          const tipoNormalizado = normalizeText(tipo);
+          const paramNormalizado = normalizeText(tipoParamNormalizado);
+
+          // Coincidencia exacta (incluso sin tildes) tiene la mayor puntuación
+          if (tipoNormalizado === paramNormalizado) {
             puntuacion = 100;
           }
-          // Coincidencia de prefijo
-          else if (
-            tipo.startsWith(tipoParamNormalizado) ||
-            tipoParamNormalizado.startsWith(tipo)
-          ) {
-            puntuacion = 75;
+          // Coincidencia exacta de la parte después del guión (para casos como farmeo-maximo vs farmeo-afortunado)
+          else if (tipoNormalizado.includes("-") && paramNormalizado.includes("-")) {
+            const tipoSegmentos = tipoNormalizado.split("-");
+            const paramSegmentos = paramNormalizado.split("-");
+            
+            // Si tienen el mismo número de segmentos y los últimos coinciden exactamente
+            if (tipoSegmentos.length === paramSegmentos.length) {
+              const coincidenciasExactas = tipoSegmentos.filter((seg, i) => seg === paramSegmentos[i]).length;
+              const totalSegmentos = tipoSegmentos.length;
+              
+              if (coincidenciasExactas === totalSegmentos) {
+                puntuacion = 100; // Coincidencia perfecta por segmentos
+              } else if (coincidenciasExactas >= totalSegmentos / 2) {
+                puntuacion = 80; // Buena coincidencia por segmentos
+              }
+            }
           }
-          // Coincidencia de contiene
+          // Coincidencia de prefijo (solo si no hay guiones o si el prefijo es significativo)
           else if (
-            tipo.includes(tipoParamNormalizado) ||
-            tipoParamNormalizado.includes(tipo)
+            (tipoNormalizado.startsWith(paramNormalizado) || paramNormalizado.startsWith(tipoNormalizado)) &&
+            Math.max(tipoNormalizado.length, paramNormalizado.length) / Math.min(tipoNormalizado.length, paramNormalizado.length) <= 1.5
           ) {
-            puntuacion = 50;
+            puntuacion = 60;
+          }
+          // Coincidencia de contiene (solo si es muy específica)
+          else if (
+            (tipoNormalizado.includes(paramNormalizado) || paramNormalizado.includes(tipoNormalizado)) &&
+            Math.min(tipoNormalizado.length, paramNormalizado.length) >= 8 // Solo para términos largos
+          ) {
+            puntuacion = 40;
           }
 
           // Si encontramos una mejor coincidencia, actualizarla
@@ -217,13 +243,15 @@ export default function CajaPage() {
             maxPuntuacion = puntuacion;
             mejorCoincidencia = tipo;
           }
+
+          console.log(`Evaluando: "${tipo}" vs "${tipoParamNormalizado}" -> Puntuación: ${puntuacion}`);
         });
 
-        // Si encontramos alguna coincidencia
-        if (mejorCoincidencia && maxPuntuacion > 0) {
+        // Si encontramos alguna coincidencia con puntuación decente
+        if (mejorCoincidencia && maxPuntuacion >= 60) {
           setTipoValidado(mejorCoincidencia);
           console.log(
-            `Tipo de caja válido (coincidencia parcial): ${mejorCoincidencia}`,
+            `Tipo de caja válido (coincidencia parcial): ${mejorCoincidencia} (puntuación: ${maxPuntuacion})`,
           );
         } else {
           // Si no hay coincidencia, usar el primer tipo disponible
@@ -304,6 +332,8 @@ export default function CajaPage() {
         let cajaData: any = null;
         let cajaError = null;
 
+        console.log(`🔍 FETCH DEBUG: Buscando caja para tipo: '${tipoValidado}'`);
+
         // Estrategia 1: Buscar por es_diaria si el tipo es 'diaria'
         if (tipoValidado === "diaria") {
           const resultadoDiaria = await supabase
@@ -314,60 +344,69 @@ export default function CajaPage() {
 
           if (resultadoDiaria.data) {
             cajaData = resultadoDiaria.data;
+            console.log(`🔍 FETCH DEBUG: Encontrada caja diaria: ${cajaData.nombre}`);
           }
         }
 
         // Si no encontramos la caja diaria o no estamos buscando la diaria
         if (!cajaData) {
-          // Estrategia 2: Buscar con formato "Caja Tipo" (ej: "Caja Premium")
-          const tipoCapitalizado =
-            tipoNormalizado.charAt(0).toUpperCase() + tipoNormalizado.slice(1);
-          const resultado1 = await supabase
+          // Estrategia 2: Buscar directamente por la ruta que debería tener la caja
+          const rutaEsperada = `/main/${tipoValidado}`;
+          const resultadoPorRuta = await supabase
             .from("cajas")
             .select("*")
-            .eq("nombre", `Caja ${tipoCapitalizado}`)
+            .eq("ruta", rutaEsperada)
             .maybeSingle();
 
-          if (resultado1.data) {
-            cajaData = resultado1.data;
+          if (resultadoPorRuta.data) {
+            cajaData = resultadoPorRuta.data;
+            console.log(`🔍 FETCH DEBUG: Encontrada caja por ruta '${rutaEsperada}': ${cajaData.nombre}`);
           } else {
-            // Estrategia 3: Buscar solo con el tipo capitalizado (ej: "Premium")
-            const resultado2 = await supabase
+            // Estrategia 3: Buscar usando extraerTipoCaja para mapear correctamente
+            const { data: todasLasCajas } = await supabase
               .from("cajas")
               .select("*")
-              .eq("nombre", tipoCapitalizado)
-              .maybeSingle();
+              .eq("esta_disponible", true);
 
-            if (resultado2.data) {
-              cajaData = resultado2.data;
-            } else {
-              // Estrategia 4: Buscar con ILIKE para encontrar coincidencias parciales
-              const resultado3 = await supabase
-                .from("cajas")
-                .select("*")
-                .ilike("nombre", `%${tipoNormalizado}%`)
-                .maybeSingle();
+            if (todasLasCajas && todasLasCajas.length > 0) {
+              // Buscar la caja cuyo tipo extraído coincida exactamente
+              const cajaCoincidente = todasLasCajas.find((caja: any) => {
+                const tipoExtraidoCaja = extraerTipoCaja(String(caja.nombre || ''), Boolean(caja.es_diaria));
+                const coincide = tipoExtraidoCaja === tipoValidado;
+                console.log(`🔍 FETCH DEBUG: Caja '${caja.nombre}' -> tipo '${tipoExtraidoCaja}' -> ¿coincide con '${tipoValidado}'? ${coincide}`);
+                return coincide;
+              });
 
-              if (resultado3.data) {
-                cajaData = resultado3.data;
+              if (cajaCoincidente) {
+                cajaData = cajaCoincidente;
+                console.log(`🔍 FETCH DEBUG: Encontrada caja por mapeo directo: ${cajaData.nombre}`);
               } else {
-                // Estrategia 5: Última oportunidad - buscar cualquier coincidencia
-                const resultado4 = await supabase
+                // Estrategia 4: Buscar con formato "Caja Tipo" (ej: "Caja Premium") - FALLBACK
+                const tipoCapitalizado =
+                  tipoNormalizado.charAt(0).toUpperCase() + tipoNormalizado.slice(1);
+                const resultado1 = await supabase
                   .from("cajas")
                   .select("*")
-                  .limit(1);
+                  .eq("nombre", `Caja ${tipoCapitalizado}`)
+                  .maybeSingle();
 
-                if (resultado4.data && resultado4.data.length > 0) {
-                  cajaData = resultado4.data[0];
-                  console.warn(
-                    `No se encontró la caja '${tipoValidado}', usando la primera caja disponible.`,
-                  );
+                if (resultado1.data) {
+                  cajaData = resultado1.data;
+                  console.log(`🔍 FETCH DEBUG: Encontrada caja por formato 'Caja Tipo': ${cajaData.nombre}`);
                 } else {
-                  cajaError =
-                    resultado1.error ||
-                    resultado2.error ||
-                    resultado3.error ||
-                    resultado4.error;
+                  // Estrategia 5: Buscar solo con el tipo capitalizado (ej: "Premium") - FALLBACK
+                  const resultado2 = await supabase
+                    .from("cajas")
+                    .select("*")
+                    .eq("nombre", tipoCapitalizado)
+                    .maybeSingle();
+
+                  if (resultado2.data) {
+                    cajaData = resultado2.data;
+                    console.log(`🔍 FETCH DEBUG: Encontrada caja por nombre directo: ${cajaData.nombre}`);
+                  } else {
+                    console.warn(`🔍 FETCH DEBUG: No se encontró ninguna caja para el tipo '${tipoValidado}'`);
+                  }
                 }
               }
             }
