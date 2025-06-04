@@ -22,7 +22,7 @@ import {
   procesarMisionMultiApertura,
   procesarSkinConseguida
 } from "@/lib/missionUtils";
-import { emitirActualizacionSaldo } from "@/lib/saldoUtils";
+import { emitirActualizacionSaldo, decrementarSaldoLocal } from "@/lib/saldoUtils";
 
 // Estilos globales para animaciones
 const globalStyles = `
@@ -527,7 +527,9 @@ export default function BoxComponent({
             }
             
             // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP (por haber gastado VP)
-            window.dispatchEvent(new CustomEvent('saldoActualizado'));
+            if (caja.precio > 0) {
+              decrementarSaldoLocal(caja.precio * numberOfBoxes);
+            }
             
             setMultipleResults(results);
             setMultipleSpinItems(spinItemsArray);
@@ -574,7 +576,9 @@ export default function BoxComponent({
             }
             
             // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP (por haber gastado VP)
-            window.dispatchEvent(new CustomEvent('saldoActualizado'));
+            if (caja.precio > 0) {
+              decrementarSaldoLocal(caja.precio);
+            }
             
             const items = generateSpinItems(openingResult.selectedSkin as Skin);
             setResultSkinForSpin(openingResult.selectedSkin as Skin);

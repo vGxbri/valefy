@@ -230,3 +230,58 @@ Para mantener la UI existente funcionando, se implementó un patrón donde:
 - Testear la funcionalidad completa en desarrollo
 - Verificar que todas las animaciones y transiciones funcionan correctamente
 - Considerar agregar funcionalidad para mostrar "skins más recientes" aprovechando fecha_obtencion 
+
+## Cambios Recientes
+
+### Arreglo del Sistema de Actualización de Saldo (Último)
+
+**Problema:** Al abrir cajas, el saldo del usuario no se actualizaba en el sidebar.
+
+**Solución:**
+1. **Mejorado `lib/saldoUtils.ts`:**
+   - Agregada función `decrementarSaldoLocal(cantidad)` para cuando se gasta VP
+   - Agregada función `actualizarSaldoLocal(nuevoCantidad)` para actualización directa
+   - Agregados logs de debugging
+
+2. **Actualizado `components/app-sidebar.tsx`:**
+   - Agregado manejo de eventos `saldoDecrementado` y `saldoNuevo`
+   - Mejorado sistema de escucha de eventos
+   - Agregados logs de debugging
+
+3. **Actualizado `components/BoxComponent.tsx`:**
+   - Cambiado de `saldoActualizado` genérico a `decrementarSaldoLocal(precio)` específico
+   - Agregada validación para no decrementar en cajas gratuitas
+   - Mejorado el manejo de cajas múltiples
+
+4. **Actualizado `app/main/misiones/page.tsx`:**
+   - Cambiado de `saldoActualizado` a `incrementarSaldoLocal(recompensa_vp)`
+
+**Eventos de Saldo Disponibles:**
+- `saldoActualizado`: Recarga el saldo desde la DB
+- `saldoIncrementado`: Incrementa el saldo local (ej: recompensas de misiones)
+- `saldoDecrementado`: Decrementa el saldo local (ej: abrir cajas)
+- `saldoNuevo`: Establece un nuevo saldo directamente
+
+## Decisiones Importantes
+
+### Sistema de Misiones
+- Las misiones progresivas se activan completando misiones anteriores
+- Se utilizan eventos personalizados para actualizar el sidebar sin recargar
+- Sistema de logs para tracking de actividades
+
+### Gestión de Skins
+- Uso de `formatSkinForApp()` para consistencia en el formato
+- Sistema de tiers con grados numéricos para ordenamiento
+- Caché de skins de la API de Valorant
+
+### Base de Datos
+- Uso de Supabase con RLS habilitado
+- Tablas separadas para inventario, misiones, y logs
+- Sistema de probabilidades por tier en cajas
+
+## Patrones Recurrentes
+
+1. **Eventos Personalizados:** Usar eventos DOM para comunicación entre componentes
+2. **Validación de Entrada:** Siempre validar datos de usuario y API
+3. **Logs de Debug:** Incluir logs útiles para troubleshooting
+4. **Manejo de Errores:** Try-catch con fallbacks apropiados 

@@ -106,20 +106,38 @@ function CreditosDisplay() {
   // 🎯 ESCUCHAR EVENTOS DE ACTUALIZACIÓN DE SALDO
   useEffect(() => {
     const handleSaldoActualizado = () => {
+      console.log('📈 Sidebar: Recibido evento saldoActualizado - Recargando saldo');
       cargarSaldo();
     };
 
     const handleSaldoIncrementado = (event: CustomEvent) => {
       const { cantidad } = event.detail;
+      console.log('📈 Sidebar: Recibido evento saldoIncrementado:', cantidad);
       setSaldo(prev => prev + cantidad);
+    };
+
+    const handleSaldoDecrementado = (event: CustomEvent) => {
+      const { cantidad } = event.detail;
+      console.log('📉 Sidebar: Recibido evento saldoDecrementado:', cantidad);
+      setSaldo(prev => Math.max(0, prev - cantidad)); // No permitir saldo negativo
+    };
+
+    const handleSaldoNuevo = (event: CustomEvent) => {
+      const { saldo: nuevoSaldo } = event.detail;
+      console.log('💰 Sidebar: Recibido evento saldoNuevo:', nuevoSaldo);
+      setSaldo(nuevoSaldo);
     };
 
     window.addEventListener('saldoActualizado', handleSaldoActualizado);
     window.addEventListener('saldoIncrementado', handleSaldoIncrementado as EventListener);
+    window.addEventListener('saldoDecrementado', handleSaldoDecrementado as EventListener);
+    window.addEventListener('saldoNuevo', handleSaldoNuevo as EventListener);
 
     return () => {
       window.removeEventListener('saldoActualizado', handleSaldoActualizado);
       window.removeEventListener('saldoIncrementado', handleSaldoIncrementado as EventListener);
+      window.removeEventListener('saldoDecrementado', handleSaldoDecrementado as EventListener);
+      window.removeEventListener('saldoNuevo', handleSaldoNuevo as EventListener);
     };
   }, []);
 

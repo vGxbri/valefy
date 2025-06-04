@@ -288,7 +288,7 @@ export default function Page() {
       window.dispatchEvent(new CustomEvent('misionesActualizadas'));
 
       // 🎯 EMITIR EVENTO DE SALDO ACTUALIZADO PARA SIDEBAR
-      window.dispatchEvent(new CustomEvent('saldoActualizado'));
+      incrementarSaldoLocal(misionUsuario.mision.recompensa_vp);
 
     } catch (error) {
       console.error("Error al reclamar recompensa:", error);
