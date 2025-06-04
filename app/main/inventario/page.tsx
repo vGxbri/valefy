@@ -16,20 +16,16 @@ export default function Page() {
   const supabase = createClient(); // Supabase client still needed for InventoryDisplayComponent
 
   useEffect(() => {
-    console.log("[InventarioPage] Next-Auth status:", nextAuthStatus);
     if (nextAuthStatus === "loading") {
       setIsLoadingSession(true);
       setUserId(null);
     } else if (nextAuthStatus === "unauthenticated") {
       setIsLoadingSession(false);
       setUserId(null);
-      console.log("[InventarioPage] User is unauthenticated via Next-Auth.");
     } else if (nextAuthStatus === "authenticated") {
       if (nextAuthSession?.user?.id) {
-        console.log("[InventarioPage] Authenticated via Next-Auth. User ID:", nextAuthSession.user.id);
         setUserId(nextAuthSession.user.id as string); // Ensure it's string
       } else {
-        console.warn("[InventarioPage] Next-Auth authenticated, but no user ID found in session:", nextAuthSession);
         setUserId(null);
       }
       setIsLoadingSession(false);

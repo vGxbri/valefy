@@ -179,7 +179,6 @@ export default function BoxComponent({
   // Log específico para monitorear cambios en multipleResults
   useEffect(() => {
     if (multipleResults.length === 0) {
-      console.log('🚨 multipleResults fue limpiado! Stack trace:', new Error().stack);
     }
   }, [multipleResults]);
 
@@ -766,19 +765,6 @@ export default function BoxComponent({
   const showSpinners = isSpinning;
   const showPreparingSpinner = isPreparingBox && !isSpinning;
   const showInitialView = !isSpinning && !showSingleResult && !showMultipleResults && !isOpening && !isPreparingBox;
-
-  // Log para debugging
-  console.log('🔄 Render state:', {
-    isSpinning,
-    isPreparingBox,
-    showSingleResult,
-    showMultipleResults,
-    showSpinners,
-    showPreparingSpinner,
-    showInitialView,
-    resultSkin: !!resultSkin,
-    multipleResultsLength: multipleResults.length
-  });
 
   return (
     <div className="w-full flex flex-col items-center justify-center py-10">

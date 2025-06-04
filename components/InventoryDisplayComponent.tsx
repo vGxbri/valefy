@@ -270,7 +270,6 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
     }
     
     setIsDeletingItems(true); // Iniciar estado de carga
-    console.log("Deleting items with IDs:", Array.from(selectedItems));
 
     try {
       // Recopilar información de las skins antes de eliminarlas para el log
@@ -302,9 +301,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
       if (deleteError) {
         console.error("Error during delete operation:", deleteError);
         setError("Error al eliminar skins: " + (deleteError.message || 'Error desconocido'));
-      } else {
-        console.log("Successfully deleted", idsToDelete.length, "skins");
-        
+      } else {        
         // Registrar el log (no interrumpir el flujo si falla)
         const supabaseClient = createClient();
         const logResult = await logSkinEliminada(logData);

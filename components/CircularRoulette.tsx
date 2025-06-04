@@ -46,14 +46,6 @@ export default function CircularRoulette({
         // El área de éxito va de 0 a successAngle (desde la parte superior en sentido horario)
         const visualResult = normalizedRotation <= successAngle;
         
-        console.log('🎯 Debug:', {
-          totalRotation: totalRotation.toFixed(2),
-          normalizedRotation: normalizedRotation.toFixed(2),
-          successAngle: successAngle.toFixed(2),
-          inGreenArea: normalizedRotation <= successAngle,
-          result: visualResult ? 'VERDE (Gana)' : 'ROJO (Pierde)'
-        });
-        
         // Usar SOLO el resultado visual (donde realmente cayó)
         onSpinComplete(visualResult);
         setHasResult(false);

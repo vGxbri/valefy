@@ -29,15 +29,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        console.log("[authorize] Credenciales recibidas:", credentials);
         if (
           !credentials?.email ||
           !credentials?.password ||
           typeof credentials.password !== "string" ||
           !credentials.password
         ) {
-          console.log("[authorize] Faltan credenciales válidas");
-
           return null;
         }
         // Buscar usuario en la tabla 'usuarios'
@@ -47,11 +44,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           .eq("correo", credentials.email)
           .single();
 
-        console.log("[authorize] Resultado de búsqueda de usuario:", {
-          user,
-          error,
-        });
-
         if (
           error ||
           !user ||
@@ -60,13 +52,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         ) {
           // Verificar si es una cuenta OAuth sin contraseña
           if (user && !user.password && user.oauth) {
-            console.log("[authorize] Intento de login con credenciales en cuenta OAuth");
             return null;
           }
-          
-          console.log(
-            "[authorize] Usuario no encontrado o password inválido en la base de datos",
-          );
 
           return null;
         }
@@ -77,13 +64,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           user.password,
         );
 
-        console.log(
-          "[authorize] Resultado de comparación de contraseña:",
-          isValid,
-        );
         if (!isValid) {
-          console.log("[authorize] Contraseña incorrecta");
-
           return null;
         }
 
@@ -94,8 +75,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.nombre_usuario,
           image: null,
         };
-
-        console.log("[authorize] Usuario autenticado correctamente:", userObj);
 
         return userObj;
       },

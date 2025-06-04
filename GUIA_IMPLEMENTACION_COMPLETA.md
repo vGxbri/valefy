@@ -237,7 +237,6 @@ const manejarAperturaCajas = async (cantidad: number) => {
     
     const resultado = await response.json();
     if (resultado.success) {
-      console.log('✅ Misiones actualizadas:', resultado);
       
       // Mostrar notificación si hay misiones completadas
       if (resultado.resultado.misionesActualizadas > 0) {

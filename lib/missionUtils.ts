@@ -27,17 +27,13 @@ const obtenerProgresoActualPorTipo = (estadisticas: any, tipo: string, tierUuid?
 // Función para inicializar misiones para un usuario
 export async function inicializarMisionesUsuario(userId: string) {
   try {
-    console.log(`🎯 Inicializando misiones para usuario: ${userId}`);
-
     // Verificar si el usuario ya tiene misiones inicializadas
     const { count: misionesExistentes } = await supabase
       .from("misiones_usuario")
       .select("*", { count: "exact", head: true })
       .eq("usuario_id", userId);
 
-    if (misionesExistentes && misionesExistentes > 0) {
-      console.log(`⚠️ Usuario ${userId} ya tiene ${misionesExistentes} misiones inicializadas`);
-      
+    if (misionesExistentes && misionesExistentes > 0) {      
       // Sincronizar misiones nuevas que puedan haberse añadido
       await sincronizarMisionesNuevas(userId);
       
@@ -65,11 +61,8 @@ export async function inicializarMisionesUsuario(userId: string) {
     }
 
     if (!misiones || misiones.length === 0) {
-      console.log("No hay misiones activas para inicializar");
       return { success: true, message: "No hay misiones activas" };
     }
-
-    console.log(`📋 Encontradas ${misiones.length} misiones activas`);
 
     // Crear progreso inicial para cada misión (solo las que debe tener disponibles inicialmente)
     const misionesParaInicializar = await obtenerMisionesDisponiblesParaUsuario(userId, misiones);
@@ -110,12 +103,9 @@ export async function inicializarMisionesUsuario(userId: string) {
       }
     }
 
-    console.log(`✅ ${misionesUsuario.length} misiones inicializadas para el usuario`);
-
     // 🎯 PROCESAR AUTOMÁTICAMENTE LA MISIÓN DE BIENVENIDA
     const resultadoBienvenida = await procesarMisionRegistro(userId);
     if (resultadoBienvenida.success) {
-      console.log("✅ Misión de bienvenida procesada automáticamente");
     } else {
       console.warn("⚠️ Error al procesar misión de bienvenida:", resultadoBienvenida.error);
     }
@@ -185,8 +175,6 @@ async function sincronizarMisionesNuevas(userId: string) {
       await supabase
         .from("misiones_usuario")
         .insert(nuevasMisiones);
-
-      console.log(`🔄 Sincronizadas ${misionesParaAñadir.length} misiones nuevas para usuario ${userId}`);
     }
   } catch (error) {
     console.error("Error al sincronizar misiones nuevas:", error);
@@ -598,7 +586,6 @@ export async function procesarMisionLogin(userId: string) {
       .single();
 
     if (checkUserError || !usuarioExiste) {
-      console.log(`⚠️ Usuario ${userId} no existe en la tabla usuarios, saltando procesamiento de login`);
       return { success: false, error: "Usuario no encontrado en tabla usuarios" };
     }
 
@@ -611,7 +598,6 @@ export async function procesarMisionLogin(userId: string) {
       .single();
 
     if (!misionLogin || error) {
-      console.log("No se encontró misión de Login Diario activa");
       return { success: false, error: "Misión no encontrada" };
     }
 
@@ -706,9 +692,7 @@ export async function actualizarProgresoMision(
   cantidad: number = 1,
   datosAdicionales?: any
 ) {
-  try {
-    console.log(`🎯 Actualizando progreso: ${tipoActividad} (${cantidad}) para usuario ${userId}`);
-    
+  try {    
     // Actualizar misiones relacionadas con esta actividad
     await actualizarMisionesEspecificas(userId, tipoActividad, cantidad, datosAdicionales);
     
@@ -959,9 +943,7 @@ export async function verificarYCrearMisionesProgresivas(userId: string) {
       await supabase
         .from("misiones_usuario")
         .insert(nuevasMisionesDisponibles);
-      
-      console.log(`✅ Creadas ${nuevasMisionesDisponibles.length} nuevas misiones progresivas con progreso real para usuario ${userId}`);
-    }
+      }
   } catch (error) {
     console.error("Error al verificar misiones progresivas:", error);
   }
@@ -1011,7 +993,6 @@ export async function procesarMisionRegistro(userId: string) {
       .single();
 
     if (!misionBienvenida || error) {
-      console.log("No se encontró misión de Bienvenida activa");
       return { success: false, error: "Misión no encontrada" };
     }
 
@@ -1028,12 +1009,10 @@ export async function procesarMisionRegistro(userId: string) {
       const progreso = progresoExistente.progreso || { actual: 0, objetivo: 1 };
       
       if (progreso.actual >= progreso.objetivo) {
-        console.log("Misión de bienvenida ya completada para este usuario");
         return { success: true, message: "Misión de registro ya procesada y completada" };
       }
       
       // 🎯 SI EXISTE PERO NO ESTÁ COMPLETA, ACTUALIZAR EL PROGRESO
-      console.log("Misión de bienvenida existe pero no está completa, actualizando progreso...");
       const { error: updateError } = await supabase
         .from("misiones_usuario")
         .update({
@@ -1083,9 +1062,7 @@ export async function procesarMisionRegistro(userId: string) {
 
 // Función para procesar misión de multi-apertura
 export async function procesarMisionMultiApertura(userId: string, cantidadCajasAbiertas: number) {
-  try {
-    console.log(`🎯 Procesando multi-apertura: ${cantidadCajasAbiertas} cajas para usuario ${userId}`);
-    
+  try {    
     // Buscar todas las misiones de multi-apertura que aplican
     const { data: misionesMulti, error } = await supabase
       .from("misiones")
@@ -1099,22 +1076,17 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
     }
 
     if (!misionesMulti || misionesMulti.length === 0) {
-      console.log("No se encontraron misiones de Multi-Apertura activas");
       return { success: true, message: "No hay misiones de multi-apertura activas" };
     }
 
-    console.log(`📋 Encontradas ${misionesMulti.length} misiones de multi-apertura activas`);
     let misionesActualizadas = 0;
 
     for (const misionMulti of misionesMulti) {
       const condicion = misionMulti.condicion;
       const cantidadRequerida = condicion.minimo_por_sesion || condicion.cantidad || 2;
-      
-      console.log(`🔍 Evaluando misión ${misionMulti.nombre}: requiere ${cantidadRequerida}, abrió ${cantidadCajasAbiertas}`);
-      
+            
       // Solo procesar si se cumple el mínimo requerido
       if (cantidadCajasAbiertas < cantidadRequerida) {
-        console.log(`❌ No cumple el mínimo requerido para ${misionMulti.nombre}`);
         continue;
       }
 
@@ -1128,7 +1100,6 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
 
       if (progresoError && progresoError.code === 'PGRST116') {
         // Crear progreso si no existe - completar inmediatamente para multi-apertura
-        console.log(`📝 Creando nueva entrada para misión ${misionMulti.nombre}`);
         const objetivoDefault = condicion.cantidad || 1;
         const { data: nuevoProgreso, error: insertError } = await supabase
           .from("misiones_usuario")
@@ -1147,10 +1118,8 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
         }
         
         misionesActualizadas++;
-        console.log(`✅ Misión ${misionMulti.nombre} creada y lista para reclamar`);
         
       } else if (progresoMision) {
-        console.log(`🔄 Misión ${misionMulti.nombre} ya existe. Completada: ${progresoMision.completada}, Tipo: ${misionMulti.tipo}`);
         
         // Si la misión es repetible y ya está completada, resetearla para que pueda reclamarse de nuevo
         if (misionMulti.tipo === 'repetible' && progresoMision.completada) {
@@ -1167,7 +1136,6 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
 
           if (!resetError) {
             misionesActualizadas++;
-            console.log(`🔄 Misión repetible ${misionMulti.nombre} reseteada y lista para reclamar`);
           } else {
             console.error("Error al resetear misión repetible:", resetError);
           }
@@ -1191,22 +1159,18 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
 
             if (!updateError) {
               misionesActualizadas++;
-              console.log(`✅ Misión ${misionMulti.nombre} completada y lista para reclamar`);
             } else {
               console.error("Error al actualizar progreso:", updateError);
             }
           } else {
-            console.log(`ℹ️ Misión ${misionMulti.nombre} ya tiene progreso completo`);
           }
         } else {
-          console.log(`ℹ️ Misión ${misionMulti.nombre} ya está completada y no es repetible`);
         }
       } else {
         console.error(`Error inesperado al obtener progreso de misión ${misionMulti.nombre}:`, progresoError);
       }
     }
 
-    console.log(`🎯 Multi-apertura procesada: ${misionesActualizadas} misiones actualizadas`);
     return { 
       success: true, 
       message: `${misionesActualizadas} misiones de multi-apertura procesadas`,

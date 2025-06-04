@@ -324,9 +324,6 @@ export default function MainPage() {
 
                             // Guardar la ruta en la base de datos para futuras referencias
                             if (caja.ruta !== rutaDinamica) {
-                              console.log(
-                                `Actualizando ruta para ${caja.nombre}: ${rutaDinamica}`,
-                              );
                               // No bloqueamos la renderización con await
                               updateCajaRuta(caja.id, rutaDinamica);
                             }

@@ -139,11 +139,6 @@ export default function CajaPage() {
           .select("id, nombre, es_diaria")
           .eq("esta_disponible", true);
 
-        console.log(
-          "Cajas disponibles en la base de datos:",
-          cajasDisponibles?.map((c: any) => c.nombre),
-        );
-
         // Extraer los tipos normalizados para el estado
         const tiposExtraidos =
           cajasDisponibles?.map((caja: any) =>
@@ -166,9 +161,6 @@ export default function CajaPage() {
             tipoACaja.set(tipoNormalizado, caja);
           });
         }
-
-        console.log(`🎯 DEBUG: Buscando tipo: '${tipoParamNormalizado}'`);
-        console.log(`🎯 DEBUG: Tipos disponibles en Map:`, Array.from(tipoACaja.keys()));
 
         // Verificar si el tipo solicitado existe directamente
         if (tipoParamNormalizado && tipoACaja.has(tipoParamNormalizado)) {
@@ -243,16 +235,11 @@ export default function CajaPage() {
             maxPuntuacion = puntuacion;
             mejorCoincidencia = tipo;
           }
-
-          console.log(`Evaluando: "${tipo}" vs "${tipoParamNormalizado}" -> Puntuación: ${puntuacion}`);
         });
 
         // Si encontramos alguna coincidencia con puntuación decente
         if (mejorCoincidencia && maxPuntuacion >= 60) {
           setTipoValidado(mejorCoincidencia);
-          console.log(
-            `Tipo de caja válido (coincidencia parcial): ${mejorCoincidencia} (puntuación: ${maxPuntuacion})`,
-          );
         } else {
           // Si no hay coincidencia, usar el primer tipo disponible
           let tipoDefault = "premium";
@@ -271,9 +258,6 @@ export default function CajaPage() {
           }
 
           setTipoValidado(tipoDefault);
-          console.log(
-            `Tipo de caja inválido: ${tipoParamNormalizado}, redirigiendo a: ${tipoDefault}`,
-          );
 
           // Si estamos en el cliente y el tipo no es válido, redirigir
           if (
@@ -332,8 +316,6 @@ export default function CajaPage() {
         let cajaData: any = null;
         let cajaError = null;
 
-        console.log(`🔍 FETCH DEBUG: Buscando caja para tipo: '${tipoValidado}'`);
-
         // Estrategia 1: Buscar por es_diaria si el tipo es 'diaria'
         if (tipoValidado === "diaria") {
           const resultadoDiaria = await supabase
@@ -344,7 +326,6 @@ export default function CajaPage() {
 
           if (resultadoDiaria.data) {
             cajaData = resultadoDiaria.data;
-            console.log(`🔍 FETCH DEBUG: Encontrada caja diaria: ${cajaData.nombre}`);
           }
         }
 
@@ -360,7 +341,6 @@ export default function CajaPage() {
 
           if (resultadoPorRuta.data) {
             cajaData = resultadoPorRuta.data;
-            console.log(`🔍 FETCH DEBUG: Encontrada caja por ruta '${rutaEsperada}': ${cajaData.nombre}`);
           } else {
             // Estrategia 3: Buscar usando extraerTipoCaja para mapear correctamente
             const { data: todasLasCajas } = await supabase
@@ -373,13 +353,11 @@ export default function CajaPage() {
               const cajaCoincidente = todasLasCajas.find((caja: any) => {
                 const tipoExtraidoCaja = extraerTipoCaja(String(caja.nombre || ''), Boolean(caja.es_diaria));
                 const coincide = tipoExtraidoCaja === tipoValidado;
-                console.log(`🔍 FETCH DEBUG: Caja '${caja.nombre}' -> tipo '${tipoExtraidoCaja}' -> ¿coincide con '${tipoValidado}'? ${coincide}`);
                 return coincide;
               });
 
               if (cajaCoincidente) {
                 cajaData = cajaCoincidente;
-                console.log(`🔍 FETCH DEBUG: Encontrada caja por mapeo directo: ${cajaData.nombre}`);
               } else {
                 // Estrategia 4: Buscar con formato "Caja Tipo" (ej: "Caja Premium") - FALLBACK
                 const tipoCapitalizado =
@@ -392,7 +370,6 @@ export default function CajaPage() {
 
                 if (resultado1.data) {
                   cajaData = resultado1.data;
-                  console.log(`🔍 FETCH DEBUG: Encontrada caja por formato 'Caja Tipo': ${cajaData.nombre}`);
                 } else {
                   // Estrategia 5: Buscar solo con el tipo capitalizado (ej: "Premium") - FALLBACK
                   const resultado2 = await supabase
@@ -403,7 +380,6 @@ export default function CajaPage() {
 
                   if (resultado2.data) {
                     cajaData = resultado2.data;
-                    console.log(`🔍 FETCH DEBUG: Encontrada caja por nombre directo: ${cajaData.nombre}`);
                   } else {
                     console.warn(`🔍 FETCH DEBUG: No se encontró ninguna caja para el tipo '${tipoValidado}'`);
                   }
@@ -480,7 +456,6 @@ export default function CajaPage() {
 
             // Obtener las probabilidades de la caja
             if (cajaData.id) {
-              console.log(`[Prob Dbg] Fetching probabilities for caja_id: ${cajaData.id}, Caja Nombre: ${cajaData.nombre}`);
               const { data: probData, error: probQueryError } = await supabase
                 .from("tier_probabilidades")
                 .select(
@@ -504,9 +479,7 @@ export default function CajaPage() {
                 console.error(`[Prob Dbg] Error fetching probabilities for caja_id ${cajaData.id}:`, probQueryError);
                 setProbabilidades([]); // Set empty on error
               } else if (probData) {
-                console.log(`[Prob Dbg] Received probData for ${cajaData.nombre}:`, JSON.parse(JSON.stringify(probData)));
                 const mappedProbs = probData.map((item: any, index: number) => {
-                  console.log(`[Prob Dbg] Mapping item ${index} for ${cajaData.nombre}:`, JSON.parse(JSON.stringify(item)));
                   const hasContentTierData = item.content_tier && item.content_tier.uuid_api && item.content_tier.nombre && item.content_tier.color;
                   
                   const tierInfo = hasContentTierData ? {
@@ -537,14 +510,11 @@ export default function CajaPage() {
                     content_tier: tierInfo,
                   };
                 });
-                console.log(`[Prob Dbg] Mapped probabilities for ${cajaData.nombre}:`, JSON.parse(JSON.stringify(mappedProbs)));
                 setProbabilidades(mappedProbs);
               } else {
-                console.log(`[Prob Dbg] No probData (null or empty array) received for ${cajaData.nombre}. Setting empty probabilities.`);
                 setProbabilidades([]); 
               }
             } else {
-                console.warn(`[Prob Dbg] No cajaData.id found when trying to fetch probabilities. Current tipoValidado: ${tipoValidado}`);
                 setProbabilidades([]); 
             }
           } catch (skinError) {
@@ -660,10 +630,6 @@ export default function CajaPage() {
         const tierSkins = filteredSkinsForSelection.filter(
           (skin) => skin.contentTierUuid === valorantApiTierUuid 
         );
-
-        console.log(
-          `Tier (Supabase PK: ${supabaseTierId}, API UUID: ${valorantApiTierUuid}): ${tierSkins.length} skins encontradas en pool.`
-        );
         skinsBySupabaseTierId.set(supabaseTierId, { skins: tierSkins, cantidad: prob.cantidad_skins });
       });
 
@@ -674,16 +640,10 @@ export default function CajaPage() {
       }
       const newSelectedSkinsForBox: SelectedSkinForUpdate[] = [];
 
-      console.log("=== SELECCIONANDO SKINS POR TIER (forceUpdateDailyBox) ===");
-
       skinsBySupabaseTierId.forEach(({ skins, cantidad }, supabaseTierId_key) => {
         const supabaseTierId = String(supabaseTierId_key);
         const tierData = supabaseIdToTierDataMap.get(supabaseTierId);
         const tierName = tierData?.nombre || `Desconocido (ID: ${supabaseTierId})`;
-
-        console.log(`Tier: ${tierName}`);
-        console.log(`  - Skins disponibles en pool: ${skins.length}`);
-        console.log(`  - Cantidad requerida: ${cantidad}`);
 
         if (skins.length === 0) {
           console.warn(`  - ADVERTENCIA: No hay skins disponibles para el tier ${tierName}`);
@@ -699,15 +659,12 @@ export default function CajaPage() {
         const shuffledSkins = [...skins].sort(() => Math.random() - 0.5);
         const skinsToPush = shuffledSkins.slice(0, Math.min(cantidad, shuffledSkins.length));
 
-        console.log(`  - Skins seleccionadas para este tier: ${skinsToPush.length}`);
-
         skinsToPush.forEach((skin) => {
           newSelectedSkinsForBox.push({
             skin_id: skin.uuid,             
             content_tier_id: supabaseTierId,   // Usar el ID (PK de Supabase) del tier
             skin_nombre: skin.displayName,
           });
-          console.log(`    * ${skin.displayName}`);
         });
       });
 
