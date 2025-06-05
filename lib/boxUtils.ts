@@ -1,6 +1,7 @@
 // lib/boxUtils.ts
 import { SupabaseClient } from "@supabase/supabase-js";
 import { logCajaAbierta, type CajaAbiertaLog } from "./logUtils";
+import { toast } from "sonner";
 
 /**
  * Extrae el tipo de caja a partir del nombre de la caja de manera consistente
@@ -73,7 +74,7 @@ const cacheTimestamps = new Map<string, number>();
  * Pre-calcula las probabilidades para un conjunto de skins y tiers
  * @param skins Array de skins disponibles
  * @param probabilidades Array de probabilidades por tier
- * @returns Array de objetos con skin y probabilidad individual
+ * @returns Array of objects with skin and probability individual
  */
 function precalculateProbabilities(
   skins: Skin[],
@@ -172,7 +173,7 @@ export function selectRandomSkinByProbability(
  * @param skins Array de skins disponibles
  * @param probabilidades Array de probabilidades por tier
  * @param count Número de skins a generar
- * @returns Array de skins seleccionadas
+ * @returns Array of skins selected
  */
 export function selectMultipleRandomSkins(
   skins: Skin[],
@@ -227,7 +228,7 @@ export function selectMultipleRandomSkins(
  * @param probabilidades Array de probabilidades por tier
  * @param count Número de skins a generar
  * @param idPrefix Prefijo para los IDs únicos
- * @returns Array de skins con IDs únicos para el spinner
+ * @returns Array of skins with unique IDs for the spinner
  */
 export function selectMultipleRandomSkinsForSpinner(
   skins: Skin[],
@@ -502,12 +503,7 @@ export async function processBoxOpeningWithLog(
       
       // Verificar si tiene suficiente saldo
       if (saldoActual < costoCaja) {
-        return {
-          selectedSkin: null,
-          inventoryOperationType: "error",
-          error: "Saldo insuficiente",
-          saldoInsuficiente: true
-        };
+        toast.error("Saldo insuficiente");
       }
 
       // Descontar el costo de la caja
@@ -645,12 +641,7 @@ export async function processMultipleBoxOpeningOptimized(
       const saldoActual = usuario?.saldo || 0;
       
       if (saldoActual < costoTotal) {
-        return {
-          results: [],
-          success: false,
-          error: "Saldo insuficiente",
-          saldoInsuficiente: true
-        };
+        toast.error("Saldo insuficiente");
       }
 
       // Descontar el costo total de una vez
@@ -684,10 +675,26 @@ export async function processMultipleBoxOpeningOptimized(
       };
     }
 
+    // 🏷️ VERIFICAR CUÁLES SON SKINS NUEVAS ANTES DE INSERTAR
+    const skinUuids = selectedSkins.map(s => s.uuid);
+    const { data: existingSkins } = await supabase
+      .from("inventario_usuario")
+      .select("skin_id")
+      .eq("usuario_id", userId)
+      .in("skin_id", skinUuids);
+
+    const existingSkinIds = new Set(existingSkins?.map(es => es.skin_id) || []);
+    
+    // Marcar cuáles son nuevas ANTES de insertar
+    const skinsWithNewFlag = selectedSkins.map(skin => ({
+      ...skin,
+      isNewSkin: !existingSkinIds.has(skin.uuid)
+    }));
+
     // 📦 PREPARAR DATOS PARA INSERCIÓN MASIVA EN INVENTARIO
     const inventoryInserts = selectedSkins.map((skin, index) => ({
       usuario_id: userId,
-      skin_id: skin.uuid,
+      skin_id: skin.uuid, // USAR EL UUID ORIGINAL, NO EL ID MODIFICADO
       skin_nombre: skin.nombre,
       fecha_obtencion: new Date().toISOString(),
     }));
@@ -722,24 +729,7 @@ export async function processMultipleBoxOpeningOptimized(
       };
     }
 
-    // 🏷️ MARCAR SKINS NUEVAS (verificación rápida por lotes)
-    const skinUuids = selectedSkins.map(s => s.uuid);
-    const { data: existingSkins } = await supabase
-      .from("inventario_usuario")
-      .select("skin_id")
-      .eq("usuario_id", userId)
-      .in("skin_id", skinUuids)
-      .neq("fecha_obtencion", new Date().toISOString());
-
-    const existingSkinIds = new Set(existingSkins?.map(es => es.skin_id) || []);
-    
-    const finalResults = selectedSkins.map(skin => ({
-      ...skin,
-      isNewSkin: !existingSkinIds.has(skin.uuid)
-    }));
-
     // 🚀 DIFERIR OPERACIONES NO CRÍTICAS PARA DESPUÉS
-    // No bloquear la UI con estas operaciones
     setTimeout(async () => {
       try {
         // Logging diferido
@@ -794,7 +784,7 @@ export async function processMultipleBoxOpeningOptimized(
     }, 100); // Diferir por 100ms
 
     return {
-      results: finalResults,
+      results: skinsWithNewFlag,
       success: true
     };
 
