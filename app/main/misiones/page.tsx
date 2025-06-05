@@ -117,6 +117,7 @@ export default function Page() {
   const [completadas, setCompletadas] = useState(0);
   const [activeTab, setActiveTab] = useState("reclamar");
   const [tabInicialDeterminado, setTabInicialDeterminado] = useState(false);
+  const [isClaimingAll, setIsClaimingAll] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -258,9 +259,6 @@ export default function Page() {
           console.error("Error al actualizar saldo:", saldoUpdateError);
           throw saldoUpdateError;
         }
-
-        // 🎯 ACTUALIZAR SALDO CON EVENTO SIMPLE
-        incrementarSaldoLocal(misionUsuario.mision.recompensa_vp);
       }
 
       // 🎯 PROCESAR ACTIVIDAD DE MISIÓN COMPLETADA PARA ACTIVAR MISIONES PROGRESIVAS
@@ -293,6 +291,128 @@ export default function Page() {
     } catch (error) {
       console.error("Error al reclamar recompensa:", error);
       toast.error("Error al reclamar la recompensa");
+    }
+  };
+
+  const reclamarTodasLasRecompensas = async () => {
+    if (!session?.user?.id || isClaimingAll) return;
+
+    // Obtener todas las misiones que se pueden reclamar
+    const misionesParaReclamar = misiones.filter(mision => {
+      const progreso = mision.progreso || { actual: 0, objetivo: 1 };
+      return !mision.completada && progreso.actual >= progreso.objetivo;
+    });
+
+    if (misionesParaReclamar.length === 0) {
+      toast.error("No hay misiones para reclamar");
+      return;
+    }
+
+    setIsClaimingAll(true);
+
+    try {
+      let vpTotalGanado = 0;
+      let misionesCompletadas = 0;
+
+      // Procesar cada misión una por una
+      for (const misionUsuario of misionesParaReclamar) {
+        try {
+          // Marcar como completada
+          const { error: updateError } = await supabase
+            .from("misiones_usuario")
+            .update({ 
+              completada: true, 
+              fecha_completada: new Date().toISOString() 
+            })
+            .eq("id", misionUsuario.id);
+
+          if (updateError) {
+            console.error("Error al marcar misión como completada:", updateError);
+            continue; // Continuar con la siguiente misión
+          }
+
+          // Registrar recompensa
+          const { error: recompensaError } = await supabase
+            .from("logs_historial_recompensas")
+            .insert({
+              usuario_id: session.user.id,
+              mision_id: misionUsuario.mision.id,
+              vp_otorgados: misionUsuario.mision.recompensa_vp
+            });
+
+          if (recompensaError) {
+            console.error("Error al registrar recompensa:", recompensaError);
+            continue; // Continuar con la siguiente misión
+          }
+
+          vpTotalGanado += misionUsuario.mision.recompensa_vp;
+          misionesCompletadas++;
+
+        } catch (error) {
+          console.error("Error al procesar misión individual:", error);
+          continue; // Continuar con la siguiente misión
+        }
+      }
+
+      // Actualizar saldo del usuario con el total acumulado
+      if (vpTotalGanado > 0) {
+        const { data: usuario, error: saldoQueryError } = await supabase
+          .from("usuarios")
+          .select("saldo")
+          .eq("id", session.user.id)
+          .single();
+
+        if (saldoQueryError) {
+          console.error("Error al obtener saldo actual:", saldoQueryError);
+        } else if (usuario) {
+          const { error: saldoUpdateError } = await supabase
+            .from("usuarios")
+            .update({ saldo: (usuario.saldo || 0) + vpTotalGanado })
+            .eq("id", session.user.id);
+
+          if (saldoUpdateError) {
+            console.error("Error al actualizar saldo:", saldoUpdateError);
+          } else {
+            // 🎯 ACTUALIZAR SALDO CON EVENTO SIMPLE
+            incrementarSaldoLocal(vpTotalGanado);
+          }
+        }
+      }
+
+      // 🎯 PROCESAR ACTIVIDAD DE MISIONES COMPLETADAS PARA ACTIVAR MISIONES PROGRESIVAS
+      if (misionesCompletadas > 0) {
+        try {
+          await fetch('/api/misiones/procesar-actividad', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              tipoActividad: 'mision_completada',
+              cantidad: misionesCompletadas
+            })
+          });
+        } catch (actividadError) {
+          console.warn("Error al procesar actividad de misiones completadas:", actividadError);
+        }
+      }
+
+      if (misionesCompletadas > 0) {
+        toast.success(`¡${misionesCompletadas} recompensas reclamadas! +${vpTotalGanado} VP total`);
+        
+        // Recargar datos
+        cargarMisiones();
+        cargarEstadisticas();
+
+        // 🎯 EMITIR EVENTO DE MISIONES ACTUALIZADAS
+        window.dispatchEvent(new CustomEvent('misionesActualizadas'));
+      } else {
+        toast.error("No se pudo reclamar ninguna misión");
+      }
+
+    } catch (error) {
+      console.error("Error al reclamar todas las recompensas:", error);
+      toast.error("Error al reclamar las recompensas");
+    } finally {
+      setIsClaimingAll(false);
     }
   };
 
@@ -408,6 +528,33 @@ export default function Page() {
             </TabsList>
           </div>
 
+          {/* Botón Reclamar Todas - Solo visible en tab "Reclamar" si hay misiones disponibles */}
+          {activeTab === "reclamar" && misiones.filter(m => {
+            const progreso = m.progreso || { actual: 0, objetivo: 1 };
+            return !m.completada && progreso.actual >= progreso.objetivo;
+          }).length > 0 && (
+            <div className="mb-6 flex">
+              <Button
+                onClick={reclamarTodasLasRecompensas}
+                disabled={isClaimingAll}
+                className="rounded-xl bg-gradient-to-r from-primary/20 to-primary/30 text-white border border-primary/30 hover:bg-gradient-to-r hover:from-primary/30 hover:to-primary/40 transition-all duration-300 px-4 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                size="lg"
+              >
+                {isClaimingAll ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2" />
+                    Reclamando...
+                  </>
+                ) : (
+                  <>
+                    <Gift className="h-5 w-5 mr-2" />
+                    Reclamar Todas
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
           <TabsContent value={activeTab} className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {misionesFiltradas.map((misionUsuario) => {
@@ -430,7 +577,7 @@ export default function Page() {
                           : "border-white/10"
                     }`}
                   >
-                    {/* Header */}
+                    {/* Reclamar */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${
@@ -453,7 +600,7 @@ export default function Page() {
                       </div>
                     </div>
 
-                    {/* Progreso */}
+                    {/* En Progreso */}
                     <div className="mb-4">
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-white/70">Progreso</span>
@@ -469,7 +616,7 @@ export default function Page() {
                       </div>
                     </div>
 
-                    {/* Recompensa y botón */}
+                    {/* Completadas */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Coins className="h-4 w-4 text-primary" />

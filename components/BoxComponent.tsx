@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,13 +16,14 @@ import {
   selectRandomSkinByProbability,
   getTierData,
   processBoxOpeningWithLog,
+  selectMultipleRandomSkins,
+  processMultipleBoxOpeningOptimized,
+  processSingleBoxOpeningOptimized,
 } from "@/lib/boxUtils";
 import {
-  actualizarProgresoMision,
-  procesarMisionMultiApertura,
   procesarSkinConseguida
 } from "@/lib/missionUtils";
-import { emitirActualizacionSaldo, decrementarSaldoLocal } from "@/lib/saldoUtils";
+import { decrementarSaldoLocal } from "@/lib/saldoUtils";
 
 // Estilos globales para animaciones
 const globalStyles = `
@@ -376,46 +377,37 @@ export default function BoxComponent({
     return `${hours}h ${minutes}m ${seconds}s`;
   };
 
-  // Función para generar items aleatorios para la ruleta
-  const generateSpinItems = (selectedSkin: Skin) => {
-    if (!cajaSkins || cajaSkins.length === 0) return [];
+  // Función para generar items aleatorios para la ruleta - OPTIMIZADA con caché
+  const generateSpinItems = useMemo(() => {
+    return (selectedSkin: Skin) => {
+      if (!cajaSkins || cajaSkins.length === 0) return [];
 
-    // Generar items para la ruleta, insertamos suficientes items para darle dinamismo
-    const baseItems: Skin[] = [];
+      // Generar items para la ruleta de forma optimizada
+      const baseItems: Skin[] = [];
 
-    // Distribuimos los items según la probabilidad real
-    // Primero añadimos 25 items aleatorios para la primera mitad
-    for (let i = 0; i < 80; i++) {
-      const randomSkin = selectRandomSkinByProbability(
-        cajaSkins,
-        probabilidades,
-        false
-      );
+      // Usar la función optimizada para generar múltiples skins de una vez
+      const randomItemsBefore = selectMultipleRandomSkins(cajaSkins, probabilidades, 80);
+      const randomItemsAfter = selectMultipleRandomSkins(cajaSkins, probabilidades, 80);
 
-      if (randomSkin)
-        baseItems.push({ ...randomSkin, id: `${randomSkin.id}-${i}` });
-    }
+      // Añadir los items antes de la skin ganadora
+      baseItems.push(...randomItemsBefore.map((skin, i) => ({ 
+        ...skin, 
+        id: `${skin.id}-before-${i}` 
+      })));
 
-    // En la posición central añadimos la skin ganadora
-    const winnerPosition = 80;
+      // En la posición central añadimos la skin ganadora
+      baseItems.push({ ...selectedSkin, id: `winner-${selectedSkin.id}` });
 
-    baseItems.push({ ...selectedSkin, id: `winner-${selectedSkin.id}` });
+      // Completamos con items después
+      baseItems.push(...randomItemsAfter.map((skin, i) => ({ 
+        ...skin, 
+        id: `${skin.id}-after-${i}` 
+      })));
 
-    // Completamos con 25 items más
-    for (let i = 0; i < 80; i++) {
-      const randomSkin = selectRandomSkinByProbability(
-        cajaSkins,
-        probabilidades,
-        false
-      );
-
-      if (randomSkin)
-        baseItems.push({ ...randomSkin, id: `${randomSkin.id}-${i + 80}` });
-    }
-
-    // Crear una copia al inicio y al final para que parezca infinito
-    return [...baseItems.slice(0, 10), ...baseItems, ...baseItems.slice(0, 10)];
-  };
+      // Crear una copia al inicio y al final para que parezca infinito
+      return [...baseItems.slice(0, 10), ...baseItems, ...baseItems.slice(0, 10)];
+    };
+  }, [cajaSkins, probabilidades]); // Solo recalcular si cambian las skins o probabilidades
 
   // Función para animar la ruleta con un efecto de frenado más realista
   const animateSpinner = (finalPosition: number) => {
@@ -439,7 +431,7 @@ export default function BoxComponent({
     spinnerElement.style.transform = `translateX(-${finalPosition}px)`;
   };
 
-  // Función para abrir una o múltiples cajas
+  // Función para abrir una o múltiples cajas - OPTIMIZADA
   const openBox = async () => {
     if (
       !caja ||
@@ -478,109 +470,57 @@ export default function BoxComponent({
         const userId = session.user.id;
 
         if (isMultipleMode && numberOfBoxes > 1) {
-          // Modo múltiples cajas
-          const results: Skin[] = [];
-          const spinItemsArray: Skin[][] = [];
-
-          for (let i = 0; i < numberOfBoxes; i++) {
-            const openingResult = await processBoxOpeningWithLog(
-              userId,
-              caja.id,
-              cajaSkins as any,
-              probabilidades as any,
-              supabase,
-              caja.precio,
-              'vp'
-            );
-
-            if (openingResult.selectedSkin) {
-              results.push(openingResult.selectedSkin as Skin);
-              const items = generateSpinItems(openingResult.selectedSkin as Skin);
-              spinItemsArray.push(items);
-              
-              // 🎯 PROCESAR MISIONES - Skin conseguida para cada skin
-              await procesarSkinConseguida(userId, openingResult.selectedSkin);
-            }
-          }
-
-          if (results.length > 0) {
-            // 🎯 PROCESAR MISIONES - Cajas abiertas múltiples y multi-apertura
-            try {
-              const misionResponse = await fetch('/api/misiones/procesar-actividad', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  tipoActividad: 'caja_abierta',
-                  cantidad: numberOfBoxes
-                })
-              });
-
-              if (!misionResponse.ok) {
-                console.warn('Error al procesar misiones de apertura múltiple:', await misionResponse.text());
-              } else {
-                // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - MISIONES
-                window.dispatchEvent(new CustomEvent('misionesActualizadas'));
-              }
-            } catch (missionError) {
-              console.warn('Error al procesar misiones automáticamente:', missionError);
-            }
-            
-            // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP (por haber gastado VP)
-            if (caja.precio > 0) {
-              decrementarSaldoLocal(caja.precio * numberOfBoxes);
-            }
-            
-            setMultipleResults(results);
-            setMultipleSpinItems(spinItemsArray);
-            setCompletedSpinners(Array(numberOfBoxes).fill(false));
-            setIsPreparingBox(false); // Desactivar el spinner de preparación
-            setIsSpinning(true);
-          } else {
-            console.error("Error al seleccionar skins");
-            setIsOpening(false);
-            setIsPreparingBox(false);
-          }
-        } else {
-          // Modo caja única
-          const openingResult = await processBoxOpeningWithLog(
+          // Modo múltiples cajas - USAR FUNCIÓN OPTIMIZADA
+          const openingResult = await processMultipleBoxOpeningOptimized(
             userId,
             caja.id,
             cajaSkins as any,
             probabilidades as any,
             supabase,
             caja.precio,
-            'vp'
+            numberOfBoxes
           );
 
-          if (openingResult.selectedSkin) {
-            // 🎯 PROCESAR MISIONES - Caja abierta única
-            try {
-              const misionResponse = await fetch('/api/misiones/procesar-actividad', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  tipoActividad: 'caja_abierta',
-                  cantidad: 1
-                })
-              });
-
-              if (!misionResponse.ok) {
-                console.warn('Error al procesar misión de caja abierta:', await misionResponse.text());
-              } else {
-                // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - MISIONES
-                window.dispatchEvent(new CustomEvent('misionesActualizadas'));
-              }
-            } catch (missionError) {
-              console.warn('Error al procesar misiones automáticamente:', missionError);
+          if (openingResult.success && openingResult.results.length > 0) {
+            // Generar items de spinner para cada resultado
+            const spinItemsArray = openingResult.results.map(result => 
+              generateSpinItems(result)
+            );
+            
+            // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP (ya se hizo en la función optimizada)
+            if (caja.precio > 0) {
+              decrementarSaldoLocal(caja.precio * numberOfBoxes);
             }
             
-            // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP (por haber gastado VP)
+            setMultipleResults(openingResult.results);
+            setMultipleSpinItems(spinItemsArray);
+            setCompletedSpinners(Array(numberOfBoxes).fill(false));
+            setIsPreparingBox(false); // Desactivar el spinner de preparación
+            setIsSpinning(true);
+          } else {
+            console.error("Error al abrir cajas múltiples:", openingResult.error);
+            setIsOpening(false);
+            setIsPreparingBox(false);
+          }
+        } else {
+          // Modo caja única - USAR FUNCIÓN OPTIMIZADA
+          const openingResult = await processSingleBoxOpeningOptimized(
+            userId,
+            caja.id,
+            cajaSkins as any,
+            probabilidades as any,
+            supabase,
+            caja.precio
+          );
+
+          if (openingResult.success && openingResult.selectedSkin) {
+            // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP (ya se hizo en la función optimizada)
             if (caja.precio > 0) {
               decrementarSaldoLocal(caja.precio);
             }
             
-            const items = generateSpinItems(openingResult.selectedSkin as Skin);
-            setResultSkinForSpin(openingResult.selectedSkin as Skin);
+            const items = generateSpinItems(openingResult.selectedSkin);
+            setResultSkinForSpin(openingResult.selectedSkin);
             setSpinItems(items);
             setIsPreparingBox(false); // Desactivar el spinner de preparación
             setIsSpinning(true);
@@ -1190,7 +1130,40 @@ export default function BoxComponent({
             transition={{ duration: 0.2 }}
             className="w-full h-full flex items-center justify-center"
           >
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
+            <div className="flex flex-col items-center justify-center space-y-6">
+              {/* Spinner principal mejorado */}
+              <div className="relative">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-3 border-b-3 border-primary">
+                  <div className="absolute inset-0 rounded-full border border-slate-700 opacity-20"></div>
+                </div>
+                {/* Efecto de pulso interno */}
+                <div className="absolute inset-2 rounded-full bg-primary/20 animate-pulse"></div>
+              </div>
+              
+              {/* Texto dinámico basado en el modo */}
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-semibold text-white">
+                  {isMultipleMode && numberOfBoxes > 1 
+                    ? `Procesando ${numberOfBoxes} cajas...` 
+                    : 'Preparando caja...'}
+                </h3>
+                <p className="text-sm text-white/60">
+                  {isMultipleMode && numberOfBoxes > 1 
+                    ? 'Esto puede tomar unos segundos' 
+                    : 'Seleccionando tu premio'}
+                </p>
+              </div>
+
+              {/* Indicador de progreso opcional para múltiples cajas */}
+              {isMultipleMode && numberOfBoxes > 1 && (
+                <div className="w-64 bg-slate-800/50 rounded-full h-2 overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-1000 ease-out animate-pulse"
+                    style={{ width: '60%' }}
+                  />
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
 

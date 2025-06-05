@@ -233,7 +233,49 @@ Para mantener la UI existente funcionando, se implementó un patrón donde:
 
 ## Cambios Recientes
 
-### Arreglo del Sistema de Actualización de Saldo (Último)
+### Arreglo de Función procesarMisionMultiApertura (Último)
+
+**Problema:** Al abrir múltiples cajas a la vez (ej: 5 cajas), se completaban todas las misiones que cumplían el mínimo requerido (misiones de 2, 3, 4 y 5 cajas).
+
+**Solución:** Modificada la función para que solo complete la misión que corresponde **exactamente** al número de cajas abiertas.
+
+**Comportamiento Nuevo:**
+- Si abres 5 cajas → Solo se completa la misión de "abrir 5 cajas a la vez"
+- Si abres 4 cajas → Solo se completa la misión de "abrir 4 cajas a la vez"
+- Si abres 3 cajas → Solo se completa la misión de "abrir 3 cajas a la vez"
+- Si abres 2 cajas → Solo se completa la misión de "abrir 2 cajas a la vez"
+
+**Cambios en `lib/missionUtils.ts`:**
+- Reemplazado loop que procesaba todas las misiones válidas
+- Agregada búsqueda de misión exacta con `find()`
+- Solo procesa la misión que coincide exactamente con `cantidadCajasAbiertas`
+- Mejorados logs de debugging con emoji indicators
+- Mejor manejo de errores con early returns
+
+**Resultado:** Sistema más preciso y justo donde cada acción específica completa solo su misión correspondiente.
+
+### Botón "Reclamar Todas" en Misiones
+
+**Nueva Funcionalidad:** Agregado botón para reclamar todas las misiones disponibles de una vez.
+
+**Características:**
+1. **Ubicación:** Tab "Reclamar", debajo de los tabs y encima de las misiones
+2. **Visibilidad:** Solo se muestra si hay misiones para reclamar
+3. **Funcionalidad:**
+   - Reclama todas las misiones completadas en lote
+   - Actualiza saldo acumulativo de una vez
+   - Procesa actividades de misiones completadas
+   - Manejo de errores individual por misión
+4. **UX:**
+   - Estado de loading con spinner
+   - Botón deshabilitado durante procesamiento
+   - Contador de misiones disponibles
+   - Toast con resumen de recompensas
+
+**Archivos Modificados:**
+- `app/main/misiones/page.tsx`: Función `reclamarTodasLasRecompensas()` y botón UI
+
+### Arreglo del Sistema de Actualización de Saldo
 
 **Problema:** Al abrir cajas, el saldo del usuario no se actualizaba en el sidebar.
 
@@ -250,17 +292,66 @@ Para mantener la UI existente funcionando, se implementó un patrón donde:
 
 3. **Actualizado `components/BoxComponent.tsx`:**
    - Cambiado de `saldoActualizado` genérico a `decrementarSaldoLocal(precio)` específico
-   - Agregada validación para no decrementar en cajas gratuitas
-   - Mejorado el manejo de cajas múltiples
+   - Agregada validación para no decrementar saldo en cajas gratuitas
 
 4. **Actualizado `app/main/misiones/page.tsx`:**
-   - Cambiado de `saldoActualizado` a `incrementarSaldoLocal(recompensa_vp)`
+   - Cambiado de evento genérico a `incrementarSaldoLocal(cantidad)` específico
 
-**Eventos de Saldo Disponibles:**
-- `saldoActualizado`: Recarga el saldo desde la DB
-- `saldoIncrementado`: Incrementa el saldo local (ej: recompensas de misiones)
-- `saldoDecrementado`: Decrementa el saldo local (ej: abrir cajas)
-- `saldoNuevo`: Establece un nuevo saldo directamente
+**Resultado:** Saldo se actualiza instantáneamente en sidebar sin recargar desde DB
+
+### Eliminación de Archivo Obsoleto
+
+**Archivo Eliminado:** `app/api/misiones/inicializar-manual/route.ts`
+
+**Razón:** Era una herramienta de debug/administración que ya no se usaba en el código actual. Las misiones ahora se inicializan automáticamente durante el registro.
+
+## Arquitectura Actual
+
+### Sistema de Eventos de Saldo
+- `saldoActualizado`: Recarga saldo desde DB
+- `saldoIncrementado`: Incrementa saldo local (misiones, etc.)
+- `saldoDecrementado`: Decrementa saldo local (cajas, compras)
+- `saldoNuevo`: Actualización directa del saldo
+
+### Sistema de Misiones
+- Inicialización automática en registro/OAuth
+- Procesamiento de actividades para misiones progresivas
+- Reclamación individual y masiva de recompensas
+- Tres tipos de vista: Reclamar, En progreso, Completadas
+
+## Problemas Conocidos y Soluciones
+
+### Fix de Misiones "Completar Misiones" que se cuentan a sí mismas (Identificado)
+- **Fecha**: Actual
+- **Problema**: Las misiones de "completar misiones" se cuentan a sí mismas, creando un bucle recursivo
+- **Causa**: En `obtenerEstadisticasUsuario`, la consulta cuenta TODAS las misiones sin filtrar tipo
+- **Comportamiento problemático**:
+  1. Usuario completa misión normal → Se registra en logs
+  2. Misión "Completar 1 misión" cuenta esa misión normal
+  3. Usuario reclama "Completar 1 misión" → Se registra en logs
+  4. Misión "Completar 2 misiones" cuenta: misión normal + misión "Completar 1 misión"
+  5. ¡Bucle infinito! Las misiones de completar se cuentan a sí mismas
+- **Solución requerida**: Filtrar en `obtenerEstadisticasUsuario` para excluir `condicion.tipo !== 'completar_misiones'`
+- **Archivo afectado**: `lib/missionUtils.ts` línea ~452 en función `obtenerEstadisticasUsuario`
+- **Estado**: Identificado, requiere implementación
+
+### Fix de Misiones de Conseguir Skins por Tier Específico (Último)
+
+### Saldo no se actualiza
+- **Causa:** Evento incorrecto o no específico
+- **Solución:** Usar eventos específicos (`incrementarSaldoLocal`, `decrementarSaldoLocal`)
+
+### Misiones no progresivas
+- **Causa:** No se procesan actividades después de acciones
+- **Solución:** Llamar a `/api/misiones/procesar-actividad` con tipo y cantidad
+
+## Buenas Prácticas Implementadas
+
+1. **Eventos Específicos:** Usar eventos específicos para actualizaciones de estado
+2. **Manejo de Errores:** Continuar procesamiento aunque falle una operación individual
+3. **Feedback Visual:** Estados de loading y mensajes informativos
+4. **Validaciones:** Verificar condiciones antes de procesar acciones
+5. **Logging:** Registros para debugging y monitoreo
 
 ## Decisiones Importantes
 

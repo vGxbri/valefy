@@ -764,8 +764,9 @@ function aplicaMisionParaActividad(condicion: any, tipoCondicion: string, datosA
   if (condicion.tipo !== tipoCondicion) return false;
   
   // Para misiones por tier, verificar que sea el tier correcto
-  if (tipoCondicion === 'conseguir_skin_tier' && datosAdicionales?.tierUuid) {
-    return condicion.tier_uuid === datosAdicionales.tierUuid;
+  if (tipoCondicion === 'conseguir_skin_tier') {
+    // Solo aplicar si se proporciona el tierUuid Y coincide con el de la misión
+    return !!(datosAdicionales?.tierUuid && condicion.tier_uuid === datosAdicionales.tierUuid);
   }
   
   return true;
@@ -1081,101 +1082,124 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
 
     let misionesActualizadas = 0;
 
-    for (const misionMulti of misionesMulti) {
-      const condicion = misionMulti.condicion;
+    // 🎯 NUEVO: Buscar la misión que corresponde EXACTAMENTE al número de cajas abiertas
+    const misionExacta = misionesMulti.find(mision => {
+      const condicion = mision.condicion;
       const cantidadRequerida = condicion.minimo_por_sesion || condicion.cantidad || 2;
-            
-      // Solo procesar si se cumple el mínimo requerido
-      if (cantidadCajasAbiertas < cantidadRequerida) {
-        continue;
-      }
+      return cantidadRequerida === cantidadCajasAbiertas;
+    });
 
-      // Buscar progreso de la misión
-      let { data: progresoMision, error: progresoError } = await supabase
+    // Si no hay una misión exacta para esta cantidad, no procesar ninguna
+    if (!misionExacta) {
+      return { 
+        success: true, 
+        message: `No hay misión específica para abrir exactamente ${cantidadCajasAbiertas} cajas`,
+        cantidadCajasAbiertas,
+        misionesEvaluadas: misionesMulti.length,
+        misionesActualizadas: 0
+      };
+    }
+
+    // 🎯 PROCESAR SOLO LA MISIÓN EXACTA
+    const condicion = misionExacta.condicion;
+    const cantidadRequerida = condicion.minimo_por_sesion || condicion.cantidad || 2;
+    
+    console.log(`🎯 Procesando misión exacta: ${misionExacta.nombre} para ${cantidadCajasAbiertas} cajas`);
+
+    // Buscar progreso de la misión
+    let { data: progresoMision, error: progresoError } = await supabase
+      .from("misiones_usuario")
+      .select("*")
+      .eq("usuario_id", userId)
+      .eq("mision_id", misionExacta.id)
+      .single();
+
+    if (progresoError && progresoError.code === 'PGRST116') {
+      // Crear progreso si no existe - completar inmediatamente para multi-apertura
+      const objetivoDefault = condicion.cantidad || 1;
+      const { data: nuevoProgreso, error: insertError } = await supabase
         .from("misiones_usuario")
-        .select("*")
-        .eq("usuario_id", userId)
-        .eq("mision_id", misionMulti.id)
+        .insert({
+          usuario_id: userId,
+          mision_id: misionExacta.id,
+          progreso: { actual: objetivoDefault, objetivo: objetivoDefault },
+          completada: false // Listo para reclamar
+        })
+        .select()
         .single();
 
-      if (progresoError && progresoError.code === 'PGRST116') {
-        // Crear progreso si no existe - completar inmediatamente para multi-apertura
+      if (insertError) {
+        console.error("Error al crear progreso de multi-apertura:", insertError);
+        return { success: false, error: insertError };
+      }
+      
+      misionesActualizadas++;
+      console.log(`✅ Misión ${misionExacta.nombre} creada y completada`);
+      
+    } else if (progresoMision) {
+      
+      // Si la misión es repetible y ya está completada, resetearla para que pueda reclamarse de nuevo
+      if (misionExacta.tipo === 'repetible' && progresoMision.completada) {
         const objetivoDefault = condicion.cantidad || 1;
-        const { data: nuevoProgreso, error: insertError } = await supabase
+        
+        const { error: resetError } = await supabase
           .from("misiones_usuario")
-          .insert({
-            usuario_id: userId,
-            mision_id: misionMulti.id,
+          .update({
             progreso: { actual: objetivoDefault, objetivo: objetivoDefault },
-            completada: false // Listo para reclamar
+            completada: false, // Resetear para que pueda ser reclamada de nuevo
+            fecha_completada: null
           })
-          .select()
-          .single();
+          .eq("id", progresoMision.id);
 
-        if (insertError) {
-          console.error("Error al crear progreso de multi-apertura:", insertError);
-          continue;
+        if (!resetError) {
+          misionesActualizadas++;
+          console.log(`✅ Misión repetible ${misionExacta.nombre} reseteada y completada`);
+        } else {
+          console.error("Error al resetear misión repetible:", resetError);
+          return { success: false, error: resetError };
         }
         
-        misionesActualizadas++;
+      } else if (!progresoMision.completada) {
+        // Si existe pero no está completada, completarla ahora
+        const objetivoDefault = condicion.cantidad || 1;
+        const progresoActual = progresoMision.progreso?.actual || 0;
         
-      } else if (progresoMision) {
-        
-        // Si la misión es repetible y ya está completada, resetearla para que pueda reclamarse de nuevo
-        if (misionMulti.tipo === 'repetible' && progresoMision.completada) {
-          const objetivoDefault = condicion.cantidad || 1;
-          
-          const { error: resetError } = await supabase
+        // Solo actualizar si no está ya en el objetivo
+        if (progresoActual < objetivoDefault) {
+          const { error: updateError } = await supabase
             .from("misiones_usuario")
             .update({
-              progreso: { actual: objetivoDefault, objetivo: objetivoDefault },
-              completada: false, // Resetear para que pueda ser reclamada de nuevo
-              fecha_completada: null
+              progreso: { 
+                actual: objetivoDefault, 
+                objetivo: objetivoDefault 
+              }
             })
             .eq("id", progresoMision.id);
 
-          if (!resetError) {
+          if (!updateError) {
             misionesActualizadas++;
+            console.log(`✅ Misión ${misionExacta.nombre} actualizada y completada`);
           } else {
-            console.error("Error al resetear misión repetible:", resetError);
-          }
-          
-        } else if (!progresoMision.completada) {
-          // Si existe pero no está completada, completarla ahora
-          const objetivoDefault = condicion.cantidad || 1;
-          const progresoActual = progresoMision.progreso?.actual || 0;
-          
-          // Solo actualizar si no está ya en el objetivo
-          if (progresoActual < objetivoDefault) {
-            const { error: updateError } = await supabase
-              .from("misiones_usuario")
-              .update({
-                progreso: { 
-                  actual: objetivoDefault, 
-                  objetivo: objetivoDefault 
-                }
-              })
-              .eq("id", progresoMision.id);
-
-            if (!updateError) {
-              misionesActualizadas++;
-            } else {
-              console.error("Error al actualizar progreso:", updateError);
-            }
-          } else {
+            console.error("Error al actualizar progreso:", updateError);
+            return { success: false, error: updateError };
           }
         } else {
+          console.log(`ℹ️ Misión ${misionExacta.nombre} ya estaba completada`);
         }
       } else {
-        console.error(`Error inesperado al obtener progreso de misión ${misionMulti.nombre}:`, progresoError);
+        console.log(`ℹ️ Misión ${misionExacta.nombre} ya está completada y reclamada`);
       }
+    } else {
+      console.error(`Error inesperado al obtener progreso de misión ${misionExacta.nombre}:`, progresoError);
+      return { success: false, error: progresoError };
     }
 
     return { 
       success: true, 
-      message: `${misionesActualizadas} misiones de multi-apertura procesadas`,
+      message: `Misión de abrir exactamente ${cantidadCajasAbiertas} cajas procesada`,
       misionesActualizadas,
       cantidadCajasAbiertas,
+      misionProcesada: misionExacta.nombre,
       misionesEvaluadas: misionesMulti.length
     };
   } catch (error) {
@@ -1187,7 +1211,7 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
 // Función para procesar cuando se consigue una skin (desde logs)
 export async function procesarSkinConseguida(userId: string, skinData: any) {
   try {
-    // Actualizar misión general de conseguir skins
+    // Actualizar misión general de conseguir skins (solo las de tipo 'conseguir_skin', no las de tier)
     await actualizarProgresoMision(userId, 'skin_conseguida', 1);
     
     // Si tiene información del tier, actualizar misión específica del tier
@@ -1203,7 +1227,6 @@ export async function procesarSkinConseguida(userId: string, skinData: any) {
     return { success: false, error };
   }
 }
-
 // Función para resetear misiones repetibles completadas
 export async function resetearMisionesRepetibles(userId: string) {
   try {

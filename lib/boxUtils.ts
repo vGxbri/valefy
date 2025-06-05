@@ -541,3 +541,241 @@ export async function processBoxOpeningWithLog(
     };
   }
 }
+
+/**
+ * Versión optimizada de procesamiento de apertura de cajas múltiples
+ * @param userId ID del usuario
+ * @param cajaId ID de la caja
+ * @param skins Array de skins disponibles
+ * @param probabilidades Array de probabilidades por tier
+ * @param supabase Cliente de Supabase
+ * @param costoCaja Costo en VP de la caja
+ * @param numberOfBoxes Número de cajas a abrir
+ * @returns Resultados de todas las cajas procesadas
+ */
+export async function processMultipleBoxOpeningOptimized(
+  userId: string,
+  cajaId: string,
+  skins: Skin[],
+  probabilidades: TierProbabilidad[],
+  supabase: SupabaseClient,
+  costoCaja: number,
+  numberOfBoxes: number,
+): Promise<{
+  results: Skin[];
+  success: boolean;
+  error?: any;
+  saldoInsuficiente?: boolean;
+}> {
+  try {
+    const costoTotal = costoCaja * numberOfBoxes;
+
+    // 💰 VERIFICAR Y DESCONTAR SALDO TOTAL DE UNA VEZ
+    if (costoTotal > 0) {
+      const { data: usuario, error: saldoError } = await supabase
+        .from("usuarios")
+        .select("saldo")
+        .eq("id", userId)
+        .single();
+
+      if (saldoError) {
+        return {
+          results: [],
+          success: false,
+          error: "Error al verificar saldo del usuario"
+        };
+      }
+
+      const saldoActual = usuario?.saldo || 0;
+      
+      if (saldoActual < costoTotal) {
+        return {
+          results: [],
+          success: false,
+          error: "Saldo insuficiente",
+          saldoInsuficiente: true
+        };
+      }
+
+      // Descontar el costo total de una vez
+      const { error: updateSaldoError } = await supabase
+        .from("usuarios")
+        .update({ saldo: saldoActual - costoTotal })
+        .eq("id", userId);
+
+      if (updateSaldoError) {
+        return {
+          results: [],
+          success: false,
+          error: "Error al procesar el pago"
+        };
+      }
+
+      // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('saldoActualizado'));
+      }
+    }
+
+    // 🎲 GENERAR TODAS LAS SKINS DE UNA VEZ USANDO LA FUNCIÓN OPTIMIZADA
+    const selectedSkins = selectMultipleRandomSkins(skins, probabilidades, numberOfBoxes);
+    
+    if (selectedSkins.length !== numberOfBoxes) {
+      return {
+        results: [],
+        success: false,
+        error: "Error al seleccionar skins"
+      };
+    }
+
+    // 📦 PREPARAR DATOS PARA INSERCIÓN MASIVA EN INVENTARIO
+    const inventoryInserts = selectedSkins.map((skin, index) => ({
+      usuario_id: userId,
+      skin_id: skin.id,
+      skin_nombre: skin.nombre,
+      fecha_obtencion: new Date().toISOString(),
+    }));
+
+    // 💾 INSERTAR TODAS LAS SKINS EN EL INVENTARIO DE UNA VEZ
+    const { error: inventoryError } = await supabase
+      .from("inventario_usuario")
+      .insert(inventoryInserts);
+
+    if (inventoryError) {
+      console.error("Error al guardar skins en inventario:", inventoryError);
+      // Si falla el inventario, revertir el saldo solo si había costo
+      if (costoTotal > 0) {
+        // Obtener el saldo actual nuevamente para la reversión
+        const { data: usuarioRevert } = await supabase
+          .from("usuarios")
+          .select("saldo")
+          .eq("id", userId)
+          .single();
+        
+        if (usuarioRevert) {
+          await supabase
+            .from("usuarios")
+            .update({ saldo: usuarioRevert.saldo + costoTotal })
+            .eq("id", userId);
+        }
+      }
+      return {
+        results: [],
+        success: false,
+        error: "Error al guardar en inventario"
+      };
+    }
+
+    // 🏷️ MARCAR SKINS NUEVAS (verificación rápida por lotes)
+    const skinIds = selectedSkins.map(s => s.id);
+    const { data: existingSkins } = await supabase
+      .from("inventario_usuario")
+      .select("skin_id")
+      .eq("usuario_id", userId)
+      .in("skin_id", skinIds)
+      .neq("fecha_obtencion", new Date().toISOString()); // Excluir las que acabamos de insertar
+
+    const existingSkinIds = new Set(existingSkins?.map(es => es.skin_id) || []);
+    
+    const finalResults = selectedSkins.map(skin => ({
+      ...skin,
+      isNewSkin: !existingSkinIds.has(skin.id)
+    }));
+
+    // 🚀 DIFERIR OPERACIONES NO CRÍTICAS PARA DESPUÉS
+    // No bloquear la UI con estas operaciones
+    setTimeout(async () => {
+      try {
+        // Logging diferido
+        const tierDataPromises = selectedSkins.map(skin => 
+          getTierData(supabase, skin.content_tier?.uuid_api || null)
+        );
+        const tierDataResults = await Promise.all(tierDataPromises);
+
+        const logData: CajaAbiertaLog = {
+          usuario_id: userId,
+          caja_id: cajaId,
+          skins_conseguidas: selectedSkins.map((skin, index) => ({
+            skin_id: skin.id,
+            skin_nombre: skin.nombre,
+            tier_id: skin.content_tier?.uuid_api || 'unknown',
+            tier_nombre: tierDataResults[index]?.nombre || 'Unknown',
+            tier_color: tierDataResults[index]?.color || '#FFFFFF'
+          })),
+          costo: costoTotal,
+          metodo_pago: 'vp'
+        };
+        
+        await logCajaAbierta(logData);
+
+        // Misiones diferidas
+        const misionResponse = await fetch('/api/misiones/procesar-actividad', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipoActividad: 'caja_abierta',
+            cantidad: numberOfBoxes
+          })
+        });
+
+        if (misionResponse.ok && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('misionesActualizadas'));
+        }
+
+        // Procesar misiones de skin conseguida diferidas
+        for (const skin of selectedSkins) {
+          try {
+            const { procesarSkinConseguida } = await import('./missionUtils');
+            await procesarSkinConseguida(userId, skin);
+          } catch (e) {
+            console.warn('Error al procesar misión de skin conseguida:', e);
+          }
+        }
+
+      } catch (error) {
+        console.warn('Error en operaciones diferidas:', error);
+      }
+    }, 100); // Diferir por 100ms
+
+    return {
+      results: finalResults,
+      success: true
+    };
+
+  } catch (error) {
+    console.error("Error en processMultipleBoxOpeningOptimized:", error);
+    return {
+      results: [],
+      success: false,
+      error
+    };
+  }
+}
+
+/**
+ * Versión optimizada para apertura de caja única
+ */
+export async function processSingleBoxOpeningOptimized(
+  userId: string,
+  cajaId: string,
+  skins: Skin[],
+  probabilidades: TierProbabilidad[],
+  supabase: SupabaseClient,
+  costoCaja: number,
+): Promise<{
+  selectedSkin: Skin | null;
+  success: boolean;
+  error?: any;
+  saldoInsuficiente?: boolean;
+}> {
+  const result = await processMultipleBoxOpeningOptimized(
+    userId, cajaId, skins, probabilidades, supabase, costoCaja, 1
+  );
+  
+  return {
+    selectedSkin: result.results[0] || null,
+    success: result.success,
+    error: result.error,
+    saldoInsuficiente: result.saldoInsuficiente
+  };
+}
