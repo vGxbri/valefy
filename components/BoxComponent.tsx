@@ -17,6 +17,7 @@ import {
   getTierData,
   processBoxOpeningWithLog,
   selectMultipleRandomSkins,
+  selectMultipleRandomSkinsForSpinner,
   processMultipleBoxOpeningOptimized,
   processSingleBoxOpeningOptimized,
 } from "@/lib/boxUtils";
@@ -385,24 +386,18 @@ export default function BoxComponent({
       // Generar items para la ruleta de forma optimizada
       const baseItems: Skin[] = [];
 
-      // Usar la función optimizada para generar múltiples skins de una vez
-      const randomItemsBefore = selectMultipleRandomSkins(cajaSkins, probabilidades, 80);
-      const randomItemsAfter = selectMultipleRandomSkins(cajaSkins, probabilidades, 80);
+      // Usar la función optimizada específica para el spinner que SÍ modifica los IDs
+      const randomItemsBefore = selectMultipleRandomSkinsForSpinner(cajaSkins, probabilidades, 80, 'before');
+      const randomItemsAfter = selectMultipleRandomSkinsForSpinner(cajaSkins, probabilidades, 80, 'after');
 
       // Añadir los items antes de la skin ganadora
-      baseItems.push(...randomItemsBefore.map((skin, i) => ({ 
-        ...skin, 
-        id: `${skin.id}-before-${i}` 
-      })));
+      baseItems.push(...randomItemsBefore);
 
       // En la posición central añadimos la skin ganadora
       baseItems.push({ ...selectedSkin, id: `winner-${selectedSkin.id}` });
 
       // Completamos con items después
-      baseItems.push(...randomItemsAfter.map((skin, i) => ({ 
-        ...skin, 
-        id: `${skin.id}-after-${i}` 
-      })));
+      baseItems.push(...randomItemsAfter);
 
       // Crear una copia al inicio y al final para que parezca infinito
       return [...baseItems.slice(0, 10), ...baseItems, ...baseItems.slice(0, 10)];

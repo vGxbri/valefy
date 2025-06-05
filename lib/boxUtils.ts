@@ -211,8 +211,64 @@ export function selectMultipleRandomSkins(
       accumulatedProbability += normalizedProbability;
       
       if (randomNum <= accumulatedProbability) {
-        // Crear una copia con ID único para la ruleta
-        results.push({ ...item.skin, id: `${item.skin.id}-${i}` });
+        // NO modificar el ID aquí, mantener el original
+        results.push({ ...item.skin });
+        break;
+      }
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Versión especial para generar items del spinner con IDs únicos
+ * @param skins Array de skins disponibles
+ * @param probabilidades Array de probabilidades por tier
+ * @param count Número de skins a generar
+ * @param idPrefix Prefijo para los IDs únicos
+ * @returns Array de skins con IDs únicos para el spinner
+ */
+export function selectMultipleRandomSkinsForSpinner(
+  skins: Skin[],
+  probabilidades: TierProbabilidad[],
+  count: number,
+  idPrefix: string = 'spin'
+): Skin[] {
+  if (!skins.length || !probabilidades.length || count <= 0) {
+    return [];
+  }
+
+  const results: Skin[] = [];
+  
+  // Pre-calcular las probabilidades una sola vez
+  const cacheKey = `${skins.map(s => s.id).sort().join(',')}|${probabilidades.map(p => p.id).sort().join(',')}`;
+  let skinProbabilities = probabilityCache.get(cacheKey);
+  
+  if (!skinProbabilities) {
+    skinProbabilities = precalculateProbabilities(skins, probabilidades);
+    probabilityCache.set(cacheKey, skinProbabilities);
+    cacheTimestamps.set(cacheKey, Date.now());
+  }
+
+  if (skinProbabilities.length === 0) {
+    return [];
+  }
+
+  const totalProbability = skinProbabilities.reduce((sum, item) => sum + item.probability, 0);
+
+  // Generar múltiples selecciones de una vez
+  for (let i = 0; i < count; i++) {
+    const randomNum = Math.random();
+    let accumulatedProbability = 0;
+
+    for (const item of skinProbabilities) {
+      const normalizedProbability = item.probability / totalProbability;
+      accumulatedProbability += normalizedProbability;
+      
+      if (randomNum <= accumulatedProbability) {
+        // SÍ modificar el ID aquí para el spinner
+        results.push({ ...item.skin, id: `${idPrefix}-${item.skin.id}-${i}` });
         break;
       }
     }
@@ -631,7 +687,7 @@ export async function processMultipleBoxOpeningOptimized(
     // 📦 PREPARAR DATOS PARA INSERCIÓN MASIVA EN INVENTARIO
     const inventoryInserts = selectedSkins.map((skin, index) => ({
       usuario_id: userId,
-      skin_id: skin.id,
+      skin_id: skin.uuid,
       skin_nombre: skin.nombre,
       fecha_obtencion: new Date().toISOString(),
     }));
@@ -667,19 +723,19 @@ export async function processMultipleBoxOpeningOptimized(
     }
 
     // 🏷️ MARCAR SKINS NUEVAS (verificación rápida por lotes)
-    const skinIds = selectedSkins.map(s => s.id);
+    const skinUuids = selectedSkins.map(s => s.uuid);
     const { data: existingSkins } = await supabase
       .from("inventario_usuario")
       .select("skin_id")
       .eq("usuario_id", userId)
-      .in("skin_id", skinIds)
-      .neq("fecha_obtencion", new Date().toISOString()); // Excluir las que acabamos de insertar
+      .in("skin_id", skinUuids)
+      .neq("fecha_obtencion", new Date().toISOString());
 
     const existingSkinIds = new Set(existingSkins?.map(es => es.skin_id) || []);
     
     const finalResults = selectedSkins.map(skin => ({
       ...skin,
-      isNewSkin: !existingSkinIds.has(skin.id)
+      isNewSkin: !existingSkinIds.has(skin.uuid)
     }));
 
     // 🚀 DIFERIR OPERACIONES NO CRÍTICAS PARA DESPUÉS
@@ -696,7 +752,7 @@ export async function processMultipleBoxOpeningOptimized(
           usuario_id: userId,
           caja_id: cajaId,
           skins_conseguidas: selectedSkins.map((skin, index) => ({
-            skin_id: skin.id,
+            skin_id: skin.uuid,
             skin_nombre: skin.nombre,
             tier_id: skin.content_tier?.uuid_api || 'unknown',
             tier_nombre: tierDataResults[index]?.nombre || 'Unknown',
