@@ -110,6 +110,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 password: null,
                 saldo: 0,
                 oauth: true,
+                admin: false,
               },
             ])
             .select()
@@ -159,6 +160,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = usuario.id;
         token.email = usuario.correo;
         token.name = usuario.nombre_usuario;
+        token.admin = usuario.admin;
       }
 
       // Si es login con credentials, ya tienes el user en el token
@@ -166,6 +168,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
+        
+        // Obtener el campo admin del usuario en credentials
+        const { data: fullUser, error: fullUserError } = await supabase
+          .from("usuarios")
+          .select("admin")
+          .eq("id", user.id)
+          .single();
+        
+        if (fullUser && !fullUserError) {
+          token.admin = fullUser.admin;
+        }
         
         // 🎯 PROCESAR MISIÓN DE LOGIN PARA CREDENTIALS
         if (user.id) {
@@ -199,10 +212,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             token.id = emailUser.id;
             token.email = emailUser.correo;
             token.name = emailUser.nombre_usuario;
+            token.admin = emailUser.admin;
           } else {
             // Token totalmente inconsistente, forzar re-login
             throw new Error("Token inconsistente, necesario re-login");
           }
+        } else {
+          // Actualizar el campo admin en el token
+          token.admin = tokenUser.admin;
         }
       }
 
@@ -213,6 +230,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = String(token.id);
         session.user.email = String(token.email);
         session.user.name = String(token.name);
+        session.user.admin = Boolean(token.admin);
       }
 
       return session;

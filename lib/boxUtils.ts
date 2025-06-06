@@ -503,6 +503,12 @@ export async function processBoxOpeningWithLog(
       
       // Verificar si tiene suficiente saldo
       if (saldoActual < costoCaja) {
+        return {
+          selectedSkin: null,
+          inventoryOperationType: "error",
+          error: "Saldo insuficiente",
+          saldoInsuficiente: true
+        };
         toast.error("Saldo insuficiente");
       }
 
@@ -641,6 +647,12 @@ export async function processMultipleBoxOpeningOptimized(
       const saldoActual = usuario?.saldo || 0;
       
       if (saldoActual < costoTotal) {
+        return {
+          results: [],
+          success: false,
+          error: "Saldo insuficiente",
+          saldoInsuficiente: true
+        };
         toast.error("Saldo insuficiente");
       }
 

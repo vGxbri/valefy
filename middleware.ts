@@ -15,21 +15,43 @@ export async function middleware(req: NextRequest) {
     const protectedRoutes = ["/main"];
     const isProtectedRoute = protectedRoutes.includes(pathname);
 
+    // Rutas que requieren rol de administrador
+    const adminRoutes = ["/admin"];
+    const isAdminRoute = adminRoutes.includes(pathname);
+
     // Si el usuario está autenticado
     if (session?.user) {
+      // Si intenta acceder a una ruta de administrador
+      if (isAdminRoute) {
+        // Verificar si el usuario es administrador
+        if (!session.user.admin) {
+          // Usuario autenticado pero no es admin, redirigir a /main
+          return NextResponse.redirect(new URL("/main", req.url));
+        }
+        // Usuario es admin, permitir acceso
+        return NextResponse.next();
+      }
+
       // Si intenta acceder a una ruta pública estando autenticado
       if (isPublicRoute) {
         return NextResponse.redirect(new URL("/main", req.url));
       }
 
-      // Usuario autenticado accediendo a rutas protegidas
+      // Usuario autenticado accediendo a rutas protegidas normales
       return NextResponse.next();
     }
 
     // Si el usuario NO está autenticado
-    if (!session?.user && isProtectedRoute) {
-      // Redirigir a la página principal solo si intenta acceder a rutas protegidas
-      return NextResponse.redirect(new URL("/", req.url));
+    if (!session?.user) {
+      // Si intenta acceder a rutas de administrador sin estar autenticado
+      if (isAdminRoute) {
+        return NextResponse.redirect(new URL("/", req.url));
+      }
+
+      // Si intenta acceder a rutas protegidas sin estar autenticado
+      if (isProtectedRoute) {
+        return NextResponse.redirect(new URL("/", req.url));
+      }
     }
 
     // Permitir acceso a rutas públicas sin autenticación

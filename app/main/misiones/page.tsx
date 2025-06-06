@@ -118,6 +118,7 @@ export default function Page() {
   const [activeTab, setActiveTab] = useState("reclamar");
   const [tabInicialDeterminado, setTabInicialDeterminado] = useState(false);
   const [isClaimingAll, setIsClaimingAll] = useState(false);
+  const [claimingMisionId, setClaimingMisionId] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -200,13 +201,15 @@ export default function Page() {
   };
 
   const reclamarRecompensa = async (misionUsuario: MisionUsuario) => {
-    if (!session?.user?.id || misionUsuario.completada) return;
+    if (!session?.user?.id || misionUsuario.completada || claimingMisionId === misionUsuario.id) return;
 
     const progreso = misionUsuario.progreso;
     if (progreso.actual < progreso.objetivo) {
       toast.error("Misión no completada aún");
       return;
     }
+
+    setClaimingMisionId(misionUsuario.id);
 
     try {
       // Marcar como completada
@@ -291,6 +294,8 @@ export default function Page() {
     } catch (error) {
       console.error("Error al reclamar recompensa:", error);
       toast.error("Error al reclamar la recompensa");
+    } finally {
+      setClaimingMisionId(null);
     }
   };
 
@@ -635,9 +640,19 @@ export default function Page() {
                           onClick={() => reclamarRecompensa(misionUsuario)}
                           className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30"
                           size="sm"
+                          disabled={claimingMisionId === misionUsuario.id}
                         >
-                          <Gift className="h-4 w-4 mr-1" />
-                          Reclamar
+                          {claimingMisionId === misionUsuario.id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-1" />
+                              Reclamando...
+                            </>
+                          ) : (
+                            <span className="flex items-center">
+                              <Gift className="h-4 w-4 mr-1" />
+                              Reclamar
+                            </span>
+                          )}
                         </Button>
                       ) : (
                         <Button variant="secondary" size="sm" disabled className="text-white/50 rounded-xl">

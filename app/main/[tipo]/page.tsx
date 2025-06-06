@@ -751,7 +751,7 @@ export default function CajaPage() {
             )}
             <Link href="/main">
               <Button
-                className="flex items-center gap-1"
+                className="flex items-center gap-1 rounded-xl"
                 size="sm"
                 variant="outline"
               >

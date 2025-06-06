@@ -210,7 +210,7 @@ export default function LandingPage() {
             </div>
 
             <Accordion
-              className="gap-4"
+              className="gap-6"
               motionProps={{
                 variants: {
                   enter: {
@@ -222,10 +222,10 @@ export default function LandingPage() {
                         type: "spring",
                         stiffness: 500,
                         damping: 30,
-                        duration: 0.4,
+                        duration: 0.5,
                       },
                       opacity: {
-                        duration: 0.4,
+                        duration: 0.5,
                       },
                     },
                   },
@@ -248,89 +248,171 @@ export default function LandingPage() {
             >
               <AccordionItem
                 key="1"
-                aria-label="¿Qué es Valefy?"
+                aria-label="¿Cómo obtengo VP para abrir cajas?"
                 classNames={{
-                  base: "border border-white/10 bg-background/40 backdrop-blur-md rounded-xl mb-4",
-                  title: "text-white font-medium",
-                  trigger: "px-5 py-4 data-[hover=true]:bg-white/5 rounded-xl",
-                  indicator: "text-primary",
-                  content: "px-5 pb-4 text-white/80",
+                  base: "border border-white/20 bg-gradient-to-br from-background/60 via-background/40 to-background/60 backdrop-blur-xl rounded-2xl mb-6 shadow-2xl shadow-primary/5 hover:shadow-primary/10 transition-all duration-500 hover:border-primary/30",
+                  title: "text-white font-semibold text-lg",
+                  trigger: "px-6 py-5 data-[hover=true]:bg-white/5 rounded-2xl transition-all duration-300",
+                  indicator: "text-primary text-xl",
+                  content: "px-6 pb-6 text-white/80 text-base leading-relaxed",
                 }}
-                title="¿Qué es Valefy?"
+                title="🎯 ¿Cómo obtengo VP para abrir cajas?"
               >
-                <div className="text-white/80">
-                  <p>
-                    Valefy es un simulador de cajas de Valorant que te permite
-                    experimentar la emoción de abrir cajas y obtener skins sin
-                    gastar dinero real. Nuestra plataforma ofrece una
-                    experiencia auténtica y divertida para los fans del juego.
+                <div className="text-white/80 space-y-3">
+                  <p className="leading-relaxed">
+                    En Valefy obtienes VP (Valorant Points) de múltiples formas:
                   </p>
+                  <ul className="space-y-2 ml-4">
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary text-sm mt-1">▪</span>
+                      <span><strong className="text-white">Misiones diarias:</strong> Completa objetivos como abrir cajas, conseguir skins de ciertos tiers</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary text-sm mt-1">▪</span>
+                      <span><strong className="text-white">Cajas diarias gratis:</strong> Obtén VP directamente al abrir tus cajas gratuitas</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary text-sm mt-1">▪</span>
+                      <span><strong className="text-white">Eventos especiales:</strong> Participa en eventos temporales con recompensas adicionales</span>
+                    </li>
+                  </ul>
                 </div>
               </AccordionItem>
 
               <AccordionItem
                 key="2"
-                aria-label="¿Cómo funciona el simulador?"
+                aria-label="¿Qué tipos de cajas están disponibles?"
                 classNames={{
-                  base: "border border-white/10 bg-background/40 backdrop-blur-md rounded-xl mb-4",
-                  title: "text-white font-medium",
-                  trigger: "px-5 py-4 data-[hover=true]:bg-white/5 rounded-xl",
-                  indicator: "text-primary",
-                  content: "px-5 pb-4 text-white/80",
+                  base: "border border-white/20 bg-gradient-to-br from-background/60 via-background/40 to-background/60 backdrop-blur-xl rounded-2xl mb-6 shadow-2xl shadow-primary/5 hover:shadow-primary/10 transition-all duration-500 hover:border-primary/30",
+                  title: "text-white font-semibold text-lg",
+                  trigger: "px-6 py-5 data-[hover=true]:bg-white/5 rounded-2xl transition-all duration-300",
+                  indicator: "text-primary text-xl",
+                  content: "px-6 pb-6 text-white/80 text-base leading-relaxed",
                 }}
-                title="¿Cómo funciona el simulador?"
+                title="📦 ¿Qué tipos de cajas están disponibles?"
               >
-                <div className="text-white/80">
-                  <p>
-                    Nuestro simulador utiliza los mismos porcentajes y mecánicas
-                    que el juego original. Puedes abrir cajas, coleccionar skins
-                    y disfrutar de la experiencia sin riesgos. Además, ofrecemos
-                    estadísticas detalladas sobre tus aperturas.
+                <div className="text-white/80 space-y-4">
+                  <p className="leading-relaxed">
+                    Ofrecemos tres tipos de cajas con diferentes probabilidades y costos:
                   </p>
+                  <div className="grid gap-3">
+                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                      <h4 className="text-green-400 font-semibold">Cajas Diarias (Gratis)</h4>
+                      <p className="text-sm text-white/70">Una caja gratis cada día con probabilidades estándar</p>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                      <h4 className="text-blue-400 font-semibold">Cajas Premium (100-500 VP)</h4>
+                      <p className="text-sm text-white/70">Mejores probabilidades de conseguir skins raras</p>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                      <h4 className="text-purple-400 font-semibold">Cajas Ultra (1000+ VP)</h4>
+                      <p className="text-sm text-white/70">Las mejores probabilidades para skins legendarias</p>
+                    </div>
+                  </div>
                 </div>
               </AccordionItem>
 
               <AccordionItem
                 key="3"
-                aria-label="¿Es gratis usar Valefy?"
+                aria-label="¿Las probabilidades son las mismas que en Valorant?"
                 classNames={{
-                  base: "border border-white/10 bg-background/40 backdrop-blur-md rounded-xl mb-4",
-                  title: "text-white font-medium",
-                  trigger: "px-5 py-4 data-[hover=true]:bg-white/5 rounded-xl",
-                  indicator: "text-primary",
-                  content: "px-5 pb-4 text-white/80",
+                  base: "border border-white/20 bg-gradient-to-br from-background/60 via-background/40 to-background/60 backdrop-blur-xl rounded-2xl mb-6 shadow-2xl shadow-primary/5 hover:shadow-primary/10 transition-all duration-500 hover:border-primary/30",
+                  title: "text-white font-semibold text-lg",
+                  trigger: "px-6 py-5 data-[hover=true]:bg-white/5 rounded-2xl transition-all duration-300",
+                  indicator: "text-primary text-xl",
+                  content: "px-6 pb-6 text-white/80 text-base leading-relaxed",
                 }}
-                title="¿Es gratis usar Valefy?"
+                title="🎲 ¿Las probabilidades son las mismas que en Valorant?"
               >
-                <div className="text-white/80">
-                  <p>
-                    ¡Sí! Valefy es completamente gratuito. Ofrecemos una
-                    experiencia premium sin costo alguno. En el futuro,
-                    podríamos añadir características opcionales de pago, pero la
-                    funcionalidad principal siempre será gratuita.
+                <div className="text-white/80 space-y-3">
+                  <p className="leading-relaxed">
+                    ¡Sí! Hemos replicado fielmente el sistema de probabilidades de Valorant:
                   </p>
+                  <div className="bg-gradient-to-r from-primary/10 to-purple-500/10 rounded-lg p-4 border border-primary/20">
+                    <ul className="space-y-2">
+                      <li className="flex justify-between">
+                        <span className="text-gray-300">Select (Blanco)</span>
+                        <span className="text-white font-mono">55.17%</span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span className="text-green-400">Deluxe (Verde)</span>
+                        <span className="text-white font-mono">26.91%</span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span className="text-blue-400">Premium (Azul)</span>
+                        <span className="text-white font-mono">15.93%</span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span className="text-purple-400">Ultra (Morado)</span>
+                        <span className="text-white font-mono">1.99%</span>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </AccordionItem>
 
               <AccordionItem
                 key="4"
-                aria-label="¿Las skins obtenidas se pueden usar en Valorant?"
+                aria-label="¿Puedo usar las skins en el juego real?"
                 classNames={{
-                  base: "border border-white/10 bg-background/40 backdrop-blur-md rounded-xl mb-4",
-                  title: "text-white font-medium",
-                  trigger: "px-5 py-4 data-[hover=true]:bg-white/5 rounded-xl",
-                  indicator: "text-primary",
-                  content: "px-5 pb-4 text-white/80",
+                  base: "border border-white/20 bg-gradient-to-br from-background/60 via-background/40 to-background/60 backdrop-blur-xl rounded-2xl mb-6 shadow-2xl shadow-primary/5 hover:shadow-primary/10 transition-all duration-500 hover:border-primary/30",
+                  title: "text-white font-semibold text-lg",
+                  trigger: "px-6 py-5 data-[hover=true]:bg-white/5 rounded-2xl transition-all duration-300",
+                  indicator: "text-primary text-xl",
+                  content: "px-6 pb-6 text-white/80 text-base leading-relaxed",
                 }}
-                title="¿Las skins obtenidas se pueden usar en Valorant?"
+                title="🎮 ¿Puedo usar las skins en el juego real?"
               >
-                <div className="text-white/80">
-                  <p>
-                    No, las skins obtenidas en Valefy son solo para el
-                    simulador. No están conectadas con tu cuenta real de
-                    Valorant ni pueden transferirse al juego. Valefy es una
-                    experiencia independiente no afiliada con Riot Games.
+                <div className="text-white/80 space-y-3">
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                    <p className="text-amber-200 font-medium mb-2">⚠️ Importante:</p>
+                    <p className="leading-relaxed">
+                      <strong>No</strong>, las skins obtenidas en Valefy son exclusivamente para el simulador. 
+                      No están conectadas con tu cuenta de Valorant ni pueden transferirse al juego.
+                    </p>
+                  </div>
+                  <p className="text-sm text-white/60 leading-relaxed">
+                    Valefy es una experiencia independiente creada por fans para fans. 
+                    No estamos afiliados con Riot Games. El objetivo es disfrutar de la 
+                    emoción de abrir cajas sin riesgo financiero.
                   </p>
+                </div>
+              </AccordionItem>
+
+              <AccordionItem
+                key="5"
+                aria-label="¿Hay estadísticas de mis aperturas?"
+                classNames={{
+                  base: "border border-white/20 bg-gradient-to-br from-background/60 via-background/40 to-background/60 backdrop-blur-xl rounded-2xl mb-6 shadow-2xl shadow-primary/5 hover:shadow-primary/10 transition-all duration-500 hover:border-primary/30",
+                  title: "text-white font-semibold text-lg",
+                  trigger: "px-6 py-5 data-[hover=true]:bg-white/5 rounded-2xl transition-all duration-300",
+                  indicator: "text-primary text-xl",
+                  content: "px-6 pb-6 text-white/80 text-base leading-relaxed",
+                }}
+                title="📊 ¿Hay estadísticas de mis aperturas?"
+              >
+                <div className="text-white/80 space-y-3">
+                  <p className="leading-relaxed">
+                    ¡Por supuesto! Valefy incluye un sistema completo de estadísticas:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                      <div className="text-primary text-sm font-medium">📈 Historial</div>
+                      <div className="text-xs text-white/70">Todas tus aperturas registradas</div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                      <div className="text-primary text-sm font-medium">🎯 Probabilidades</div>
+                      <div className="text-xs text-white/70">Tu suerte personal vs esperada</div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                      <div className="text-primary text-sm font-medium">💰 VP gastados</div>
+                      <div className="text-xs text-white/70">Total invertido en cajas</div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                      <div className="text-primary text-sm font-medium">🏆 Logros</div>
+                      <div className="text-xs text-white/70">Desbloquea achievements</div>
+                    </div>
+                  </div>
                 </div>
               </AccordionItem>
             </Accordion>
