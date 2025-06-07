@@ -3,7 +3,15 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react"; // Importar useSession
 import { useRouter } from "next/navigation"; // Importar useRouter
-import { Accordion, AccordionItem } from "@heroui/react";
+import {
+  Accordion,
+  AccordionContainer,
+  AccordionHeader,
+  AccordionItem,
+  AccordionPanel,
+  AccordionWrapper,
+} from '@/components/landing/premade/accordion';
+
 
 import Aurora from "../components/landing/premade/Aurora";
 import AuthModal from "../components/AuthModal";
@@ -183,7 +191,7 @@ export default function LandingPage() {
 
         {/* Sección de Timeline */}
         <div
-          className="py-16 bg-gradient-to-b from-background to-background/90"
+          className="py-16"
           id="funcionamiento"
         >
           <div className="container mx-auto max-w-7xl px-6 mb-10" />
@@ -193,229 +201,263 @@ export default function LandingPage() {
 
         {/* Sección de Preguntas Frecuentes */}
         <div
-          className="py-16 bg-gradient-to-b from-background/90 to-background/95 relative"
+          className="py-16 relative"
           id="faq"
         >
           {/* Separador visual superior */}
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
 
-          <div className="container mx-auto max-w-4xl px-6">
+          <div className="container mx-auto max-w-6xl px-6">
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold mb-4 text-white">
                 Preguntas <span className="text-primary">Frecuentes</span>
               </h2>
               <p className="text-white/70 max-w-2xl mx-auto">
-                Todo lo que necesitas saber sobre nuestro simulador de cajas
+                Todo lo que necesitas saber sobre nosotros.
               </p>
             </div>
+            <AccordionContainer className="md:grid-cols-2 grid-cols-1">
+              <AccordionWrapper>
+                <Accordion defaultValue={"item-1"}>
+                  <AccordionItem value="item-1">
+                    <AccordionHeader className="2xl:text-base text-sm">
+                      ¿Cómo obtengo VP para abrir cajas?
+                    </AccordionHeader>
 
-            <Accordion
-              className="gap-6"
-              motionProps={{
-                variants: {
-                  enter: {
-                    y: 0,
-                    opacity: 1,
-                    height: "auto",
-                    transition: {
-                      height: {
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 30,
-                        duration: 0.5,
-                      },
-                      opacity: {
-                        duration: 0.5,
-                      },
-                    },
-                  },
-                  exit: {
-                    y: -10,
-                    opacity: 0,
-                    height: 0,
-                    transition: {
-                      height: {
-                        duration: 0.3,
-                      },
-                      opacity: {
-                        duration: 0.3,
-                      },
-                    },
-                  },
-                },
-              }}
-              variant="light"
-            >
-              <AccordionItem
-                key="1"
-                aria-label="¿Cómo obtengo VP para abrir cajas?"
-                classNames={{
-                  base: "border border-white/20 bg-gradient-to-br from-background/60 via-background/40 to-background/60 backdrop-blur-xl rounded-2xl mb-6 shadow-2xl shadow-primary/5 hover:shadow-primary/10 transition-all duration-500 hover:border-primary/30",
-                  title: "text-white font-semibold text-lg",
-                  trigger: "px-6 py-5 data-[hover=true]:bg-white/5 rounded-2xl transition-all duration-300",
-                  indicator: "text-primary text-xl",
-                  content: "px-6 pb-6 text-white/80 text-base leading-relaxed",
-                }}
-                title="🎯 ¿Cómo obtengo VP para abrir cajas?"
-              >
-                <div className="text-white/80 space-y-3">
-                  <p className="leading-relaxed">
-                    En Valefy obtienes VP (Valorant Points) de múltiples formas:
-                  </p>
-                  <ul className="space-y-2 ml-4">
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary text-sm mt-1">▪</span>
-                      <span><strong className="text-white">Misiones diarias:</strong> Completa objetivos como abrir cajas, conseguir skins de ciertos tiers</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary text-sm mt-1">▪</span>
-                      <span><strong className="text-white">Cajas diarias gratis:</strong> Obtén VP directamente al abrir tus cajas gratuitas</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary text-sm mt-1">▪</span>
-                      <span><strong className="text-white">Eventos especiales:</strong> Participa en eventos temporales con recompensas adicionales</span>
-                    </li>
-                  </ul>
-                </div>
-              </AccordionItem>
+                    <AccordionPanel className="2xl:text-base text-sm">
+                      <div className="space-y-3">
+                        <p className="leading-relaxed text-white/90">
+                          En Valefy obtienes VP (Valorant Points) de múltiples formas completamente gratuitas:
+                        </p>
+                        <ul className="space-y-2 ml-4">
+                          <li className="flex items-start gap-2">
+                            <span className="text-primary text-sm mt-1">·</span>
+                            <span><strong className="text-white">2000 VP de bienvenida:</strong> Al registrarte recibes VP inmediatamente para empezar.</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="text-primary text-sm mt-1">·</span>
+                            <span><strong className="text-white">Misiones diarias:</strong> Login diario (50 VP), abrir cajas (25-100 VP), conseguir skins específicas (100-250 VP).</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="text-primary text-sm mt-1">·</span>
+                            <span><strong className="text-white">Misiones especiales:</strong> Conseguir skins Ultra Edition (250 VP), eliminar duplicados (75 VP).</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="text-primary text-sm mt-1">·</span>
+                            <span><strong className="text-white">Renovación automática:</strong> Más de 15 misiones disponibles que se renuevan constantemente.</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </AccordionPanel>
+                  </AccordionItem>
 
-              <AccordionItem
-                key="2"
-                aria-label="¿Qué tipos de cajas están disponibles?"
-                classNames={{
-                  base: "border border-white/20 bg-gradient-to-br from-background/60 via-background/40 to-background/60 backdrop-blur-xl rounded-2xl mb-6 shadow-2xl shadow-primary/5 hover:shadow-primary/10 transition-all duration-500 hover:border-primary/30",
-                  title: "text-white font-semibold text-lg",
-                  trigger: "px-6 py-5 data-[hover=true]:bg-white/5 rounded-2xl transition-all duration-300",
-                  indicator: "text-primary text-xl",
-                  content: "px-6 pb-6 text-white/80 text-base leading-relaxed",
-                }}
-                title="📦 ¿Qué tipos de cajas están disponibles?"
-              >
-                <div className="text-white/80 space-y-4">
-                  <p className="leading-relaxed">
-                    Ofrecemos tres tipos de cajas con diferentes probabilidades y costos:
-                  </p>
-                  <div className="grid gap-3">
-                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                      <h4 className="text-green-400 font-semibold">Cajas Diarias (Gratis)</h4>
-                      <p className="text-sm text-white/70">Una caja gratis cada día con probabilidades estándar</p>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                      <h4 className="text-blue-400 font-semibold">Cajas Premium (100-500 VP)</h4>
-                      <p className="text-sm text-white/70">Mejores probabilidades de conseguir skins raras</p>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                      <h4 className="text-purple-400 font-semibold">Cajas Ultra (1000+ VP)</h4>
-                      <p className="text-sm text-white/70">Las mejores probabilidades para skins legendarias</p>
-                    </div>
-                  </div>
-                </div>
-              </AccordionItem>
+                  <AccordionItem value="item-2">
+                    <AccordionHeader className="2xl:text-base text-sm">
+                      ¿Qué tipos de cajas están disponibles y cuánto cuestan?
+                    </AccordionHeader>
 
-              <AccordionItem
-                key="3"
-                aria-label="¿Las probabilidades son las mismas que en Valorant?"
-                classNames={{
-                  base: "border border-white/20 bg-gradient-to-br from-background/60 via-background/40 to-background/60 backdrop-blur-xl rounded-2xl mb-6 shadow-2xl shadow-primary/5 hover:shadow-primary/10 transition-all duration-500 hover:border-primary/30",
-                  title: "text-white font-semibold text-lg",
-                  trigger: "px-6 py-5 data-[hover=true]:bg-white/5 rounded-2xl transition-all duration-300",
-                  indicator: "text-primary text-xl",
-                  content: "px-6 pb-6 text-white/80 text-base leading-relaxed",
-                }}
-                title="🎲 ¿Las probabilidades son las mismas que en Valorant?"
-              >
-                <div className="text-white/80 space-y-3">
-                  <p className="leading-relaxed">
-                    ¡Sí! Hemos replicado fielmente el sistema de probabilidades de Valorant:
-                  </p>
-                  <div className="bg-gradient-to-r from-primary/10 to-purple-500/10 rounded-lg p-4 border border-primary/20">
-                    <ul className="space-y-2">
-                      <li className="flex justify-between">
-                        <span className="text-gray-300">Select (Blanco)</span>
-                        <span className="text-white font-mono">55.17%</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span className="text-green-400">Deluxe (Verde)</span>
-                        <span className="text-white font-mono">26.91%</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span className="text-blue-400">Premium (Azul)</span>
-                        <span className="text-white font-mono">15.93%</span>
-                      </li>
-                      <li className="flex justify-between">
-                        <span className="text-purple-400">Ultra (Morado)</span>
-                        <span className="text-white font-mono">1.99%</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </AccordionItem>
+                    <AccordionPanel className="2xl:text-base text-sm">
+                      <div className="space-y-4">
+                        <p className="leading-relaxed text-white/90">
+                          Ofrecemos tres tipos de cajas con precios y probabilidades diferentes:
+                        </p>
+                        <div className="grid gap-3">
+                          <div className="bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-lg p-4 border border-green-500/20">
+                            <div className="flex justify-between items-center mb-2">
+                              <h4 className="text-green-400 font-semibold">Caja Diaria</h4>
+                              <span className="text-green-400 font-bold">GRATIS</span>
+                            </div>
+                            <p className="text-sm text-white/80 mb-2">Se renueva automáticamente cada 24 horas</p>
+                            <div className="text-xs text-white/70">
+                              Probabilidades estándar: 55.17% Select, 26.91% Deluxe, 15.93% Premium, 1.99% Ultra
+                            </div>
+                          </div>
+                          <div className="bg-gradient-to-r from-blue-500/10 to-blue-600/10 rounded-lg p-4 border border-blue-500/20">
+                            <div className="flex justify-between items-center mb-2">
+                              <h4 className="text-blue-400 font-semibold">Caja Premium</h4>
+                              <span className="text-blue-400 font-bold">100-500 VP</span>
+                            </div>
+                            <p className="text-sm text-white/80 mb-2">Mejores probabilidades para tiers altos</p>
+                            <div className="text-xs text-white/70">
+                              Bonificación +15% para Premium y Ultra Edition
+                            </div>
+                          </div>
+                          <div className="bg-gradient-to-r from-purple-500/10 to-purple-600/10 rounded-lg p-4 border border-purple-500/20">
+                            <div className="flex justify-between items-center mb-2">
+                              <h4 className="text-purple-400 font-semibold">Caja Ultra</h4>
+                              <span className="text-purple-400 font-bold">1000+ VP</span>
+                            </div>
+                            <p className="text-sm text-white/80 mb-2">Máximas probabilidades y garantías</p>
+                            <div className="text-xs text-white/70">
+                              Garantía de tier Premium o superior + bonificación +25%
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionPanel>
+                  </AccordionItem>
 
-              <AccordionItem
-                key="4"
-                aria-label="¿Puedo usar las skins en el juego real?"
-                classNames={{
-                  base: "border border-white/20 bg-gradient-to-br from-background/60 via-background/40 to-background/60 backdrop-blur-xl rounded-2xl mb-6 shadow-2xl shadow-primary/5 hover:shadow-primary/10 transition-all duration-500 hover:border-primary/30",
-                  title: "text-white font-semibold text-lg",
-                  trigger: "px-6 py-5 data-[hover=true]:bg-white/5 rounded-2xl transition-all duration-300",
-                  indicator: "text-primary text-xl",
-                  content: "px-6 pb-6 text-white/80 text-base leading-relaxed",
-                }}
-                title="🎮 ¿Puedo usar las skins en el juego real?"
-              >
-                <div className="text-white/80 space-y-3">
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-                    <p className="text-amber-200 font-medium mb-2">⚠️ Importante:</p>
-                    <p className="leading-relaxed">
-                      <strong>No</strong>, las skins obtenidas en Valefy son exclusivamente para el simulador. 
-                      No están conectadas con tu cuenta de Valorant ni pueden transferirse al juego.
-                    </p>
-                  </div>
-                  <p className="text-sm text-white/60 leading-relaxed">
-                    Valefy es una experiencia independiente creada por fans para fans. 
-                    No estamos afiliados con Riot Games. El objetivo es disfrutar de la 
-                    emoción de abrir cajas sin riesgo financiero.
-                  </p>
-                </div>
-              </AccordionItem>
+                  <AccordionItem value="item-3">
+                    <AccordionHeader className="2xl:text-base text-sm">
+                      ¿Las probabilidades son exactas a Valorant oficial?
+                    </AccordionHeader>
 
-              <AccordionItem
-                key="5"
-                aria-label="¿Hay estadísticas de mis aperturas?"
-                classNames={{
-                  base: "border border-white/20 bg-gradient-to-br from-background/60 via-background/40 to-background/60 backdrop-blur-xl rounded-2xl mb-6 shadow-2xl shadow-primary/5 hover:shadow-primary/10 transition-all duration-500 hover:border-primary/30",
-                  title: "text-white font-semibold text-lg",
-                  trigger: "px-6 py-5 data-[hover=true]:bg-white/5 rounded-2xl transition-all duration-300",
-                  indicator: "text-primary text-xl",
-                  content: "px-6 pb-6 text-white/80 text-base leading-relaxed",
-                }}
-                title="📊 ¿Hay estadísticas de mis aperturas?"
-              >
-                <div className="text-white/80 space-y-3">
-                  <p className="leading-relaxed">
-                    ¡Por supuesto! Valefy incluye un sistema completo de estadísticas:
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                      <div className="text-primary text-sm font-medium">📈 Historial</div>
-                      <div className="text-xs text-white/70">Todas tus aperturas registradas</div>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                      <div className="text-primary text-sm font-medium">🎯 Probabilidades</div>
-                      <div className="text-xs text-white/70">Tu suerte personal vs esperada</div>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                      <div className="text-primary text-sm font-medium">💰 VP gastados</div>
-                      <div className="text-xs text-white/70">Total invertido en cajas</div>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                      <div className="text-primary text-sm font-medium">🏆 Logros</div>
-                      <div className="text-xs text-white/70">Desbloquea achievements</div>
-                    </div>
-                  </div>
-                </div>
-              </AccordionItem>
-            </Accordion>
+                    <AccordionPanel className="2xl:text-base text-sm">
+                      <div className="space-y-4">
+                        <p className="leading-relaxed text-white/90">
+                          <strong>¡Absolutamente sí!</strong> Hemos replicado exactamente el sistema de probabilidades de Riot Games:
+                        </p>
+                        <div className="bg-gradient-to-r from-primary/10 to-purple-500/10 rounded-lg p-5 border border-primary/20">
+                          <h5 className="text-white font-semibold mb-3 text-center">Probabilidades Oficiales</h5>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                              <span className="text-gray-300 text-sm">Select Edition</span>
+                              <span className="text-white font-mono text-sm font-bold">55.17%</span>
+                            </div>
+                            <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                              <span className="text-green-400 text-sm">Deluxe Edition</span>
+                              <span className="text-white font-mono text-sm font-bold">26.91%</span>
+                            </div>
+                            <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                              <span className="text-blue-400 text-sm">Premium Edition</span>
+                              <span className="text-white font-mono text-sm font-bold">15.93%</span>
+                            </div>
+                            <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                              <span className="text-purple-400 text-sm">Ultra Edition</span>
+                              <span className="text-white font-mono text-sm font-bold">1.99%</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-primary/5 rounded-lg p-3 border border-primary/10">
+                          <p className="text-primary text-sm font-medium flex items-center gap-2">
+                            <span>✓</span>
+                            Usamos la API oficial de Riot Games para obtener todas las skins y sus clasificaciones
+                          </p>
+                        </div>
+                      </div>
+                    </AccordionPanel>
+                  </AccordionItem>
+                </Accordion>
+              </AccordionWrapper>
+
+              <AccordionWrapper>
+                <Accordion defaultValue={"item-4"}>
+                  <AccordionItem value="item-4">
+                    <AccordionHeader className="2xl:text-base text-sm">
+                      ¿Puedo usar las skins en Valorant real?
+                    </AccordionHeader>
+
+                    <AccordionPanel className="2xl:text-base text-sm">
+                      <div className="space-y-4">
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-amber-400 text-lg">⚠️</span>
+                            <span className="text-amber-200 font-medium">Importante:</span>
+                          </div>
+                          <p className="leading-relaxed text-white/90">
+                            <strong>No</strong>, las skins obtenidas en Valefy son exclusivamente para el simulador. 
+                            No están conectadas con tu cuenta de Valorant ni pueden transferirse al juego oficial.
+                          </p>
+                        </div>
+                        <div className="space-y-3">
+                          <p className="text-white/90 leading-relaxed">
+                            Valefy es una <strong>experiencia independiente</strong> creada por fans para fans del juego, no está afiliada con Riot Games.
+                          </p>
+                        </div>
+                      </div>
+                    </AccordionPanel>
+                  </AccordionItem>
+
+                  <AccordionItem value="item-5">
+                    <AccordionHeader className="2xl:text-base text-sm">
+                      ¿Qué estadísticas y características incluye?
+                    </AccordionHeader>
+
+                    <AccordionPanel className="2xl:text-base text-sm">
+                      <div className="space-y-4">
+                        <p className="leading-relaxed text-white/90">
+                          Valefy incluye un sistema completo de seguimiento y estadísticas en tiempo real:
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-lg p-4 border border-blue-500/20">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-blue-400 text-sm">📊</span>
+                              <div className="text-blue-400 text-sm font-medium">Estadísticas Detalladas</div>
+                            </div>
+                            <ul className="text-xs text-white/80 space-y-1">
+                              <li>• Total de cajas abiertas</li>
+                              <li>• VP gastados vs ganados</li>
+                              <li>• Distribución por tiers</li>
+                              <li>• Probabilidad personal vs esperada</li>
+                            </ul>
+                          </div>
+                          <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-lg p-4 border border-green-500/20">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-green-400 text-sm">📦</span>
+                              <div className="text-green-400 text-sm font-medium">Gestión de Inventario</div>
+                            </div>
+                            <ul className="text-xs text-white/80 space-y-1">
+                              <li>• Filtrado por tier, arma, bundle</li>
+                              <li>• Eliminación de duplicados</li>
+                              <li>• Indicador de skins nuevas</li>
+                              <li>• Búsqueda avanzada</li>
+                            </ul>
+                          </div>
+                          <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-lg p-4 border border-purple-500/20">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-purple-400 text-sm">🎯</span>
+                              <div className="text-purple-400 text-sm font-medium">Sistema de Misiones</div>
+                            </div>
+                            <ul className="text-xs text-white/80 space-y-1">
+                              <li>• 15+ misiones activas simultáneas</li>
+                              <li>• Renovación automática diaria</li>
+                              <li>• Progreso en tiempo real</li>
+                              <li>• Recompensas de 25-500 VP</li>
+                            </ul>
+                          </div>
+                          <div className="bg-gradient-to-br from-red-500/10 to-red-600/10 rounded-lg p-4 border border-red-500/20">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-red-400 text-sm">⚡</span>
+                              <div className="text-red-400 text-sm font-medium">Características Técnicas</div>
+                            </div>
+                            <ul className="text-xs text-white/80 space-y-1">
+                              <li>• Apertura múltiple (hasta 5 cajas)</li>
+                              <li>• Animaciones realistas de 12s</li>
+                              <li>• 1000+ skins de la API oficial</li>
+                              <li>• Guardado automático en tiempo real</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionPanel>
+                  </AccordionItem>
+
+                  <AccordionItem value="item-6">
+                    <AccordionHeader className="2xl:text-base text-sm">
+                      ¿Es completamente gratis? ¿Hay límites o pagos ocultos?
+                    </AccordionHeader>
+
+                    <AccordionPanel className="2xl:text-base text-sm">
+                      <div className="space-y-4">
+                        <div className="bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-lg p-4 border border-green-500/20 text-center">
+                          <div className="text-2xl font-bold text-green-400 mb-1">100% GRATUITO</div>
+                          <p className="text-green-300 text-sm">Sin pagos, sin límites, sin trucos</p>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <p className="text-white/90 leading-relaxed">
+                            <strong>Valefy es completamente gratuito</strong> y siempre lo será. No hay costos ocultos ni limitaciones.
+                          </p>
+                          <p className="text-white/90 leading-relaxed">
+                            <strong>Nuestro objetivo:</strong> Proporcionar una experiencia auténtica y divertida sin barreras económicas.
+                          </p>
+                        </div>
+                      </div>
+                    </AccordionPanel>
+                  </AccordionItem>
+                </Accordion>
+              </AccordionWrapper>
+            </AccordionContainer>
           </div>
         </div>
 

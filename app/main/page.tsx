@@ -232,16 +232,16 @@ export default function MainPage() {
 
   return (
     <>      
-      <div className="body-main-page flex flex-col gap-8 px-4 sm:px-8 md:px-12 lg:px-16 pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1">        
+      <div className="body-main-page flex flex-col gap-8 px-4 sm:px-8 md:px-12 lg:px-16 pt-16 md:pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1">        
         {/* Sección de Cajas */}
         <div className="w-full">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold text-foreground flex items-center font-[Raleway] font-semibold italic tracking-widest">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground flex items-center font-[Raleway] font-semibold italic tracking-widest">
               / CAJAS
             </h2>
           </div>
 
-          <div className="w-full overflow-hidden relative p-8">
+          <div className="w-full overflow-hidden relative p-4 md:p-8">
             {/* Contenedor de tarjetas de cajas */}
             <div className="relative z-10">
               {isLoading ? (
@@ -260,7 +260,7 @@ export default function MainPage() {
                 </div>
               ) : (
                 <motion.div 
-                  className="space-y-12"
+                  className="space-y-8 md:space-y-12"
                   initial="hidden"
                   animate="show"
                   variants={containerVariants}
@@ -279,16 +279,16 @@ export default function MainPage() {
                     return (
                       <motion.div 
                         key={categoria} 
-                        className="mb-10 rounded-2xl"
+                        className="mb-8 md:mb-10 rounded-2xl"
                         variants={itemVariants}
                       >
                         
                         <div className="relative">
                           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
                         </div>
-                        <div className={`mb-6 pt-10 text-center`}>
+                        <div className={`mb-6 pt-8 md:pt-10 text-center`}>
                           <h3 className="font-bold inline-block
-                                        text-3xl font-bold text-foreground font-[Raleway] font-semibold italic tracking-widest
+                                        text-2xl md:text-3xl font-bold text-foreground font-[Raleway] font-semibold italic tracking-widest
                                         [text-shadow:_0px_0px_20px_rgba(255,255,255,0.35)] bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                             · {categoriaInfo.nombre} ·
                           </h3>
@@ -296,12 +296,12 @@ export default function MainPage() {
 
                         {/* Banner para la categoría "alumno" - Condición mejorada */}
                         {(categoria.toLowerCase().includes('alumno') || categoriaInfo.nombre.toLowerCase().includes('alumno')) && (
-                          <div className="flex flex-row justify-between items-center my-8 mx-auto w-5/6 p-6 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 shadow-2xl border border-primary/40 backdrop-blur-sm">
-                            <div className="flex flex-col items-start w-1/2">
-                              <h4 className="font-[Raleway] text-2xl font-semibold text-white mb-2 tracking-wide [text-shadow:_0px_0px_18px_rgba(255,255,255,0.5)]">
+                          <div className="flex flex-col md:flex-row justify-between items-center my-6 md:my-8 mx-auto w-full md:w-5/6 p-4 md:p-6 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 shadow-2xl border border-primary/40 backdrop-blur-sm">
+                            <div className="flex flex-col items-start w-full md:w-1/2 mb-4 md:mb-0">
+                              <h4 className="font-[Raleway] text-xl md:text-2xl font-semibold text-white mb-2 tracking-wide [text-shadow:_0px_0px_18px_rgba(255,255,255,0.5)]">
                                 ¡NOVEDAD EXCLUSIVA!
                               </h4>
-                              <p className="text-foreground/90 text-lg leading-relaxed font-light text-pretty">
+                              <p className="text-foreground/90 text-base md:text-lg leading-relaxed font-light text-pretty">
                                 Descubre nuestras cajas <span className="font-semibold bg-gradient-to-r from-primary/100 to-primary/80 bg-clip-text text-transparent">especialmente seleccionadas</span> por nuestros alumnos.
                               </p>
                             </div>
@@ -311,7 +311,7 @@ export default function MainPage() {
                           </div>
                         )}
                         
-                        <div className="flex flex-wrap justify-center items-center w-full gap-2">
+                        <div className="flex flex-wrap justify-center items-center w-full gap-2 md:gap-2">
                           {cajasDisponiblesEnCategoria.map((caja) => {
                             // Usar la función centralizada para extraer el tipo de caja
                             const tipoCaja = extraerTipoCaja(caja.nombre, caja.es_diaria);
@@ -339,6 +339,7 @@ export default function MainPage() {
                                     disabled={!caja.esta_disponible}
                                     imageUrl={caja.imagen_url}
                                     title={caja.nombre}
+                                    price={caja.precio}
                                   />
                                 </Link>
                                 
@@ -357,7 +358,7 @@ export default function MainPage() {
                   )}
                 </motion.div>
               )}
-              <div className="relative mb-6 mt-10">
+              <div className="relative mb-6 mt-8 md:mt-10">
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
               </div>
             </div>

@@ -7,6 +7,7 @@ import Image from "next/image";
 interface StripeCardProps {
   imageUrl: string;
   title: string;
+  price?: number;
   disabled?: boolean;
 }
 
@@ -15,6 +16,7 @@ function StripeCard({
   imageUrl,
   title,
   disabled = false,
+  price,
 }: StripeCardProps) {
   return (
     <>
@@ -30,11 +32,16 @@ function StripeCard({
             src={imageUrl}
           />
         </figure>
-        <article className="p-4 space-y-3 flex flex-col justify-between">
+        <article className="p-4 space-y-2 flex flex-col justify-between">
           <div className="h-1 w-3/4 bg-gradient-to-r from-primary/60 to-secondary/60 rounded-full mx-auto" />
           <h1 className="text-lg sm:text-xl font-semibold capitalize text-foreground text-center">
             {title}
           </h1>
+          <div className="z-10">
+            <p className="text-sm text-white/90 font-semibold text-center text-primary bg-gradient-to-r from-primary/40 to-secondary/30 rounded-lg w-fit mx-auto py-1 px-2 rounded-xl">
+              {price} VP
+            </p>
+          </div>
         </article>
       </div>
     </>
