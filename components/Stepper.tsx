@@ -226,14 +226,14 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="my-8">
+    <div className="w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto">
+      <div className="my-6 sm:my-8">
         <div className="flex items-center">
           {steps.map((step, index) => (
             <React.Fragment key={index}>
               <div className="flex flex-col items-center z-10">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-300 text-xs sm:text-sm ${
                     index < currentStep
                       ? "bg-primary text-white"
                       : index === currentStep
@@ -243,7 +243,7 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
                 >
                   {index < currentStep ? (
                     <svg
-                      className="h-5 w-5"
+                      className="h-3 w-3 sm:h-5 sm:w-5"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                       xmlns="http://www.w3.org/2000/svg"
@@ -261,7 +261,7 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
               </div>
 
               {index < steps.length - 1 && (
-                <div className="flex-1 h-8 flex items-center relative mx-1">
+                <div className="flex-1 h-6 sm:h-8 flex items-center relative mx-1">
                   {" "}
                   {/* Adjusted container for centering */}
                   {/* Background line */}
@@ -291,18 +291,18 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
           initial={{ opacity: 0, x: 20 }}
           transition={{ duration: 0.3 }}
         >
-          <h2 className="text-2xl font-bold text-white ">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">
             {steps[currentStep].title}
           </h2>
           {steps[currentStep].title && (
-            <div className="h-[2px] my-4 bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
+            <div className="h-[2px] my-3 sm:my-4 bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
           )}
-          <p className="text-sm mt-6 mb-2 text-alternative/70">
+          <p className="text-xs sm:text-sm mt-4 sm:mt-6 mb-2 text-alternative/70">
             {steps[currentStep].description}
           </p>
 
           {currentStep === 0 && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
                 <input
                   required // Added required attribute for HTML5 validation (optional)
@@ -313,12 +313,12 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
                   value={formData.email} 
                   onChange={handleInputChange}
                   // Added styling similar to other inputs
-                  className={`w-full px-4 py-2 bg-white/5 border ${errors.email ? 'border-red-500' : 'border-white/10'} rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-white`}
+                  className={`w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-white/5 border ${errors.email ? 'border-red-500' : 'border-white/10'} rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-white`}
                 />
                 {errors.email && (
-                  <div className="mt-2 flex items-center space-x-2 p-2 bg-primary/10 border border-primary/20 rounded-lg">
+                  <div className="mt-2 flex items-center space-x-2 p-2 sm:p-3 bg-primary/10 border border-primary/20 rounded-lg">
                     <svg
-                      className="h-4 w-4 text-primary flex-shrink-0"
+                      className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                       xmlns="http://www.w3.org/2000/svg"
@@ -340,7 +340,7 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
             <div className="space-y-2">
               <div>
                 <input
-                  className={`w-full px-4 py-2 bg-white/5 border ${errors.username ? "border-red-500" : "border-white/10"} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-white`}
+                  className={`w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-white/5 border ${errors.username ? "border-red-500" : "border-white/10"} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-white`}
                   id="username"
                   name="username"
                   placeholder="Tu nombre de usuario"
@@ -349,9 +349,9 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
                   onChange={handleInputChange}
                 />
                 {errors.username && (
-                  <div className="mt-2 flex items-center space-x-2 p-2 bg-primary/10 border border-primary/20 rounded-lg">
+                  <div className="mt-2 flex items-center space-x-2 p-2 sm:p-3 bg-primary/10 border border-primary/20 rounded-lg">
                     <svg
-                      className="h-4 w-4 text-primary flex-shrink-0"
+                      className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                       xmlns="http://www.w3.org/2000/svg"
@@ -366,9 +366,9 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
                   </div>
                 )}
               </div>
-              <div className="flex items-center space-x-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+              <div className="flex items-center space-x-2 p-2 sm:p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
                 <svg
-                  className="h-4 w-4 text-amber-500 flex-shrink-0"
+                  className="h-3 w-3 sm:h-4 sm:w-4 text-amber-500 flex-shrink-0"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                   xmlns="http://www.w3.org/2000/svg"
@@ -387,7 +387,7 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
           )}
 
           {currentStep === 2 && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <PasswordInput
                 error={errors.password}
                 id="password"
@@ -399,11 +399,11 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
           )}
 
           {currentStep === 3 && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
                 <div className="relative">
                   <input
-                    className={`w-full px-4 py-2 bg-white/5 border ${errors.confirmPassword ? "border-red-500" : "border-white/10"} rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-white pr-10`}
+                    className={`w-full px-3 sm:px-4 py-2 sm:py-2.5 pr-8 sm:pr-10 text-sm sm:text-base bg-white/5 border ${errors.confirmPassword ? "border-red-500" : "border-white/10"} rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-white`}
                     id="confirmPassword"
                     name="confirmPassword"
                     type={isVisible ? "text" : "password"}
@@ -414,17 +414,17 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
                     aria-label={
                       isVisible ? "Ocultar contraseña" : "Mostrar contraseña"
                     }
-                    className="absolute inset-y-0 right-0 outline-none flex items-center justify-center w-10 text-white/50 hover:text-white"
+                    className="absolute inset-y-0 right-0 outline-none flex items-center justify-center w-8 sm:w-10 text-white/50 hover:text-white"
                     type="button"
                     onClick={() => setIsVisible((prev) => !prev)}
                   >
-                    {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {isVisible ? <EyeOff size={16} className="sm:w-4 sm:h-4" /> : <Eye size={16} className="sm:w-4 sm:h-4" />}
                   </button>
                 </div>
                 {errors.confirmPassword && (
-                  <div className="mt-2 flex items-center space-x-2 p-2 bg-primary/10 border border-primary/20 rounded-lg">
+                  <div className="mt-2 flex items-center space-x-2 p-2 sm:p-3 bg-primary/10 border border-primary/20 rounded-lg">
                     <svg
-                      className="h-4 w-4 text-primary flex-shrink-0"
+                      className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                       xmlns="http://www.w3.org/2000/svg"
@@ -441,10 +441,10 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
                   </div>
                 )}
               </div>
-              <div className="flex items-start mt-4">
-                <div className="text-sm">
+              <div className="flex items-start mt-3 sm:mt-4">
+                <div className="text-xs sm:text-sm">
                   <label
-                    className="flex flex-row items-center gap-2.5 text-white"
+                    className="flex flex-row items-center gap-2 sm:gap-2.5 text-white"
                     htmlFor="agreeTerms"
                   >
                     <input
@@ -455,9 +455,9 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
                       type="checkbox"
                       onChange={handleInputChange}
                     />
-                    <div className="h-5 w-5 flex rounded-md border border-[#a2a1a833] bg-white/5 peer-checked:bg-alternative transition">
+                    <div className="h-4 w-4 sm:h-5 sm:w-5 flex rounded-md border border-[#a2a1a833] bg-white/5 peer-checked:bg-alternative transition flex-shrink-0">
                       <svg
-                        className="w-5 h-5 stroke-[#212121]"
+                        className="w-4 h-4 sm:w-5 sm:h-5 stroke-[#212121]"
                         fill="none"
                         viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg"
@@ -470,14 +470,16 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
                         />
                       </svg>
                     </div>
-                    Acepto los términos y condiciones
+                    <span className="leading-relaxed">
+                      Acepto los términos y condiciones
+                    </span>
                   </label>
                 </div>
               </div>
               {errors.agreeTerms && (
-                <div className="mt-2 flex items-center space-x-2 p-2 bg-primary/10 border border-primary/20 rounded-lg">
+                <div className="mt-2 flex items-center space-x-2 p-2 sm:p-3 bg-primary/10 border border-primary/20 rounded-lg">
                   <svg
-                    className="h-4 w-4 text-primary flex-shrink-0"
+                    className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                     xmlns="http://www.w3.org/2000/svg"
@@ -505,7 +507,7 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
           onClick={prevStep}
         >
           <svg
-            className="h-5 w-5 text-neutral-600 rotate-180 hover:drop-shadow-[0_2px_8px_rgba(252,78,91,0.7)] transition-[filter] duration-150"
+            className="h-4 w-4 sm:h-5 sm:w-5 text-neutral-600 rotate-180 hover:drop-shadow-[0_2px_8px_rgba(252,78,91,0.7)] transition-[filter] duration-150"
             fill="none"
             height="15"
             viewBox="0 0 15 15"
@@ -522,21 +524,21 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
         </button>
 
         <button
-          className={`group relative inline-flex h-12 items-center justify-center overflow-hidden rounded-[0.9em] px-6 ${isSubmitting ? "opacity-70 cursor-not-allowed bg-primary/40 border-1 border-primary" : "bg-primary/40 border-1 border-primary"} text-white transition-all duration-300 before:absolute before:inset-0 before:rounded-[0.9em] before:p-[1.5px] before:-z-10 before:content-['']`}
+          className={`group relative inline-flex h-10 sm:h-12 items-center justify-center overflow-hidden rounded-[0.8em] sm:rounded-[0.9em] px-4 sm:px-6 text-sm sm:text-base ${isSubmitting ? "opacity-70 cursor-not-allowed bg-primary/40 border-1 border-primary" : "bg-primary/40 border-1 border-primary"} text-white transition-all duration-300 before:absolute before:inset-0 before:rounded-[0.8em] sm:before:rounded-[0.9em] before:p-[1.5px] before:-z-10 before:content-['']`}
           disabled={isSubmitting}
           onClick={nextStep}
         >
           {isSubmitting ? (
             <div className="flex items-center">
-              <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-              <span>Procesando</span>
+              <div className="animate-spin mr-2 h-3 w-3 sm:h-4 sm:w-4 border-2 border-white border-t-transparent rounded-full" />
+              <span className="text-xs sm:text-sm">Procesando</span>
             </div>
           ) : (
             <>
-              <span className="font-medium">Continuar</span>
-              <div className="w-0 translate-x-[100%] pl-0 opacity-0 transition-all duration-200 group-hover:w-5 group-hover:translate-x-0 group-hover:pl-1 group-hover:opacity-100">
+              <span className="font-medium text-xs sm:text-sm">Continuar</span>
+              <div className="w-0 translate-x-[100%] pl-0 opacity-0 transition-all duration-200 group-hover:w-4 sm:group-hover:w-5 group-hover:translate-x-0 group-hover:pl-1 group-hover:opacity-100">
                 <svg
-                  className="h-5 w-5"
+                  className="h-4 w-4 sm:h-5 sm:w-5"
                   fill="none"
                   height="15"
                   viewBox="0 0 15 15"
@@ -560,31 +562,35 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
       {currentStep === 0 && (
         <>
           {/* Separador Opcional */}
-          <div className="relative flex items-center my-6 mt-6">
+          <div className="relative flex items-center my-4 sm:my-6 mt-4 sm:mt-6">
             {" "}
             {/* Añadido mt-6 */}
             <div className="flex-grow border-t border-white/10" />
-            <span className="flex-shrink mx-4 text-white/50 text-xs">
+            <span className="flex-shrink mx-3 sm:mx-4 text-white/50 text-xs">
               O REGÍSTRATE CON
             </span>
             <div className="flex-grow border-t border-white/10" />
           </div>
 
           {/* Botones de registro social */}
-          <div className="space-y-3 mb-6">
+          <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
             <button
-              className="w-full flex items-center justify-center px-4 py-2 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-colors duration-200"
+              className="w-full flex items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-colors duration-200"
               type="button"
               onClick={() => signIn("google", { callbackUrl: "/main" })}
             >
-              <FaGoogle className="mr-2" /> Registrarse con Google
+              <FaGoogle className="mr-1 sm:mr-2 text-sm sm:text-base" /> 
+              <span className="hidden sm:inline">Registrarse con Google</span>
+              <span className="sm:hidden">Google</span>
             </button>
             <button
-              className="w-full flex items-center justify-center px-4 py-2 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-colors duration-200"
+              className="w-full flex items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-colors duration-200"
               type="button"
               onClick={() => signIn("discord", { callbackUrl: "/main" })}
             >
-              <FaDiscord className="mr-2" /> Registrarse con Discord
+              <FaDiscord className="mr-1 sm:mr-2 text-sm sm:text-base" /> 
+              <span className="hidden sm:inline">Registrarse con Discord</span>
+              <span className="sm:hidden">Discord</span>
             </button>
           </div>
         </>

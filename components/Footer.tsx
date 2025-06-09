@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
@@ -66,57 +67,62 @@ export default function Footer() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="relative py-16 overflow-hidden"
+      className="relative py-12 sm:py-16 overflow-hidden"
     >
       {/* Elementos decorativos de fondo */}
       <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-70" />
       <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl opacity-50" />
       <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl opacity-50" />
       
-      <div className="container mx-auto max-w-7xl px-6 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 mb-16">
+      <div className="container mx-auto max-w-7xl px-4 sm:px-6 relative z-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 sm:gap-10 mb-12 sm:mb-16">
           {/* Logo y descripción */}
-          <div className="md:col-span-4 space-y-6">
+          <div className="sm:col-span-2 lg:col-span-5 space-y-4 sm:space-y-6">
             <Link 
               className="inline-block transform transition-transform duration-300 hover:scale-105" 
               href="/"
             >
               <Image
                 alt="Valefy Logo"
-                className="object-contain drop-shadow-glow"
+                className="object-contain drop-shadow-glow h-8 sm:h-9 w-auto"
                 height={35}
                 src="/logo-valefy.png"
                 width={140}
               />
             </Link>
             
-            <p className="text-slate-400 text-base leading-relaxed">
+            <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
               El mejor simulador de cajas de Valorant. Experimenta la emoción
               sin gastar dinero real.
             </p>
             
-            <div className="flex space-x-5 mt-6">
+            <div className="flex space-x-3 sm:space-x-5 mt-4 sm:mt-6">
               {socialLinks.map((link) => (
                 <motion.a
                   key={link.name}
                   aria-label={link.name}
                   initial="initial"
                   whileHover="hover"
-                  className="text-slate-400 hover:text-primary p-2 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-primary/30 transition-all duration-300"
+                  className="text-slate-400 hover:text-primary p-1.5 sm:p-2 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-primary/30 transition-all duration-300"
                   href={link.href}
                   rel="noopener noreferrer"
                   target="_blank"
                 >
-                  {link.icon}
+                  <div className="w-4 h-4 sm:w-5 sm:h-5">
+                    {React.cloneElement(link.icon, { 
+                      width: "100%", 
+                      height: "100%" 
+                    })}
+                  </div>
                 </motion.a>
               ))}
             </div>
           </div>
 
           {/* Enlaces de navegación */}
-          <div className="md:col-span-2 md:ml-auto">
-            <h4 className="text-white font-semibold mb-5 text-lg">Enlaces</h4>
-            <ul className="space-y-3">
+          <div className="lg:col-span-2">
+            <h4 className="text-white font-semibold mb-3 sm:mb-5 text-base sm:text-lg">Enlaces</h4>
+            <ul className="space-y-2 sm:space-y-3">
               {navLinks.map((link) => (
                 <li key={link.name}>
                   <motion.div
@@ -124,10 +130,10 @@ export default function Footer() {
                     whileHover="hover"
                   >
                     <Link
-                      className="text-slate-400 hover:text-primary transition-colors flex items-center group"
+                      className="text-slate-400 hover:text-primary transition-colors flex items-center group text-sm sm:text-base"
                       href={link.href}
                     >
-                      <ChevronRight className="h-4 w-0 opacity-0 group-hover:w-4 group-hover:opacity-100 transition-all duration-300 text-primary" />
+                      <ChevronRight className="h-3 w-0 sm:h-4 opacity-0 group-hover:w-3 sm:group-hover:w-4 group-hover:opacity-100 transition-all duration-300 text-primary" />
                       <motion.span variants={linkAnimation}>{link.name}</motion.span>
                     </Link>
                   </motion.div>
@@ -137,9 +143,9 @@ export default function Footer() {
           </div>
 
           {/* Enlaces legales */}
-          <div className="md:col-span-2">
-            <h4 className="text-white font-semibold mb-5 text-lg">Legal</h4>
-            <ul className="space-y-3">
+          <div className="lg:col-span-2">
+            <h4 className="text-white font-semibold mb-3 sm:mb-5 text-base sm:text-lg">Legal</h4>
+            <ul className="space-y-2 sm:space-y-3">
               {legalLinks.map((link) => (
                 <li key={link.name}>
                   <motion.div
@@ -147,10 +153,10 @@ export default function Footer() {
                     whileHover="hover"
                   >
                     <Link
-                      className="text-slate-400 hover:text-primary transition-colors flex items-center group"
+                      className="text-slate-400 hover:text-primary transition-colors flex items-center group text-sm sm:text-base"
                       href={link.href}
                     >
-                      <ChevronRight className="h-4 w-0 opacity-0 group-hover:w-4 group-hover:opacity-100 transition-all duration-300 text-primary" />
+                      <ChevronRight className="h-3 w-0 sm:h-4 opacity-0 group-hover:w-3 sm:group-hover:w-4 group-hover:opacity-100 transition-all duration-300 text-primary" />
                       <motion.span variants={linkAnimation}>{link.name}</motion.span>
                     </Link>
                   </motion.div>
@@ -160,18 +166,18 @@ export default function Footer() {
           </div>
 
           {/* Contacto */}
-          <div className="md:col-span-3">
-            <h4 className="text-white font-semibold mb-5 text-lg">Contacto</h4>
-            <ul className="space-y-4">
+          <div className="sm:col-span-2 lg:col-span-3">
+            <h4 className="text-white font-semibold mb-3 sm:mb-5 text-base sm:text-lg">Contacto</h4>
+            <ul className="space-y-3 sm:space-y-4">
               <li>
                 <a 
                   href="mailto:soporte@valefy.com" 
-                  className="text-slate-400 hover:text-primary transition-colors flex items-center gap-3 group"
+                  className="text-slate-400 hover:text-primary transition-colors flex items-center gap-2 sm:gap-3 group text-sm sm:text-base"
                 >
-                  <div className="p-2 bg-slate-800/70 rounded-lg border border-slate-700/50 group-hover:border-primary/30 group-hover:bg-primary/10 transition-all duration-300">
-                    <Mail className="h-4 w-4 text-primary/80" />
+                  <div className="p-1.5 sm:p-2 bg-slate-800/70 rounded-lg border border-slate-700/50 group-hover:border-primary/30 group-hover:bg-primary/10 transition-all duration-300 flex-shrink-0">
+                    <Mail className="h-3 w-3 sm:h-4 sm:w-4 text-primary/80" />
                   </div>
-                  <span>soporte@valefy.com</span>
+                  <span className="truncate">soporte@valefy.com</span>
                 </a>
               </li>
               <li>
@@ -179,13 +185,13 @@ export default function Footer() {
                   href="https://discord.gg/valefy" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-slate-400 hover:text-primary transition-colors flex items-center gap-3 group"
+                  className="text-slate-400 hover:text-primary transition-colors flex items-center gap-2 sm:gap-3 group text-sm sm:text-base"
                 >
-                  <div className="p-2 bg-slate-800/70 rounded-lg border border-slate-700/50 group-hover:border-primary/30 group-hover:bg-primary/10 transition-all duration-300">
-                    <MessageCircle className="h-4 w-4 text-primary/80" />
+                  <div className="p-1.5 sm:p-2 bg-slate-800/70 rounded-lg border border-slate-700/50 group-hover:border-primary/30 group-hover:bg-primary/10 transition-all duration-300 flex-shrink-0">
+                    <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 text-primary/80" />
                   </div>
-                  <span>Discord: Valefy</span>
-                  <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity duration-300" />
+                  <span className="truncate">Discord: Valefy</span>
+                  <ExternalLink className="h-2 w-2 sm:h-3 sm:w-3 opacity-0 group-hover:opacity-70 transition-opacity duration-300 flex-shrink-0" />
                 </a>
               </li>
             </ul>
@@ -193,14 +199,11 @@ export default function Footer() {
         </div>
 
         {/* Barra de copyright */}
-        <div className="pt-8 border-t border-slate-800/80 text-center">
-          <p className="text-slate-500 text-sm">
+        <div className="pt-6 sm:pt-8 border-t border-slate-800/80 text-center">
+          <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">
             © {currentYear} Valefy. Todos los derechos reservados. Valefy no
             está afiliado con Riot Games.
           </p>
-          <div className="mt-4 text-xs text-slate-600">
-            Diseñado con <span className="text-primary">♥</span> para la comunidad de Valorant
-          </div>
         </div>
       </div>
     </motion.footer>

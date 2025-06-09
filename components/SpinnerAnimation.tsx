@@ -15,7 +15,7 @@ interface SpinnerAnimationProps {
   customContainerClass?: string;
 }
 
-const ITEM_WIDTH_CAROUSEL = 260;
+const ITEM_WIDTH_CAROUSEL = 320;
 const ITEM_HEIGHT_CAROUSEL = 160;
 
 export default function SpinnerAnimation({
@@ -199,8 +199,8 @@ export default function SpinnerAnimation({
   const containerStyle = customContainerClass
     ? {} // No aplicar estilos predeterminados si hay clase personalizada
     : orientation === "horizontal" 
-      ? { height: "280px" }
-      : { width: "200px", height: "400px" };
+      ? { height: "200px sm:h-[240px] md:h-[280px]", width: "100%" } // Eliminado maxWidth
+      : { width: "160px sm:w-[180px] md:w-[200px]", height: "320px sm:h-[360px] md:h-[400px]" }; // Responsive width and height
 
   const spinnerStyle = orientation === "horizontal"
     ? {
@@ -217,8 +217,8 @@ export default function SpinnerAnimation({
     : { height: `${ITEM_HEIGHT_CAROUSEL}px`, width: "100%" };
 
   return (
-    <div className="text-center mb-8 relative max-w-6xl mx-auto">
-      <div className={orientation === "horizontal" ? "w-full py-6 relative" : "w-full relative flex justify-center h-full"}>
+    <div className="text-center mb-6 sm:mb-8 relative max-w-6xl mx-auto px-0 sm:px-2">
+      <div className={orientation === "horizontal" ? "w-full py-4 sm:py-6 relative" : "w-full relative flex justify-center h-full"}>
         <div
           className={containerClass}
           style={containerStyle}
@@ -248,26 +248,30 @@ export default function SpinnerAnimation({
               const weaponType = getWeaponType(skin.nombre);
               const weaponStyles = getWeaponSpecificStyles(weaponType);
 
-              // Ajustar el escalado basado en la orientación - aumentado para imágenes más grandes
-              const baseScale = orientation === "vertical" ? weaponStyles.baseScale * 1.0 : weaponStyles.baseScale;
+              // Ajustar el escalado basado en la orientación - responsive
+              const baseScale = orientation === "vertical" ? weaponStyles.baseScale * 0.9 : weaponStyles.baseScale * 1.05;
               const imageTransformStyle: React.CSSProperties = {
                 transform: `scale(${baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
               };
 
-              // Ajustar el tamaño del item basado en la orientación
-              const adjustedItemSize = orientation === "vertical" ? Math.min(itemSize, 130) : itemSize;
+              // Ajustar el tamaño del item basado en la orientación y hacer responsive
+              const adjustedItemSize = orientation === "vertical" ? Math.min(itemSize, 100) : Math.min(itemSize, 300);
 
               return (
                 <div
                   key={`${skin.id}-${index}`}
-                  className="p-2 flex-shrink-0 flex flex-col justify-center items-center text-center transition-all"
+                  className={orientation === "horizontal" ? "p-1 flex-shrink-0 flex flex-col justify-center items-center text-center transition-all" : "p-1 sm:p-2 flex-shrink-0 flex flex-col justify-center items-center text-center transition-all"}
                   style={itemStyle}
                 >
                   <div 
-                    className={`relative rounded-xl overflow-hidden flex items-center justify-center group`}
-                    style={{ 
-                      width: orientation === "vertical" ? "190px" : `${adjustedItemSize}px`, 
-                      height: orientation === "vertical" ? "120px" : `${adjustedItemSize}px` 
+                    className={`relative rounded-lg sm:rounded-xl overflow-hidden flex items-center justify-center group ${
+                      orientation === "vertical"
+                        ? "w-[150px] sm:w-[170px] md:w-[190px] h-[90px] sm:h-[100px] md:h-[120px]"
+                        : ""
+                    }`}
+                    style={{
+                      width: orientation === "horizontal" ? `${Math.max(adjustedItemSize - 10, 200)}px` : undefined,
+                      height: orientation === "horizontal" ? `${Math.max(adjustedItemSize - 10, 200)}px` : undefined,
                     }}
                   >
                     {skin.content_tier?.uuid_api && skin.content_tier.uuid_api !== 'default' && (
@@ -275,11 +279,8 @@ export default function SpinnerAnimation({
                         src={`/skins-bg/${skin.content_tier.uuid_api}.png`}
                         alt={`Fondo para ${skin.content_tier.nombre}`}
                         layout="fill"
-                        objectFit="contain" // O "cover" si prefieres que llene y recorte
-                        className="absolute inset-0 z-0 p-4 opacity-60 transform"
-                        style={{
-                          scale: orientation === "vertical" ? "2.1" : "1.3",
-                        }}
+                        objectFit="contain"
+                        className={`absolute inset-0 z-0 opacity-70 transform rotate-12 ${orientation === "vertical" ? "p-3 scale-150" : "p-2 scale-100"}`}
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         priority={index < 10}
                       />
@@ -287,11 +288,11 @@ export default function SpinnerAnimation({
                     {skin.imagen_url && (
                       <Image
                         alt={skin.nombre}
-                        className="object-contain drop-shadow-lg p-2 relative z-10 transform transition-transform duration-300"
+                        className="object-contain drop-shadow-lg p-1 sm:p-2 relative z-10 transform transition-transform duration-300"
                         style={imageTransformStyle}
-                        height={orientation === "vertical" ? 300 : adjustedItemSize - 20}
+                        height={orientation === "vertical" ? 240 : Math.max(adjustedItemSize - 20, 180)}
                         src={skin.imagen_url}
-                        width={orientation === "vertical" ? 300 : adjustedItemSize - 20}
+                        width={orientation === "vertical" ? 240 : Math.max(adjustedItemSize - 20, 180)}
                         priority={index < 10}
                       />
                     )}
@@ -308,7 +309,7 @@ export default function SpinnerAnimation({
               : "left-0 top-1/2 w-full transform -translate-y-1/2"
           }`}>
             <div className={`bg-gradient-to-b from-transparent via-primary to-transparent opacity-75 ${
-              orientation === "horizontal" ? "w-[3px] h-full" : "h-[3px] w-full"
+              orientation === "horizontal" ? "w-[2px] sm:w-[3px] h-full" : "h-[2px] sm:h-[3px] w-full"
             }`}></div>
           </div>
         </div>

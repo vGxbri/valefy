@@ -134,32 +134,30 @@ export default function Page() {
   );
 
   return (
-    <div className="flex flex-col gap-8 pl-16 md:pr-12 lg:pr-16 pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1">
-      <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
+    <div className="flex flex-col gap-6 sm:gap-8 px-4 sm:px-6 md:px-8 lg:pl-16 lg:pr-12 xl:pr-16 pt-12 pb-8 sm:pb-12 min-h-screen bg-background w-full max-w-full flex-1">
+      <div className="flex flex-col gap-4 sm:gap-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
             / CATÁLOGO DE BUNDLES
           </h1>
 
           {/* SECCIÓN DEL BUSCADOR MODIFICADA */}
           {!loading && !error && (
-            <div className="relative w-64 group">
-              {" "}
-              {/* Contenedor para 'group' y ancho */}
+            <div className="relative w-full sm:w-64 group">
               {/* Este div es ahora el contenedor Flex y lleva los estilos del input */}
               <div className="relative flex items-center rounded-xl border-2 border-input bg-background/50 backdrop-blur-sm text-sm focus-within:outline-none focus-within:border-primary focus-within:ring-0 transition-all duration-300">
                 {/* Contenedor del icono de lupa (elemento Flex) */}
                 <span className="pl-3 pr-2 flex items-center pointer-events-none">
                   {/* pl-3: padding izquierdo para el icono dentro del "input" */}
                   {/* pr-2: espacio entre el icono y el texto del input */}
-                  <RiSearch2Line className="w-5 h-5 text-white/50 group-focus-within:text-primary transition-colors duration-300" />
+                  <RiSearch2Line className="w-4 h-4 sm:w-5 sm:h-5 text-white/50 group-focus-within:text-primary transition-colors duration-300" />
                 </span>
 
                 {/* Campo de Input (elemento Flex que crece) */}
                 <input
                   placeholder="Buscar bundles..."
                   type="text"
-                  className="flex-1 py-2.5 bg-transparent appearance-none focus:outline-none text-white placeholder:text-muted-foreground/70 pr-10"
+                  className="flex-1 py-2 sm:py-2.5 bg-transparent appearance-none focus:outline-none text-white placeholder:text-muted-foreground/70 pr-8 sm:pr-10 text-sm sm:text-base"
                   // flex-1: permite que el input ocupe el espacio disponible
                   // bg-transparent: el fondo lo provee el div padre
                   // pr-10: espacio para el botón de limpiar (X) que es absoluto
@@ -170,10 +168,10 @@ export default function Page() {
                 {/* Botón para limpiar búsqueda (sigue siendo absoluto) */}
                 {searchTerm && (
                   <button
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                    className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
                     onClick={() => setSearchTerm("")}
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3 w-3 sm:h-4 sm:w-4" />
                   </button>
                 )}
               </div>
@@ -185,18 +183,18 @@ export default function Page() {
         {/* ... (resto de tu JSX: loading, error, grid de bundles, paginación, modal) ... */}
         {loading ? (
           <div className="flex flex-col justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4" />
+            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-primary mb-4" />
           </div>
         ) : error ? (
           <div className="text-red-500 text-center p-4">{error}</div>
         ) : filteredBundleGroups.length === 0 ? (
-          <div className="text-center p-8 bg-card rounded-lg">
-            <p className="text-lg text-muted-foreground">
+          <div className="text-center p-6 sm:p-8 bg-card rounded-lg">
+            <p className="text-base sm:text-lg text-muted-foreground">
               No se encontraron bundles que coincidan con &quot;{searchTerm}
               &quot;
             </p>
             <button
-              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm sm:text-base"
               onClick={() => setSearchTerm("")}
             >
               Mostrar todos los bundles
@@ -204,7 +202,7 @@ export default function Page() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {paginatedBundles.map(([bundleName, skins]) => (
                 <button
                   key={bundleName}
@@ -215,7 +213,7 @@ export default function Page() {
                     setModalOpen(true);
                   }}
                 >
-                  <div className="relative h-64 w-full overflow-hidden">
+                  <div className="relative h-48 sm:h-56 md:h-64 w-full overflow-hidden">
                     {skins[0].bundleIcon && (
                       <Image
                         fill
@@ -227,17 +225,17 @@ export default function Page() {
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-70 group-hover:opacity-60 transition-opacity" />
                   </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <h3 className="text-xl font-bold text-white mb-1">
+                  <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+                    <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
                       {bundleName}
                     </h3>
-                    <p className="text-sm text-gray-300">
+                    <p className="text-xs sm:text-sm text-gray-300">
                       {skins.length} skins
                     </p>
                   </div>
-                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-2 bg-primary/90 rounded-full hover:bg-primary transition-colors shadow-lg">
-                      <Plus className="w-5 h-5 text-white" />
+                  <div className="absolute top-2 sm:top-3 right-2 sm:right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="p-1.5 sm:p-2 bg-primary/90 rounded-full hover:bg-primary transition-colors shadow-lg">
+                      <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </button>
                   </div>
                 </button>

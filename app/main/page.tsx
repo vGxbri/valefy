@@ -287,17 +287,17 @@ export default function MainPage() {
                           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
                         </div>
                         <div className={`mb-6 pt-8 md:pt-10 text-center`}>
-                          <h3 className="font-bold inline-block
+                          <h3 className="font-bold inline-block w-max mx-auto
                                         text-2xl md:text-3xl font-bold text-foreground font-[Raleway] font-semibold italic tracking-widest
                                         [text-shadow:_0px_0px_20px_rgba(255,255,255,0.35)] bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                             · {categoriaInfo.nombre} ·
                           </h3>
                         </div>
 
-                        {/* Banner para la categoría "alumno" - Condición mejorada */}
+                        {/* Banner para la categoría "alumno" - Responsive mejorado */}
                         {(categoria.toLowerCase().includes('alumno') || categoriaInfo.nombre.toLowerCase().includes('alumno')) && (
                           <div className="flex flex-col md:flex-row justify-between items-center my-6 md:my-8 mx-auto w-full md:w-5/6 p-4 md:p-6 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 shadow-2xl border border-primary/40 backdrop-blur-sm">
-                            <div className="flex flex-col items-start w-full md:w-1/2 mb-4 md:mb-0">
+                            <div className="flex flex-col items-center text-center w-full mb-4 md:mb-0 xl:w-1/2 xl:items-start xl:text-left">
                               <h4 className="font-[Raleway] text-xl md:text-2xl font-semibold text-white mb-2 tracking-wide [text-shadow:_0px_0px_18px_rgba(255,255,255,0.5)]">
                                 ¡NOVEDAD EXCLUSIVA!
                               </h4>
@@ -305,7 +305,8 @@ export default function MainPage() {
                                 Descubre nuestras cajas <span className="font-semibold bg-gradient-to-r from-primary/100 to-primary/80 bg-clip-text text-transparent">especialmente seleccionadas</span> por nuestros alumnos.
                               </p>
                             </div>
-                            <div className="flex flex-col items-end w-1/2 absolute bottom-0 right-10">
+                            {/* Imagen solo visible en pantallas xl (1280px) y superiores */}
+                            <div className="hidden xl:flex xl:flex-col items-end w-1/2 absolute bottom-0 right-10">
                               <Image src="/jett_1.png" alt="Alumno" objectFit="contain" width={300} height={300} />
                             </div>
                           </div>
@@ -329,21 +330,18 @@ export default function MainPage() {
                             }
 
                             return (
-                              <>
-                                <Link
-                                  key={caja.id}
-                                  className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-[22%]"
-                                  href={rutaDinamica}
-                                >
-                                  <StripeCard
-                                    disabled={!caja.esta_disponible}
-                                    imageUrl={caja.imagen_url}
-                                    title={caja.nombre}
-                                    price={caja.precio}
-                                  />
-                                </Link>
-                                
-                              </>
+                              <Link
+                                key={caja.id}
+                                className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-[22%]"
+                                href={rutaDinamica}
+                              >
+                                <StripeCard
+                                  disabled={!caja.esta_disponible}
+                                  imageUrl={caja.imagen_url}
+                                  title={caja.nombre}
+                                  price={caja.precio}
+                                />
+                              </Link>
                             );
                           })}
                         </div>

@@ -6,24 +6,17 @@ import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
-import { getWeaponSkins, filterSkinsByIds, getWeaponSpecificStyles, getWeaponType } from "@/lib/valorantApi";
+import { getWeaponSkins, filterSkinsByIds } from "@/lib/valorantApi";
 import { formatSkinForApp } from "@/lib/skinUtils";
 import SpinnerAnimation from "@/components/SpinnerAnimation";
 import {
   Skin,
   TierProbabilidad,
-  processBoxOpening,
-  selectRandomSkinByProbability,
   getTierData,
-  processBoxOpeningWithLog,
-  selectMultipleRandomSkins,
   selectMultipleRandomSkinsForSpinner,
   processMultipleBoxOpeningOptimized,
   processSingleBoxOpeningOptimized,
 } from "@/lib/boxUtils";
-import {
-  procesarSkinConseguida
-} from "@/lib/missionUtils";
 import { decrementarSaldoLocal } from "@/lib/saldoUtils";
 
 // Estilos globales para animaciones
@@ -381,10 +374,10 @@ export default function BoxComponent({
   // Función para generar items aleatorios para la ruleta - OPTIMIZADA con caché
   const generateSpinItems = useMemo(() => {
     return (selectedSkin: Skin) => {
-      if (!cajaSkins || cajaSkins.length === 0) return [];
+    if (!cajaSkins || cajaSkins.length === 0) return [];
 
       // Generar items para la ruleta de forma optimizada
-      const baseItems: Skin[] = [];
+    const baseItems: Skin[] = [];
 
       // Usar la función optimizada específica para el spinner que SÍ modifica los IDs
       const randomItemsBefore = selectMultipleRandomSkinsForSpinner(cajaSkins, probabilidades, 80, 'before');
@@ -393,15 +386,15 @@ export default function BoxComponent({
       // Añadir los items antes de la skin ganadora
       baseItems.push(...randomItemsBefore);
 
-      // En la posición central añadimos la skin ganadora
-      baseItems.push({ ...selectedSkin, id: `winner-${selectedSkin.id}` });
+    // En la posición central añadimos la skin ganadora
+    baseItems.push({ ...selectedSkin, id: `winner-${selectedSkin.id}` });
 
       // Completamos con items después
       baseItems.push(...randomItemsAfter);
 
-      // Crear una copia al inicio y al final para que parezca infinito
-      return [...baseItems.slice(0, 10), ...baseItems, ...baseItems.slice(0, 10)];
-    };
+    // Crear una copia al inicio y al final para que parezca infinito
+    return [...baseItems.slice(0, 10), ...baseItems, ...baseItems.slice(0, 10)];
+  };
   }, [cajaSkins, probabilidades]); // Solo recalcular si cambian las skins o probabilidades
 
   // Función para animar la ruleta con un efecto de frenado más realista
@@ -467,11 +460,11 @@ export default function BoxComponent({
         if (isMultipleMode && numberOfBoxes > 1) {
           // Modo múltiples cajas - USAR FUNCIÓN OPTIMIZADA
           const openingResult = await processMultipleBoxOpeningOptimized(
-            userId,
-            caja.id,
-            cajaSkins as any,
-            probabilidades as any,
-            supabase,
+          userId,
+          caja.id,
+          cajaSkins as any,
+          probabilidades as any,
+          supabase,
             caja.precio,
             numberOfBoxes
           );
@@ -516,12 +509,12 @@ export default function BoxComponent({
             
             const items = generateSpinItems(openingResult.selectedSkin);
             setResultSkinForSpin(openingResult.selectedSkin);
-            setSpinItems(items);
+          setSpinItems(items);
             setIsPreparingBox(false); // Desactivar el spinner de preparación
-            setIsSpinning(true);
-          } else {
-            console.error("Error al seleccionar skin:", openingResult.error);
-            setIsOpening(false);
+          setIsSpinning(true);
+        } else {
+          console.error("Error al seleccionar skin:", openingResult.error);
+          setIsOpening(false);
             setIsPreparingBox(false);
           }
         }
@@ -629,6 +622,28 @@ export default function BoxComponent({
     }, 500); // Después de que terminen las animaciones
 
     return () => clearTimeout(timer);
+  }, [numberOfBoxes]);
+
+  // useEffect para forzar 1 caja en móvil
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640) { // Tailwind's sm breakpoint
+        if (numberOfBoxes > 1) {
+          setNumberOfBoxes(1);
+          setIsMultipleMode(false);
+        }
+      }
+    };
+
+    // Verificar inmediatamente al montar
+    handleResize();
+
+    // Escuchar cambios de tamaño
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, [numberOfBoxes]);
 
   // Función para separar la última palabra del nombre
@@ -776,9 +791,9 @@ export default function BoxComponent({
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{ delay: 0.5, duration: 0.4, ease: "easeOut" }}
                         >
-                          {resultSkin.imagen_url && (
-                            <Image
-                              alt={resultSkin.nombre}
+          {resultSkin.imagen_url && (
+                <Image
+                  alt={resultSkin.nombre}
                               className="object-contain drop-shadow-lg p-2 relative z-10 transform transition-transform duration-300"
                               fill
                               src={resultSkin.imagen_url}
@@ -805,10 +820,10 @@ export default function BoxComponent({
                               </h3>
                             );
                           })()}
-                          {resultSkin.content_tier && (
-                            <div
+          {resultSkin.content_tier && (
+              <div
                               className="px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-2xl border-2 mx-auto inline-block"
-                              style={{
+                style={{
                                 backgroundColor: `${resultSkin.content_tier?.color}25`,
                                 color: resultSkin.content_tier?.color,
                                 borderColor: resultSkin.content_tier?.color,
@@ -816,10 +831,10 @@ export default function BoxComponent({
                               }}
                             >
                               {resultSkin.content_tier?.nombre}
-                            </div>
-                          )}
+            </div>
+          )}
                         </motion.div>
-                      </div>
+        </div>
                       
                       {/* Efecto de brillo */}
                       <div 
@@ -832,8 +847,8 @@ export default function BoxComponent({
                     </motion.div>
                   </motion.div>
                 </div>
-              </div>
-              
+                </div>
+                
               {/* Botón para abrir más cajas */}
               <motion.div 
                 className="text-center"
@@ -848,7 +863,7 @@ export default function BoxComponent({
                   Abrir de nuevo
                 </Button>
               </motion.div>
-            </div>
+                  </div>
           </motion.div>
         )}
 
@@ -863,24 +878,54 @@ export default function BoxComponent({
             className="w-full h-full flex items-center justify-center"
           >
             <div className="w-full flex flex-col items-center justify-center">
-              <div className="flex justify-center items-center px-2 md:px-4 overflow-hidden mb-8">
+              <div className="flex justify-center items-center px-2 md:px-4 overflow-x-auto mb-8 w-full">
               <div className={`flex justify-center items-center ${
                 numberOfBoxes === 1 ? 'gap-0' :
-                numberOfBoxes === 2 ? 'gap-4 md:gap-8' :
-                numberOfBoxes === 3 ? 'gap-3 md:gap-6' :
-                numberOfBoxes === 4 ? 'gap-2 md:gap-4' :
+                numberOfBoxes === 2 ? 'gap-2 sm:gap-4 md:gap-8' :
+                numberOfBoxes === 3 ? 'gap-1 sm:gap-3 md:gap-6' :
+                numberOfBoxes === 4 ? 'gap-1 sm:gap-2 md:gap-4' :
                 'gap-1 md:gap-3'
-              }`}>
+              } min-w-max`}>
                 {multipleResults.map((result, index) => {
-                  // Calcular tamaños responsivos según número de cajas - Ajustados para evitar scroll
+                  // Calcular tamaños responsivos según número de cajas - Simplificado para móvil
                   const getSizes = () => {
                     switch(numberOfBoxes) {
-                      case 1: return { w: 'w-[320px] md:w-[400px]', h: 'h-[500px] md:h-[600px]', imgW: 'w-[260px] md:w-[320px]', imgH: 'h-[260px] md:h-[320px]' };
-                      case 2: return { w: 'w-[280px] md:w-[340px]', h: 'h-[450px] md:h-[520px]', imgW: 'w-[220px] md:w-[270px]', imgH: 'h-[220px] md:h-[270px]' };
-                      case 3: return { w: 'w-[240px] md:w-[290px]', h: 'h-[400px] md:h-[460px]', imgW: 'w-[180px] md:w-[230px]', imgH: 'h-[180px] md:h-[230px]' };
-                      case 4: return { w: 'w-[200px] md:w-[240px]', h: 'h-[360px] md:h-[410px]', imgW: 'w-[150px] md:w-[190px]', imgH: 'h-[150px] md:h-[190px]' };
-                      case 5: return { w: 'w-[170px] md:w-[200px]', h: 'h-[320px] md:h-[370px]', imgW: 'w-[120px] md:w-[150px]', imgH: 'h-[120px] md:h-[150px]' };
-                      default: return { w: 'w-[320px] md:w-[400px]', h: 'h-[500px] md:h-[600px]', imgW: 'w-[260px] md:w-[320px]', imgH: 'h-[260px] md:h-[320px]' };
+                      case 1: return { 
+                        w: 'w-[280px] sm:w-[320px] md:w-[400px]', 
+                        h: 'h-[450px] sm:h-[500px] md:h-[600px]', 
+                        imgW: 'w-[220px] sm:w-[260px] md:w-[320px]', 
+                        imgH: 'h-[220px] sm:h-[260px] md:h-[320px]' 
+                      };
+                      case 2: return { 
+                        w: 'w-[160px] sm:w-[200px] md:w-[280px] lg:w-[340px]', 
+                        h: 'h-[320px] sm:h-[380px] md:h-[450px] lg:h-[520px]', 
+                        imgW: 'w-[120px] sm:w-[150px] md:w-[220px] lg:w-[270px]', 
+                        imgH: 'h-[120px] sm:h-[150px] md:h-[220px] lg:h-[270px]' 
+                      };
+                      case 3: return { 
+                        w: 'w-[110px] sm:w-[140px] md:w-[190px] lg:w-[240px] xl:w-[290px]', 
+                        h: 'h-[280px] sm:h-[320px] md:h-[360px] lg:h-[400px] xl:h-[460px]', 
+                        imgW: 'w-[80px] sm:w-[100px] md:w-[140px] lg:w-[180px] xl:w-[230px]', 
+                        imgH: 'h-[80px] sm:h-[100px] md:h-[140px] lg:h-[180px] xl:h-[230px]' 
+                      };
+                      case 4: return { 
+                        w: 'w-[85px] sm:w-[110px] md:w-[140px] lg:w-[170px] xl:w-[200px] 2xl:w-[240px]', 
+                        h: 'h-[250px] sm:h-[280px] md:h-[320px] lg:h-[360px] xl:h-[390px] 2xl:h-[410px]', 
+                        imgW: 'w-[60px] sm:w-[80px] md:w-[100px] lg:w-[120px] xl:w-[150px] 2xl:w-[190px]', 
+                        imgH: 'h-[60px] sm:h-[80px] md:h-[100px] lg:h-[120px] xl:h-[150px] 2xl:h-[190px]' 
+                      };
+                      case 5: return { 
+                        w: 'w-[70px] sm:w-[85px] md:w-[110px] lg:w-[140px] xl:w-[170px] 2xl:w-[200px]', 
+                        h: 'h-[220px] sm:h-[250px] md:h-[280px] lg:h-[310px] xl:h-[340px] 2xl:h-[370px]', 
+                        imgW: 'w-[50px] sm:w-[60px] md:w-[80px] lg:w-[100px] xl:w-[120px] 2xl:w-[150px]', 
+                        imgH: 'h-[50px] sm:h-[60px] md:h-[80px] lg:h-[100px] xl:h-[120px] 2xl:h-[150px]' 
+                      };
+                      default: return { 
+                        w: 'w-[280px] sm:w-[320px] md:w-[400px]', 
+                        h: 'h-[450px] sm:h-[500px] md:h-[600px]', 
+                        imgW: 'w-[220px] sm:w-[260px] md:w-[320px]', 
+                        imgH: 'h-[220px] sm:h-[260px] md:h-[320px]' 
+                      };
                     }
                   };
                   const sizes = getSizes();
@@ -914,7 +959,7 @@ export default function BoxComponent({
                           initial={{ scale: 1, opacity: 0, x: 0, y: 0 }}
                           animate={{ scale: 1, opacity: 1, x: 0, y: 0 }}
                           transition={{ delay: index * 0.1 + 1.2, duration: 0.4, type: "spring", stiffness: 300 }}
-                          className="absolute top-2 right-2 z-20 mt-2 mr-2 px-2 py-1 rounded-xl text-xs font-bold 
+                          className="absolute top-1 right-1 sm:top-2 sm:right-2 z-20 px-1 py-0.5 sm:px-2 sm:py-1 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold 
                                      bg-gradient-to-r from-red-500/20 to-red-600/20 text-white-300 shadow-lg 
                                      shadow-red-900/20 border border-red-500/20 backdrop-blur-sm
                                      active:scale-95 transition-all duration-200"
@@ -934,13 +979,13 @@ export default function BoxComponent({
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             priority={index < 10}
                           />
-                        </div>
+                      </div>
                       )}
                       
                       {/* Contenido principal */}
-                      <div className="relative z-10 h-full flex flex-col items-center justify-center p-4">
+                      <div className="relative z-10 h-full flex flex-col items-center justify-center p-2 sm:p-4">
                         <motion.div 
-                          className={`relative ${sizes.imgW} ${sizes.imgH} mb-4`}
+                          className={`relative ${sizes.imgW} ${sizes.imgH} mb-2 sm:mb-4`}
                           initial={{ scale: 0.8, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{ delay: index * 0.1 + 0.5, duration: 0.4, ease: "easeOut" }}
@@ -948,10 +993,10 @@ export default function BoxComponent({
                           {result.imagen_url && (
                             <Image
                               alt={result.nombre}
-                              className="object-contain drop-shadow-lg p-2 relative z-10 transform transition-transform duration-300"
+                              className="object-contain drop-shadow-lg p-1 sm:p-2 relative z-10 transform transition-transform duration-300"
                               fill
                               src={result.imagen_url}
-                              style={{
+                        style={{
                                 animation: 'float 4s infinite ease-in-out',
                                 filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.3))',
                               }}
@@ -960,7 +1005,7 @@ export default function BoxComponent({
                         </motion.div>
                         
                         <motion.div
-                          className="text-center space-y-3"
+                          className="text-center space-y-1 sm:space-y-3"
                           initial={{ y: 20, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
                           transition={{ delay: index * 0.1 + 0.7, duration: 0.4 }}
@@ -968,7 +1013,11 @@ export default function BoxComponent({
                           {(() => {
                             const { firstPart, lastWord } = formatNameWithLastWordSeparate(result.nombre);
                             return (
-                              <h3 className="text-sm md:text-lg font-bold text-white leading-tight px-2">
+                              <h3 className={`font-bold text-white leading-tight px-1 sm:px-2 ${
+                                numberOfBoxes >= 4 ? 'text-[10px] sm:text-xs md:text-sm' : 
+                                numberOfBoxes === 3 ? 'text-xs sm:text-sm md:text-base' :
+                                'text-sm md:text-lg'
+                              }`}>
                                 {firstPart && <span className="block">{firstPart}</span>}
                                 <span className="block">{lastWord}</span>
                               </h3>
@@ -976,7 +1025,11 @@ export default function BoxComponent({
                           })()}
                           {result.content_tier && (
                             <div
-                              className="px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-2xl border-2 mx-auto inline-block"
+                              className={`rounded-full font-bold shadow-2xl border-2 mx-auto inline-block ${
+                                numberOfBoxes >= 4 ? 'px-1 py-0.5 text-[8px] sm:text-[10px] md:text-xs' :
+                                numberOfBoxes === 3 ? 'px-2 py-1 text-[10px] sm:text-xs md:text-sm' :
+                                'px-3 md:px-4 py-2 text-xs md:text-sm'
+                              }`}
                               style={{
                                 backgroundColor: `${result.content_tier?.color}25`,
                                 color: result.content_tier?.color,
@@ -993,7 +1046,7 @@ export default function BoxComponent({
                       {/* Efecto de brillo */}
                       <div 
                         className="absolute inset-0 rounded-2xl pointer-events-none"
-                        style={{
+                                style={{
                           background: `radial-gradient(circle at 50% 30%, ${result.content_tier?.color || '#ffffff'}20 0%, transparent 60%)`,
                           animation: 'pulse 2s infinite'
                         }}
@@ -1002,24 +1055,24 @@ export default function BoxComponent({
                   </motion.div>
                   );
                 })}
-              </div>
-            </div>
+                            </div>
+                          </div>
             
             {/* Botón para abrir más cajas */}
             <motion.div 
-              className="text-center"
+              className="text-center px-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: multipleResults.length * 0.1 + 1, duration: 0.5 }}
             >
               <Button
                 onClick={resetResults}
-                className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-8 py-3 text-lg font-medium"
+                className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-6 sm:px-8 py-3 text-base sm:text-lg font-medium"
               >
                 Abrir de nuevo
               </Button>
             </motion.div>
-            </div>
+                      </div>
           </motion.div>
         )}
 
@@ -1038,29 +1091,53 @@ export default function BoxComponent({
             className="w-full h-full flex items-center justify-center"
           >
             {isMultipleMode && numberOfBoxes > 1 ? (
-              // Vista múltiples cajas - Layout horizontal
+              // Vista múltiples cajas - Layout horizontal responsive
               <div className="w-full mb-8">
-                <div className="flex justify-center items-center px-2 md:px-4 overflow-hidden">
+                <div className="flex justify-center items-center px-2 md:px-4 overflow-x-auto w-full">
                   <div className={`flex justify-center items-center ${
                     numberOfBoxes === 1 ? 'gap-0' :
-                    numberOfBoxes === 2 ? 'gap-4 md:gap-8' :
-                    numberOfBoxes === 3 ? 'gap-3 md:gap-6' :
-                    numberOfBoxes === 4 ? 'gap-2 md:gap-4' :
+                    numberOfBoxes === 2 ? 'gap-2 sm:gap-4 md:gap-8' :
+                    numberOfBoxes === 3 ? 'gap-1 sm:gap-3 md:gap-6' :
+                    numberOfBoxes === 4 ? 'gap-1 sm:gap-2 md:gap-4' :
                     'gap-1 md:gap-3'
-                  }`}>
+                  } min-w-max`}>
                     {Array.from({ length: numberOfBoxes }).map((_, index) => {
                       // Calcular duración escalonada: 12s, 13s, 14s, etc.
                       const animationDuration = 12000 + (index * 1000);
                       
-                      // Calcular tamaños responsivos según número de cajas - Ajustados para evitar scroll
+                      // Calcular tamaños responsivos según número de cajas - Simplificado
                       const getSizes = () => {
                         switch(numberOfBoxes) {
-                          case 1: return { w: 'w-[320px] md:w-[400px]', h: 'h-[500px] md:h-[600px]', itemSize: 200 };
-                          case 2: return { w: 'w-[280px] md:w-[340px]', h: 'h-[450px] md:h-[520px]', itemSize: 170 };
-                          case 3: return { w: 'w-[240px] md:w-[290px]', h: 'h-[400px] md:h-[460px]', itemSize: 150 };
-                          case 4: return { w: 'w-[200px] md:w-[240px]', h: 'h-[360px] md:h-[410px]', itemSize: 130 };
-                          case 5: return { w: 'w-[170px] md:w-[200px]', h: 'h-[320px] md:h-[370px]', itemSize: 110 };
-                          default: return { w: 'w-[320px] md:w-[400px]', h: 'h-[500px] md:h-[600px]', itemSize: 200 };
+                          case 1: return { 
+                            w: 'w-[280px] sm:w-[320px] md:w-[400px]', 
+                            h: 'h-[450px] sm:h-[500px] md:h-[600px]', 
+                            itemSize: 180 
+                          };
+                          case 2: return { 
+                            w: 'w-[160px] sm:w-[200px] md:w-[280px] lg:w-[340px]', 
+                            h: 'h-[320px] sm:h-[380px] md:h-[450px] lg:h-[520px]', 
+                            itemSize: 130 
+                          };
+                          case 3: return { 
+                            w: 'w-[110px] sm:w-[140px] md:w-[190px] lg:w-[240px] xl:w-[290px]', 
+                            h: 'h-[280px] sm:h-[320px] md:h-[360px] lg:h-[400px] xl:h-[460px]', 
+                            itemSize: 100 
+                          };
+                          case 4: return { 
+                            w: 'w-[85px] sm:w-[110px] md:w-[140px] lg:w-[170px] xl:w-[200px] 2xl:w-[240px]', 
+                            h: 'h-[250px] sm:h-[280px] md:h-[320px] lg:h-[360px] xl:h-[390px] 2xl:h-[410px]', 
+                            itemSize: 80 
+                          };
+                          case 5: return { 
+                            w: 'w-[70px] sm:w-[85px] md:w-[110px] lg:w-[140px] xl:w-[170px] 2xl:w-[200px]', 
+                            h: 'h-[220px] sm:h-[250px] md:h-[280px] lg:h-[310px] xl:h-[340px] 2xl:h-[370px]', 
+                            itemSize: 65
+                          };
+                          default: return { 
+                            w: 'w-[280px] sm:w-[320px] md:w-[400px]', 
+                            h: 'h-[450px] sm:h-[500px] md:h-[600px]', 
+                            itemSize: 180 
+                          };
                         }
                       };
                       const sizes = getSizes();
@@ -1088,29 +1165,35 @@ export default function BoxComponent({
                             // Estado inicial - preparando
                             <div className={`${sizes.w} ${sizes.h} rounded-xl bg-slate-800/30 border border-slate-700/30 flex items-center justify-center opacity-50 backdrop-blur-sm shadow-xl`}>
                               <div className="text-white/60 text-center">
-                                <div className="w-12 md:w-16 h-12 md:h-16 border-2 border-white/20 rounded-xl mb-4 md:mb-6 mx-auto flex items-center justify-center bg-slate-700/20">
-                                  <span className="text-2xl md:text-4xl">📦</span>
-                                </div>
-                                <p className="text-sm md:text-base font-medium">Preparando...</p>
-                              </div>
-                            </div>
+                                <div className={`border-2 border-white/20 rounded-xl mx-auto flex items-center justify-center bg-slate-700/20 ${
+                                  numberOfBoxes >= 4 ? 'w-8 h-8 mb-2' : 'w-12 h-12 mb-4'
+                                }`}>
+                                  <span className={numberOfBoxes >= 4 ? 'text-lg' : 'text-2xl md:text-4xl'}>📦</span>
+                      </div>
+                                <p className={`font-medium ${
+                                  numberOfBoxes >= 4 ? 'text-[10px] sm:text-xs' : 
+                                  numberOfBoxes === 3 ? 'text-xs sm:text-sm' : 
+                                  'text-sm md:text-base'
+                                }`}>Preparando...</p>
+                    </div>
+                  </div>
                           )}
                         </motion.div>
                       );
                     })}
                   </div>
                 </div>
-              </div>
-            ) : (
-              // Vista caja única - Spinner más grande
-              <div className="w-full mx-auto">
+                </div>
+              ) : (
+              // Vista caja única - Spinner más grande pero responsive
+              <div className="w-full mx-auto px-2 sm:px-4">
                 <SpinnerAnimation
                   isSpinning={true}
                   spinItems={spinItems}
                   onAnimationComplete={handleSpinnerComplete}
                   orientation="horizontal"
                 />
-              </div>
+                          </div>
             )}
           </motion.div>
         )}
@@ -1125,40 +1208,40 @@ export default function BoxComponent({
             transition={{ duration: 0.2 }}
             className="w-full h-full flex items-center justify-center"
           >
-            <div className="flex flex-col items-center justify-center space-y-6">
+            <div className="flex flex-col items-center justify-center space-y-4 sm:space-y-6 px-4">
               {/* Spinner principal mejorado */}
               <div className="relative">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-3 border-b-3 border-primary">
+                <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-t-3 border-b-3 border-primary">
                   <div className="absolute inset-0 rounded-full border border-slate-700 opacity-20"></div>
-                </div>
+                        </div>
                 {/* Efecto de pulso interno */}
                 <div className="absolute inset-2 rounded-full bg-primary/20 animate-pulse"></div>
-              </div>
-              
+                      </div>
+                      
               {/* Texto dinámico basado en el modo */}
               <div className="text-center space-y-2">
-                <h3 className="text-lg font-semibold text-white">
+                <h3 className="text-base sm:text-lg font-semibold text-white">
                   {isMultipleMode && numberOfBoxes > 1 
                     ? `Procesando ${numberOfBoxes} cajas...` 
                     : 'Preparando caja...'}
                 </h3>
-                <p className="text-sm text-white/60">
+                <p className="text-xs sm:text-sm text-white/60">
                   {isMultipleMode && numberOfBoxes > 1 
                     ? 'Esto puede tomar unos segundos' 
                     : 'Seleccionando tu premio'}
                 </p>
-              </div>
+                    </div>
 
               {/* Indicador de progreso opcional para múltiples cajas */}
               {isMultipleMode && numberOfBoxes > 1 && (
-                <div className="w-64 bg-slate-800/50 rounded-full h-2 overflow-hidden">
+                <div className="w-48 sm:w-64 bg-slate-800/50 rounded-full h-2 overflow-hidden">
                   <div 
                     className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-1000 ease-out animate-pulse"
                     style={{ width: '60%' }}
                   />
                 </div>
               )}
-            </div>
+                </div>
           </motion.div>
         )}
 
@@ -1177,26 +1260,39 @@ export default function BoxComponent({
             className="w-full h-full flex items-center justify-center"
           >
             {/* Vista principal de la caja mejorada */}
-            <div className="flex flex-col items-center w-full max-w-7xl mx-auto">
+            <div className="flex flex-col items-center w-full max-w-7xl mx-auto px-4">
               {caja && (
                 <div className="w-full text-center relative z-0">
                   {/* Efectos de resplandor mejorados detrás de la caja */}
-                  <div className="absolute -z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full opacity-15 blur-3xl bg-gradient-radial from-primary/40 to-transparent"></div>
-                  <div className="absolute -z-10 left-1/3 top-1/3 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full opacity-10 blur-2xl bg-gradient-radial from-amber-300/30 to-transparent"></div>
+                  <div className="absolute -z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] sm:w-[800px] h-[400px] sm:h-[600px] rounded-full opacity-15 blur-3xl bg-gradient-radial from-primary/40 to-transparent"></div>
+                  <div className="absolute -z-10 left-1/3 top-1/3 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[400px] h-[300px] sm:h-[400px] rounded-full opacity-10 blur-2xl bg-gradient-radial from-amber-300/30 to-transparent"></div>
                   
                   {/* Título estilizado */}
-                  <h1 className="text-4xl md:text-5xl font-bold font-[Raleway] font-bold italic tracking-widest uppercase mb-12 
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold font-[Raleway] font-bold italic tracking-widest uppercase mb-8 sm:mb-12 
                                  [text-shadow:_0px_0px_20px_rgba(255,255,255,0.1)] bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                     · {caja.nombre} ·
                   </h1>
 
-                  {/* Solo las cajas seleccionadas en línea horizontal */}
-                  <div className="flex justify-center items-center gap-2 md:gap-6 mb-8 px-2 md:px-4 overflow-hidden">
+                  {/* Solo las cajas seleccionadas en línea horizontal responsive */}
+                  <div className="flex justify-center items-center gap-1 sm:gap-2 md:gap-6 mb-6 sm:mb-8 px-2 md:px-4 overflow-x-auto">
                     <div className="flex gap-0 min-w-max">
                       <AnimatePresence mode="popLayout">
                         {Array.from({ length: numberOfBoxes }).map((_, index) => {
                           // Determinar si esta caja es nueva (apareció al incrementar numberOfBoxes)
                           const isNewBox = index >= previousNumberOfBoxes;
+                          
+                          // Calcular tamaños responsive para las cajas iniciales
+                          const getInitialBoxSizes = () => {
+                            switch(numberOfBoxes) {
+                              case 1: return { w: 280, h: 280 };
+                              case 2: return { w: 220, h: 220 };
+                              case 3: return { w: 180, h: 180 };
+                              case 4: return { w: 150, h: 150 };
+                              case 5: return { w: 120, h: 120 };
+                              default: return { w: 280, h: 280 };
+                            }
+                          };
+                          const { w: boxWidth, h: boxHeight } = getInitialBoxSizes();
                           
                           return (
                             <motion.div 
@@ -1222,34 +1318,26 @@ export default function BoxComponent({
                                 <div className="absolute -inset-1 rounded-xl blur opacity-30 transition duration-500"></div>
                                 <div className="relative p-1 rounded-xl overflow-hidden">
                                   {caja.imagen_url && (
-                                    <Image
+                          <Image 
                                       alt={caja.nombre}
                                       className="relative z-20 object-contain transform transition-transform duration-300"
-                                      height={
-                                        numberOfBoxes === 4 ? 240 : 
-                                        numberOfBoxes === 5 ? 200 : 
-                                        300
-                                      }
-                                      width={
-                                        numberOfBoxes === 4 ? 240 : 
-                                        numberOfBoxes === 5 ? 200 : 
-                                        300
-                                      }
+                                      height={boxHeight}
+                                      width={boxWidth}
                                       src={caja.imagen_url || "/free_cage.png"}
                                     />
                                   )}
-                                </div>
+                      </div>
                               </motion.div>
                             </motion.div>
                           );
                         })}
                       </AnimatePresence>
-                    </div>
+                       </div>
                   </div>
 
-                  {/* Selector de multiplicador estilizado */}
-                  <div className="mb-8 flex flex-col items-center gap-4">
-                    <div className="flex items-center gap-0 border-2 rounded-2xl border-primary/20">
+                  {/* Selector de multiplicador estilizado - Solo visible en SM+ (640px+) */}
+                  <div className="mb-6 sm:mb-8 flex flex-col items-center gap-4">
+                    <div className="hidden sm:flex items-center gap-0 border-2 rounded-2xl border-primary/20">
                       {[1, 2, 3, 4, 5].map((num) => (
                         <button
                           key={num}
@@ -1257,7 +1345,7 @@ export default function BoxComponent({
                             setNumberOfBoxes(num);
                             setIsMultipleMode(num > 1);
                           }}
-                          className={`relative w-10 h-10 md:w-12 md:h-12 transition-all duration-300 font-bold text-sm md:text-base ${
+                          className={`relative w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 transition-all duration-300 font-bold text-xs sm:text-sm md:text-base ${
                             numberOfBoxes === num
                               ? 'bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-primary/40'
                               : 'bg-gray-800/50 text-white/70 hover:bg-gray-700/60 backdrop-blur-sm'
@@ -1275,25 +1363,25 @@ export default function BoxComponent({
                           )}
                         </button>
                       ))}
-                    </div>
                   </div>
+                </div>
 
-                  {/* Botón principal estilizado */}
-                  <div className="flex justify-center">
-                    <Button
-                      className={`px-8 md:px-12 py-4 md:py-5 text-lg md:text-xl font-medium rounded-2xl bg-gradient-to-r from-red-500/20 to-red-600/20
+                  {/* Botón principal estilizado - Responsive */}
+                  <div className="flex justify-center px-4">
+                <Button
+                      className={`px-6 sm:px-8 md:px-12 py-3 sm:py-4 md:py-5 text-base sm:text-lg md:text-xl font-medium rounded-2xl bg-gradient-to-r from-red-500/20 to-red-600/20
                                   text-white hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30
-                                  active:scale-95 transition-all duration-300 min-w-[200px] md:min-w-[280px] shadow-2xl shadow-red-900/20
+                                  active:scale-95 transition-all duration-300 min-w-[180px] sm:min-w-[200px] md:min-w-[280px] shadow-2xl shadow-red-900/20
                                   border-2 border-red-500/20 hover:border-red-500/60
                                   ${(!isOpening && !isSpinning && !isPreparingBox && (!caja.es_diaria || !dailyOpened) && caja.esta_disponible) 
                                     ? 'hover:shadow-primary/50 hover:-translate-y-1' 
                                     : 'opacity-60 cursor-not-allowed'}`}
                       disabled={isOpening || isSpinning || isPreparingBox || (caja.es_diaria && dailyOpened) || !caja.esta_disponible}
-                      onClick={openBox}
-                    >
+                  onClick={openBox}
+                >
                       {isOpening || isSpinning || isPreparingBox ? (
                         <span className="flex items-center justify-center gap-3">
-                          <span className="animate-spin h-5 w-5 border-2 border-white/30 border-t-white rounded-full"></span>
+                          <span className="animate-spin h-4 w-4 sm:h-5 sm:w-5 border-2 border-white/30 border-t-white rounded-full"></span>
                           {isPreparingBox ? 'Preparando...' : 'Cargando...'}
                         </span>
                       ) : caja.es_diaria && dailyOpened ? (
@@ -1312,29 +1400,29 @@ export default function BoxComponent({
                         </>
                       ) : (
                         `ABRIR GRATIS`
-                      )}
-                    </Button>
-                  </div>
+                  )}
+                </Button>
+              </div>
 
                   {/* Timer para caja diaria */}
                   {caja.es_diaria && nextUpdate && (
-                    <div className="mt-8 text-white/90 bg-gradient-to-r from-slate-800/70 to-slate-900/70 border border-slate-700/70 rounded-xl py-3 px-6 shadow-lg inline-block backdrop-blur-sm">
-                      <p className="flex items-center gap-2 font-medium">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary">
+                    <div className="mt-6 sm:mt-8 text-white/90 bg-gradient-to-r from-slate-800/70 to-slate-900/70 border border-slate-700/70 rounded-xl py-3 px-4 sm:px-6 shadow-lg inline-block backdrop-blur-sm">
+                      <p className="flex items-center gap-2 font-medium text-sm sm:text-base">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary flex-shrink-0">
                           <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
                           <path d="M12 6v6l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                         </svg>
-                        <span className="text-sm opacity-80">Próxima actualización:</span>
-                        <span className="text-primary font-bold">{nextUpdate}</span>
+                        <span className="text-xs sm:text-sm opacity-80">Próxima actualización:</span>
+                        <span className="text-primary font-bold text-xs sm:text-sm">{nextUpdate}</span>
                       </p>
-                    </div>
-                  )}
                 </div>
               )}
-              {!caja && <p>Cargando información de la caja...</p>}
             </div>
+          )}
+          {!caja && <p>Cargando información de la caja...</p>}
+        </div>
           </motion.div>
-        )}
+      )}
         </AnimatePresence>
       </div>
     </div>

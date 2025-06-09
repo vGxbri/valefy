@@ -713,23 +713,23 @@ export default function CajaPage() {
 
   return (
     <motion.div 
-      className="flex flex-col gap-8 pl-16 md:pr-12 lg:pr-16 pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1"
+      className="flex flex-col gap-6 sm:gap-8 px-4 sm:px-8 md:px-12 lg:px-16 pt-16 md:pt-12 pb-8 sm:pb-12 min-h-screen bg-background w-full max-w-full flex-1"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
       <motion.div className="w-full" variants={itemVariants}>
         {/* Navegación superior con breadcrumbs y botones */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 sm:mb-6 gap-3 sm:gap-4">
           <div className="flex flex-col">
-            <div className="flex items-center gap-2 text-white/60 text-sm mb-2">
+            <div className="flex items-center gap-2 text-white/60 text-xs sm:text-sm mb-2">
               <Link href="/main" className="hover:text-primary transition-colors">Inicio</Link>
               <span>•</span>
               <Link href="/main" className="hover:text-primary transition-colors">Cajas</Link>
               <span>•</span>
               <span className="text-primary">{isLoading ? "Cargando..." : caja?.nombre || tipoValidado}</span>
             </div>
-            <h2 className="text-3xl font-bold text-foreground flex items-center font-[Raleway] font-semibold italic tracking-widest">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center font-[Raleway] font-semibold italic tracking-widest">
               {isLoading
                 ? "/ CARGANDO..."
                 : error
@@ -751,11 +751,11 @@ export default function CajaPage() {
             )}
             <Link href="/main">
               <Button
-                className="flex items-center gap-1 rounded-xl"
+                className="flex items-center gap-1 rounded-xl text-xs sm:text-sm"
                 size="sm"
                 variant="outline"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={14} />
                 Volver
               </Button>
             </Link>
@@ -765,18 +765,18 @@ export default function CajaPage() {
         {/* Panel de administración para la caja diaria */}
         {tipoValidado.includes("diaria") && showAdminPanel && (
           <motion.div 
-            className="w-full bg-black/30 backdrop-blur-sm border border-white/10 rounded-lg p-4 mb-4"
+            className="w-full bg-black/30 backdrop-blur-sm border border-white/10 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <h3 className="text-lg font-medium text-white mb-3">
+            <h3 className="text-base sm:text-lg font-medium text-white mb-3">
               Panel de Administración - Caja Diaria
             </h3>
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
               <Button
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 text-sm"
                 disabled={isUpdating}
                 variant="destructive"
                 onClick={forceUpdateDailyBox}
@@ -795,15 +795,15 @@ export default function CajaPage() {
                 <p
                   className={
                     updateMessage.includes("Error")
-                      ? "text-red-400"
-                      : "text-green-400"
+                      ? "text-red-400 text-sm"
+                      : "text-green-400 text-sm"
                   }
                 >
                   {updateMessage}
                 </p>
               )}
             </div>
-            <p className="text-white/60 text-sm mt-2">
+            <p className="text-white/60 text-xs sm:text-sm mt-2">
               Nota: Esta función es solo para pruebas. En producción, la caja se
               actualizará automáticamente a las 9:00 AM.
             </p>
@@ -812,30 +812,30 @@ export default function CajaPage() {
 
         {/* Contenedor principal con efecto de fondo mejorado */}
         <motion.div 
-          className="w-full p-6 overflow-hidden relative bg-backgroundAlt/10 border border-white/10 rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)]"
+          className="w-full p-3 sm:p-4 md:p-6 overflow-hidden relative bg-backgroundAlt/10 border border-white/10 rounded-xl sm:rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)]"
           variants={itemVariants}
         >
           {/* Efectos de fondo mejorados */}
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-30" />
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary/10 rounded-full blur-3xl opacity-30" />
+          <div className="absolute -top-16 sm:-top-24 -right-16 sm:-right-24 w-48 sm:w-64 h-48 sm:h-64 bg-primary/10 rounded-full blur-3xl opacity-30" />
+          <div className="absolute -bottom-16 sm:-bottom-24 -left-16 sm:-left-24 w-48 sm:w-64 h-48 sm:h-64 bg-secondary/10 rounded-full blur-3xl opacity-30" />
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-radial from-primary/5 to-transparent opacity-50" />
 
           {/* Contenido de la caja */}
-          <div className="relative z-10 flex flex-col items-center justify-center min-h-[400px] w-full">
+          <div className="relative z-10 flex flex-col items-center justify-center min-h-[350px] sm:min-h-[400px] w-full">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4" />
+                <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-primary mb-4" />
               </div>
             ) : error ? (
-              <div className="flex flex-col items-center justify-center p-8 bg-black/40 rounded-xl border border-red-500/20 max-w-lg mx-auto">
-                <div className="w-16 h-16 flex items-center justify-center bg-red-500/10 rounded-full mb-4">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-red-500">
+              <div className="flex flex-col items-center justify-center p-6 sm:p-8 bg-black/40 rounded-xl border border-red-500/20 max-w-lg mx-auto">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center bg-red-500/10 rounded-full mb-4">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-red-500">
                     <path d="M12 8V12M12 16H12.01M21.0001 12C21.0001 16.9706 16.9707 21 12.0001 21C7.02949 21 3.00012 16.9706 3.00012 12C3.00012 7.02944 7.02949 3 12.0001 3C16.9707 3 21.0001 7.02944 21.0001 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <p className="text-red-500 mb-4">{error}</p>
+                <p className="text-red-500 mb-4 text-sm sm:text-base text-center">{error}</p>
                 <Button
-                  className="bg-slate-800 hover:bg-slate-700 text-white px-6"
+                  className="bg-slate-800 hover:bg-slate-700 text-white px-4 sm:px-6 text-sm"
                   onClick={() => window.location.reload()}
                 >
                   Reintentar
@@ -872,22 +872,22 @@ export default function CajaPage() {
               className="w-full"
               variants={itemVariants}
             >
-              <div className="relative mb-12 mt-8">
+              <div className="relative mb-8 sm:mb-12 mt-6 sm:mt-8">
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
               </div>
               {/* Probabilities section will be removed */}
 
               {/* Right Column: All Skins in the Box - Now takes full width and is centered */}
               {cajaSkins && cajaSkins.length > 0 && (
-                <div className="w-full max-w-4xl mx-auto mb-12">
-                  <div className={`mb-6 pt-2 text-center`}>
-                    <h3 className="font-bold inline-block mt-10
-                                  text-3xl font-bold text-foreground font-[Raleway] font-semibold italic tracking-widest
+                <div className="w-full max-w-5xl mx-auto mb-8 sm:mb-12">
+                  <div className={`mb-4 sm:mb-6 pt-2 text-center`}>
+                    <h3 className="font-bold inline-block mt-6 sm:mt-10
+                                  text-xl sm:text-2xl md:text-3xl font-bold text-foreground font-[Raleway] font-semibold italic tracking-widest
                                   [text-shadow:_0px_0px_20px_rgba(255,255,255,0.35)] bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                       · CONTENIDO DE LA CAJA ·
                     </h3>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 px-2">
                     {(() => {
                       // Ordenar las skins usando los grados de la base de datos
                       const sortedSkins = [...cajaSkins].sort((a, b) => {
@@ -924,9 +924,9 @@ export default function CajaPage() {
                         const weaponType = getWeaponType(skin.nombre);
                         const weaponStyles = getWeaponSpecificStyles(weaponType);
 
-                        // Crear el estilo inline para las transformaciones
+                        // Crear el estilo inline para las transformaciones - responsive
                         const imageTransformStyle: React.CSSProperties = {
-                          transform: `scale(${weaponStyles.baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
+                          transform: `scale(${weaponStyles.baseScale * 0.9})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
                         };
 
                         return (
@@ -941,7 +941,7 @@ export default function CajaPage() {
                                 src={`/skins-bg/${skin.content_tier.uuid_api}.png`}
                                 alt={`Fondo para ${skin.content_tier.nombre}`}
                                 fill
-                                className="absolute inset-0 z-0 p-3 opacity-20 transform scale-125 rotate-12 object-contain"
+                                className="absolute inset-0 z-0 p-2 sm:p-3 opacity-20 transform scale-110 sm:scale-125 rotate-12 object-contain"
                                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
                               />
                             )}
@@ -952,22 +952,22 @@ export default function CajaPage() {
                                 src={skin.imagen_url} 
                                 alt={skin.nombre} 
                                 fill
-                                className="object-contain p-3 group-hover:scale-105 transition-transform duration-300 z-10"
+                                className="object-contain p-2 sm:p-3 group-hover:scale-105 transition-transform duration-300 z-10"
                                 style={imageTransformStyle}
                               />
                             )}
                             
                             {/* Información de la skin en la parte inferior */}
-                            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent z-10">
+                            <div className="absolute bottom-0 left-0 right-0 p-1.5 sm:p-2 bg-gradient-to-t from-black/80 to-transparent z-10">
                               <h4 
-                                className="text-xs font-semibold text-white truncate" 
+                                className="text-[10px] sm:text-xs font-semibold text-white truncate" 
                                 style={{color: skin.content_tier?.color || 'white'}}
                                 title={skin.nombre}
                               >
                                 {skin.nombre}
                               </h4>
                               {skin.content_tier?.nombre && (
-                                <p className="text-[10px] text-slate-400 truncate" title={skin.content_tier.nombre}>
+                                <p className="text-[8px] sm:text-[10px] text-slate-400 truncate" title={skin.content_tier.nombre}>
                                   {skin.content_tier.nombre}
                                 </p>
                               )}
@@ -992,13 +992,13 @@ export default function CajaPage() {
         {/* Sección de cajas relacionadas */}
         {cajasRelacionadas.length > 0 && (
           <motion.div 
-            className="mt-8" 
+            className="mt-6 sm:mt-8" 
             variants={itemVariants}
           >
-            <h3 className="text-2xl font-bold text-foreground mb-4 font-[Raleway] italic tracking-wide">
+            <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-3 sm:mb-4 font-[Raleway] italic tracking-wide">
               / CAJAS RELACIONADAS
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {cajasRelacionadas.map((cajaRelacionada) => {
                 const tipoCajaRel = extraerTipoCaja(cajaRelacionada.nombre, cajaRelacionada.es_diaria);
                 const rutaCajaRel = `/main/${tipoCajaRel}`;

@@ -84,13 +84,13 @@ export function ImageCarousel({
   return (
     <div className="w-full overflow-hidden relative">
       <div
-        className="absolute left-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
+        className="absolute left-0 top-0 bottom-0 w-16 sm:w-20 md:w-24 z-10 pointer-events-none"
         style={{
           background: "linear-gradient(to right, #0A141D 0%, transparent 100%)",
         }}
       />
       <div
-        className="absolute right-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
+        className="absolute right-0 top-0 bottom-0 w-16 sm:w-20 md:w-24 z-10 pointer-events-none"
         style={{
           background: "linear-gradient(to left, #0A141D 0%, transparent 100%)",
         }}
@@ -118,7 +118,7 @@ export function ImageCarousel({
           return (
             <div
               key={index}
-              className="relative w-64 h-40 flex-shrink-0 rounded-lg overflow-hidden transform transition-all duration-300"
+              className="relative w-48 h-32 sm:w-56 sm:h-36 md:w-64 md:h-40 flex-shrink-0 rounded-lg overflow-hidden transform transition-all duration-300"
             >
               {/* Imagen de fondo del tier */}
               {item.contentTier.id && item.contentTier.id !== 'default' && (
@@ -126,7 +126,7 @@ export function ImageCarousel({
                   src={`/skins-bg/${item.contentTier.id}.png`}
                   alt={`Fondo para ${item.contentTier.nombre}`}
                   fill
-                  className="absolute inset-0 z-0 p-4 opacity-60 transform scale-150 rotate-12 object-contain"
+                  className="absolute inset-0 z-0 p-3 sm:p-4 opacity-60 transform scale-150 rotate-12 object-contain"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
@@ -138,9 +138,9 @@ export function ImageCarousel({
                 <Image
                   fill
                   alt={`Slide ${(index % itemsToShow.length) + 1}`}
-                  className="object-contain p-4 group-hover:scale-105 transition-transform duration-300 z-10"
+                  className="object-contain p-3 sm:p-4 group-hover:scale-105 transition-transform duration-300 z-10"
                   priority={index < itemsToShow.length}
-                  sizes="256px"
+                  sizes="(max-width: 640px) 192px, (max-width: 768px) 224px, 256px"
                   src={item.skinIcon}
                   style={{
                     filter: "drop-shadow(0 0 8px rgba(255, 255, 255, 0.2))",

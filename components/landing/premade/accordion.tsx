@@ -26,7 +26,7 @@ export function AccordionContainer({
   className?: string;
 }) {
   return (
-    <div className={cn('grid grid-cols-2 gap-1', className)}>{children}</div>
+    <div className={cn('grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-1', className)}>{children}</div>
   );
 }
 
@@ -94,7 +94,7 @@ export function AccordionItem({
   return (
     <div
     data-active={isActive || undefined}
-      className={`rounded-xl overflow-hidden mb-4  transition-all duration-300
+      className={`rounded-xl overflow-hidden mb-3 sm:mb-4 transition-all duration-300
         ${
           isActive
             ? 'active border-1 border-white bg-gradient-to-br from-slate-800/80 to-black/80 '
@@ -122,7 +122,7 @@ export function AccordionHeader({
   return (
     <motion.div
     data-active={isActive || undefined}
-      className={`group p-4 cursor-pointer transition-all font-semibold text-white/90 flex justify-between items-center
+      className={`group p-3 sm:p-4 cursor-pointer transition-all font-semibold text-sm sm:text-base text-white/90 flex justify-between items-center
         ${
           isActive
             ? 'active bg-slate-700/60'
@@ -131,11 +131,13 @@ export function AccordionHeader({
       `}
       onClick={() => onChangeIndex(value)}
     >
-      {children}
+      <div className="flex-1 pr-2 text-left">
+        {children}
+      </div>
       {!customIcon && (
         <ChevronDown
           className={cn(
-            "transition-transform ",
+            "transition-transform w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0",
             isActive ? "rotate-180" : "rotate-0",
           )}
         />
@@ -175,7 +177,7 @@ export function AccordionPanel({
               duration: 0.4,
               bounce: 0,
             }}
-            className={`p-3 bg-transparent text-white/80 `}
+            className={`p-3 sm:p-4 bg-transparent text-sm sm:text-base text-white/80`}
           >
             {children}
           </motion.article>

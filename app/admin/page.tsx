@@ -885,20 +885,40 @@ export default function AdminPage() {
       if (skinsError) throw skinsError;
 
       if (existingSkins && existingSkins.length > 0) {
-        // Convertir a formato Skin
-        const formattedSkins: Skin[] = existingSkins.map(skin => ({
-          id: String(skin.skin_id),
-          uuid: String(skin.skin_id), // Agregar uuid que es requerido
-          nombre: String(skin.skin_nombre),
-          imagen_url: `/skins/${skin.skin_id}.png`, // Imagen por defecto
-          content_tier_id: (skin.content_tiers as any)?.uuid_api || "",
-          content_tier: {
-            id: String((skin.content_tiers as any)?.uuid_api || ""),
-            nombre: String((skin.content_tiers as any)?.nombre || ""),
-            color: String((skin.content_tiers as any)?.color || "#FFFFFF"),
-            uuid_api: String((skin.content_tiers as any)?.uuid_api || ""),
+        // Obtener todas las skins de la API de Valorant para obtener las URLs reales
+        const allValorantSkins = await getWeaponSkins();
+        
+        // Convertir a formato Skin con URLs reales
+        const formattedSkins: Skin[] = existingSkins.map(skin => {
+          // Buscar la skin correspondiente en la API de Valorant
+          const valorantSkin = allValorantSkins.find(vSkin => vSkin.uuid === skin.skin_id);
+          
+          // Si encontramos la skin en la API, usar formatSkinForApp para obtener la URL real
+          if (valorantSkin && valorantSkin.contentTierUuid === (skin.content_tiers as any)?.uuid_api) {
+            const tierData = {
+              nombre: String((skin.content_tiers as any)?.nombre || ""),
+              color: String((skin.content_tiers as any)?.color || "#FFFFFF"),
+              grado: Number((skin.content_tiers as any)?.grado || 0),
+            };
+            
+            return formatSkinForApp(valorantSkin, tierData);
           }
-        }));
+          
+          // Fallback: usar los datos de la base de datos con URL por defecto
+          return {
+            id: String(skin.skin_id),
+            uuid: String(skin.skin_id),
+            nombre: String(skin.skin_nombre),
+            imagen_url: `/skins/${skin.skin_id}.png`, // Mantener como fallback
+            content_tier_id: (skin.content_tiers as any)?.uuid_api || "",
+            content_tier: {
+              id: String((skin.content_tiers as any)?.uuid_api || ""),
+              nombre: String((skin.content_tiers as any)?.nombre || ""),
+              color: String((skin.content_tiers as any)?.color || "#FFFFFF"),
+              uuid_api: String((skin.content_tiers as any)?.uuid_api || ""),
+            }
+          };
+        });
 
         setEditSelectedSkins(formattedSkins);
       } else {
@@ -1201,27 +1221,28 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background text-white">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-white/10">
-        <div className="px-6 py-4">
+        <div className="px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-r from-primary/20 to-secondary/20 border border-primary/30">
-                  <Shield className="h-6 w-6 text-primary" />
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-xl bg-gradient-to-r from-primary/20 to-secondary/20 border border-primary/30">
+                  <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-white font-[Raleway] italic tracking-wider">
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white font-[Raleway] italic tracking-wider">
                     / PANEL DE ADMINISTRACIÓN
                   </h1>
-                  <p className="text-sm text-white/60">Gestión y control del sistema</p>
+                  <p className="text-xs sm:text-sm text-white/60">Gestión y control del sistema</p>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Link href="/main">
-                <Button variant="default" className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200">
-                <ChevronRight className="h-4 w-4 mr-2 rotate-180" />
-                Volver al Inicio
+                <Button variant="default" className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 text-xs sm:text-sm px-2 sm:px-4 py-2">
+                <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 rotate-180" />
+                <span className="hidden sm:inline">Volver al Inicio</span>
+                <span className="sm:hidden">Inicio</span>
                 </Button>
               </Link>
             </div>
@@ -1229,30 +1250,31 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {/* Navigation Tabs */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <TabsList className="grid w-full grid-cols-3 bg-backgroundAlt/20 backdrop-blur-xl border border-white/10 rounded-2xl px-1 py-0">
-              <TabsTrigger value="dashboard" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl">
-                <BarChart3 className="h-4 w-4" />
-                Dashboard
+              <TabsTrigger value="dashboard" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl text-xs sm:text-sm">
+                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+                <span className="sm:hidden">Stats</span>
               </TabsTrigger>
-              <TabsTrigger value="boxes" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl">
-                <Package className="h-4 w-4" />
+              <TabsTrigger value="boxes" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl text-xs sm:text-sm">
+                <Package className="h-3 w-3 sm:h-4 sm:w-4" />
                 Cajas
               </TabsTrigger>
-              <TabsTrigger value="skins" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl">
-                <Layers className="h-4 w-4" />
+              <TabsTrigger value="skins" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl text-xs sm:text-sm">
+                <Layers className="h-3 w-3 sm:h-4 sm:w-4" />
                 Skins
               </TabsTrigger>
             </TabsList>
           </div>
 
           {/* Dashboard Tab */}
-          <TabsContent value="dashboard" className="space-y-6">
+          <TabsContent value="dashboard" className="space-y-4 sm:space-y-6">
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <StatCard
                 title="Total Usuarios"
                 value={stats.totalUsers.toLocaleString()}
@@ -1284,32 +1306,32 @@ export default function AdminPage() {
             </div>
 
             {/* Overview Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <TrendingUp className="h-5 w-5 text-primary" />
+                  <CardTitle className="flex items-center gap-2 text-white text-base sm:text-lg">
+                    <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     Cajas Más Populares
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {cajas.slice(0, 5).map((caja, index) => (
-                      <div key={caja.id} className="flex items-center gap-3 p-3 rounded-2xl bg-white/5">
-                        <div className="w-10 h-10 overflow-hidden">
+                      <div key={caja.id} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-2xl bg-white/5">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 overflow-hidden flex-shrink-0">
                           <Image
                             src={caja.imagen_url}
                             alt={caja.nombre}
-                            width={50}
-                            height={50}
+                            width={40}
+                            height={40}
                             className="object-cover"
                           />
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-white">{caja.nombre}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-white truncate">{caja.nombre}</p>
                           <p className="text-xs text-white/60">{caja.precio} VP</p>
                         </div>
-                        <Badge variant={caja.esta_disponible ? "default" : "secondary"} className="text-white/90">
+                        <Badge variant={caja.esta_disponible ? "default" : "secondary"} className="text-white/90 text-xs">
                           {caja.esta_disponible ? "Disponible" : "No disponible"}
                         </Badge>
                       </div>
@@ -1320,24 +1342,24 @@ export default function AdminPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Activity className="h-5 w-5 text-primary" />
+                  <CardTitle className="flex items-center gap-2 text-white text-base sm:text-lg">
+                    <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     Tiers de Contenido
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {contentTiers.map((tier, index) => (
-                      <div key={tier.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                      <div key={tier.id} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-white/5">
                         <div 
-                          className="w-4 h-4 rounded-full"
+                          className="w-3 h-3 sm:w-4 sm:h-4 rounded-full flex-shrink-0"
                           style={{ backgroundColor: tier.color }}
                         />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-white">{tier.nombre}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-white truncate">{tier.nombre}</p>
                           <p className="text-xs text-white/60">Grado {tier.grado}</p>
                         </div>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="text-xs">
                           {cajaSkins.filter(cs => cs.content_tier_id === tier.id).length} skins
                         </Badge>
                       </div>
@@ -1349,52 +1371,52 @@ export default function AdminPage() {
           </TabsContent>
 
           {/* Boxes Tab */}
-          <TabsContent value="boxes" className="space-y-6">
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-              <div className="flex items-center gap-4 w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-80">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
+          <TabsContent value="boxes" className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
+              <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64 lg:w-80">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-white/50" />
                   <Input
                     placeholder="Buscar cajas..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-white/5 border-white/20 text-white rounded-2xl"
+                    className="pl-8 sm:pl-10 bg-white/5 border-white/20 text-white rounded-2xl text-sm sm:text-base h-9 sm:h-10"
                   />
                 </div>
               </div>
-              <Button variant="default" className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
+              <Button variant="default" className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 text-xs sm:text-sm px-3 sm:px-4 py-2"
                 onClick={() => {
                   setShowCreateModal(true);
                   initializeCreateModal();
                 }}>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 Nueva Caja
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
               {filteredCajas.map((caja) => (
                 <Card key={caja.id} className="overflow-hidden">
-                  <div className="relative h-48 flex items-center justify-center">
+                  <div className="relative h-36 sm:h-48 flex items-center justify-center">
                     <Image
                       src={caja.imagen_url}
                       alt={caja.nombre}
-                      height={300}
-                      width={300}
+                      height={200}
+                      width={200}
                       quality={100}
                       className="object-cover"
                     />
                     <div className="absolute top-2 right-2">
-                      <Badge variant={caja.esta_disponible ? "default" : "secondary"} className="text-white/90">
+                      <Badge variant={caja.esta_disponible ? "default" : "secondary"} className="text-white/90 text-xs">
                         {caja.esta_disponible ? "Disponible" : "No disponible"}
                       </Badge>
                     </div>
                   </div>
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="space-y-2 sm:space-y-3">
                       <div>
-                        <h3 className="font-semibold text-white">{caja.nombre}</h3>
-                        <p className="text-sm text-white/60">{caja.precio} VP</p>
+                        <h3 className="font-semibold text-white text-sm sm:text-base truncate">{caja.nombre}</h3>
+                        <p className="text-xs sm:text-sm text-white/60">{caja.precio} VP</p>
                         {caja.categoria_titulo && (
                           <p className="text-xs text-white/50 uppercase tracking-wider">{caja.categoria_titulo}</p>
                         )}
@@ -1502,7 +1524,7 @@ export default function AdminPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
             onClick={() => setShowCreateModal(false)}
           >
             <motion.div
@@ -1511,12 +1533,12 @@ export default function AdminPage() {
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-background border border-white/10 rounded-2xl backdrop-blur-xl 
                          shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 
-                         hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-6 w-full max-w-6xl max-h-[90vh] 
+                         hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-4 sm:p-6 w-full max-w-7xl max-h-[95vh] 
                          overflow-y-auto custom-scrollbar"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">Nueva Caja</h2>
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-white">Nueva Caja</h2>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1527,58 +1549,58 @@ export default function AdminPage() {
               </div>
 
               {createError && (
-                <div className="mb-4 p-4 bg-red-500/20 border border-red-500/40 rounded-lg text-red-400">
+                <div className="mb-4 p-3 sm:p-4 bg-red-500/20 border border-red-500/40 rounded-lg text-red-400 text-sm">
                   {createError}
                 </div>
               )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Información de la caja */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-white">Información de la Caja</CardTitle>
+                    <CardTitle className="text-white text-base sm:text-lg">Información de la Caja</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 sm:space-y-4">
                     <div>
-                      <Label htmlFor="nombre" className="text-white">Nombre</Label>
+                      <Label htmlFor="nombre" className="text-white text-sm">Nombre</Label>
                       <Input
                         id="nombre"
                         name="nombre"
                         value={nuevaCaja.nombre}
                         onChange={handleCajaChange}
-                        className="bg-white/5 border-white/20 text-white"
+                        className="bg-white/5 border-white/20 text-white text-sm sm:text-base h-9 sm:h-10"
                         placeholder="Ej: Caja Premium"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="precio" className="text-white">Precio (VP)</Label>
+                      <Label htmlFor="precio" className="text-white text-sm">Precio (VP)</Label>
                       <Input
                         id="precio"
                         name="precio"
                         type="number"
                         value={nuevaCaja.precio}
                         onChange={handleCajaChange}
-                        className="bg-white/5 border-white/20 text-white"
+                        className="bg-white/5 border-white/20 text-white text-sm sm:text-base h-9 sm:h-10"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="imagen_url" className="text-white">URL de imagen</Label>
+                      <Label htmlFor="imagen_url" className="text-white text-sm">URL de imagen</Label>
                       <Input
                         id="imagen_url"
                         name="imagen_url"
                         value={nuevaCaja.imagen_url}
                         onChange={handleCajaChange}
-                        className="bg-white/5 border-white/20 text-white"
+                        className="bg-white/5 border-white/20 text-white text-sm sm:text-base h-9 sm:h-10"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="categoria" className="text-white">Categoría</Label>
+                      <Label htmlFor="categoria" className="text-white text-sm">Categoría</Label>
                       <Input
                         id="categoria"
                         name="categoria"
                         value={nuevaCaja.categoria}
                         onChange={handleCajaChange}
-                        className="bg-white/5 border-white/20 text-white"
+                        className="bg-white/5 border-white/20 text-white text-sm sm:text-base h-9 sm:h-10"
                       />
                     </div>
                     <div className="flex items-center space-x-2">
@@ -1590,7 +1612,7 @@ export default function AdminPage() {
                         onChange={handleCajaChange}
                         className="w-4 h-4"
                       />
-                      <Label htmlFor="esta_disponible" className="text-white">Disponible</Label>
+                      <Label htmlFor="esta_disponible" className="text-white text-sm">Disponible</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <input
@@ -1601,7 +1623,7 @@ export default function AdminPage() {
                         onChange={handleCajaChange}
                         className="w-4 h-4"
                       />
-                      <Label htmlFor="es_diaria" className="text-white">Es caja diaria</Label>
+                      <Label htmlFor="es_diaria" className="text-white text-sm">Es caja diaria</Label>
                     </div>
                   </CardContent>
                 </Card>
@@ -1609,18 +1631,18 @@ export default function AdminPage() {
                 {/* Probabilidades */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-white">Probabilidades por Tier</CardTitle>
+                    <CardTitle className="text-white text-base sm:text-lg">Probabilidades por Tier</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {probabilidades.map((prob) => (
-                        <div key={prob.content_tier_id} className="grid grid-cols-7 gap-2 items-center">
-                          <div className="col-span-3 flex items-center">
+                        <div key={prob.content_tier_id} className="grid grid-cols-5 sm:grid-cols-7 gap-2 items-center">
+                          <div className="col-span-2 sm:col-span-3 flex items-center">
                             <div
-                              className="w-3 h-3 rounded-full mr-2"
+                              className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
                               style={{ backgroundColor: prob.content_tier?.color || "#fff" }}
                             />
-                            <span className="text-white text-sm">{prob.content_tier?.nombre}</span>
+                            <span className="text-white text-xs sm:text-sm truncate">{prob.content_tier?.nombre}</span>
                           </div>
                           <div className="col-span-2">
                             <Input
@@ -1631,17 +1653,17 @@ export default function AdminPage() {
                               value={prob.probabilidad}
                               onChange={(e) => handleProbabilidadChange(prob.content_tier_id, parseFloat(e.target.value))}
                               disabled={prob.cantidad_skins === 0}
-                              className="bg-white/5 border-white/20 text-white text-sm"
+                              className="bg-white/5 border-white/20 text-white text-xs sm:text-sm h-8 sm:h-9"
                             />
                           </div>
-                          <div className="col-span-2 text-xs text-white/80 text-center">
+                          <div className="col-span-1 sm:col-span-2 text-xs text-white/80 text-center">
                             {prob.cantidad_skins} skin{prob.cantidad_skins === 1 ? "" : "s"}
                           </div>
                         </div>
                       ))}
                     </div>
-                    <div className="flex justify-between mt-4 pt-2 border-t border-white/10">
-                      <span className="text-white">Total:</span>
+                    <div className="flex justify-between mt-3 sm:mt-4 pt-2 border-t border-white/10">
+                      <span className="text-white text-sm">Total:</span>
                       <span className={
                         Math.abs(probabilidades.reduce((sum, p) => sum + p.probabilidad, 0) - 1) < 0.001
                           ? "text-green-400"
@@ -1655,32 +1677,32 @@ export default function AdminPage() {
               </div>
 
               {/* Selección de Skins */}
-              <Card className="mt-6">
+              <Card className="mt-4 sm:mt-6">
                 <CardHeader>
-                  <CardTitle className="text-white">Selección de Skins</CardTitle>
+                  <CardTitle className="text-white text-base sm:text-lg">Selección de Skins</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="mb-4 flex gap-4 items-center">
+                  <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
                     <Input
                       placeholder="Buscar bundles..."
                       value={bundleSearchTerm}
                       onChange={(e) => setBundleSearchTerm(e.target.value)}
-                      className="max-w-md bg-white/5 border-white/20 text-white"
+                      className="max-w-full sm:max-w-md bg-white/5 border-white/20 text-white text-sm sm:text-base h-9 sm:h-10"
                     />
                     <Input
                       placeholder="Buscar skins/armas..."
                       value={skinSearchTerm}
                       onChange={(e) => setSkinSearchTerm(e.target.value)}
-                      className="max-w-md bg-white/5 border-white/20 text-white"
+                      className="max-w-full sm:max-w-md bg-white/5 border-white/20 text-white text-sm sm:text-base h-9 sm:h-10"
                     />
                     {bundles.length > 0 && (
-                      <Button variant="outline" onClick={toggleAllBundles}>
+                      <Button variant="outline" onClick={toggleAllBundles} className="w-full sm:w-auto text-xs sm:text-sm">
                         {filteredBundles.length > 0 && filteredBundles.every(b => expandedBundles.includes(b.uuid)) 
                           ? "Contraer Todos" 
                           : "Expandir Todos"}
                       </Button>
                     )}
-                    <div className="ml-auto text-white/70">
+                    <div className="ml-auto text-white/70 text-sm">
                       {selectedSkins.length} skins seleccionadas
                     </div>
                   </div>
@@ -1690,8 +1712,8 @@ export default function AdminPage() {
                       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary" />
                     </div>
                   ) : (
-                    <div className="max-h-96 overflow-y-auto custom-scrollbar">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="max-h-80 sm:max-h-96 overflow-y-auto custom-scrollbar">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                         {filteredBundles.map((bundle) => (
                           <div key={bundle.uuid} className="mb-2">
                             <div
@@ -1709,12 +1731,12 @@ export default function AdminPage() {
                               <Image
                                 src={bundle.displayIcon}
                                 alt={bundle.displayName}
-                                width={32}
-                                height={32}
-                                className="rounded"
+                                width={24}
+                                height={24}
+                                className="rounded flex-shrink-0 sm:w-8 sm:h-8"
                               />
-                              <div className="flex-1">
-                                <h3 className="text-sm font-medium text-white">{bundle.displayName}</h3>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-xs sm:text-sm font-medium text-white truncate">{bundle.displayName}</h3>
                                 <p className="text-xs text-white/60">
                                   {getFilteredSkinsForBundle(bundle.uuid).length} skins
                                   {skinSearchTerm && (
@@ -1725,7 +1747,7 @@ export default function AdminPage() {
                                 </p>
                               </div>
                               <div className={`transition-transform ${expandedBundles.includes(bundle.uuid) ? "rotate-90" : ""}`}>
-                                <ChevronRight className="h-4 w-4 text-white/60" />
+                                <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-white/60" />
                               </div>
                             </div>
 
@@ -1736,7 +1758,7 @@ export default function AdminPage() {
                                     <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary mx-auto" />
                                   </div>
                                 ) : (
-                                  <div className="grid grid-cols-2 gap-2">
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {getFilteredSkinsForBundle(bundle.uuid).length > 0 ? (
                                       getFilteredSkinsForBundle(bundle.uuid).map((skin) => (
                                         <div
@@ -1763,8 +1785,8 @@ export default function AdminPage() {
                                               <Image
                                                 src={skin.imagen_url}
                                                 alt={skin.nombre}
-                                                width={80}
-                                                height={80}
+                                                width={60}
+                                                height={60}
                                                 quality={100}
                                                 className="object-contain w-full h-full"
                                               />
@@ -1776,7 +1798,7 @@ export default function AdminPage() {
                                         </div>
                                       ))
                                     ) : (
-                                      <div className="col-span-2 text-center py-4 text-white/60 text-sm">
+                                      <div className="col-span-2 sm:col-span-3 text-center py-4 text-white/60 text-sm">
                                         {skinSearchTerm ? `No hay skins que coincidan con "${skinSearchTerm}"` : 'No hay skins disponibles'}
                                       </div>
                                     )}
@@ -1794,17 +1816,17 @@ export default function AdminPage() {
 
               {/* Skins Seleccionadas */}
               {selectedSkins.length > 0 && (
-                <Card className="mt-6">
+                <Card className="mt-4 sm:mt-6">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center justify-between">
+                    <CardTitle className="text-white flex items-center justify-between text-base sm:text-lg">
                       Skins Seleccionadas
-                      <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/40">
+                      <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/40 text-xs">
                         {selectedSkins.length} skins
                       </Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-80 overflow-y-auto">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3 max-h-60 sm:max-h-80 overflow-y-auto">
                       {selectedSkins.map((skin) => (
                         <div
                           key={skin.id}
@@ -1812,7 +1834,7 @@ export default function AdminPage() {
                         >
                           <button
                             onClick={() => toggleSkinSelection(skin)}
-                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500/80 hover:bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            className="absolute top-1 right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-red-500/80 hover:bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
                             title="Quitar skin"
                           >
                             ×
@@ -1822,8 +1844,8 @@ export default function AdminPage() {
                               <Image
                                 src={skin.imagen_url}
                                 alt={skin.nombre}
-                                width={80}
-                                height={80}
+                                width={60}
+                                height={60}
                                 quality={100}
                                 className="object-contain w-full h-full"
                               />
@@ -1888,7 +1910,7 @@ export default function AdminPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
             onClick={() => setShowEditModal(false)}
           >
             <motion.div
@@ -1897,12 +1919,12 @@ export default function AdminPage() {
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-background border border-white/10 rounded-2xl backdrop-blur-xl 
                          shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 
-                         hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-6 w-full max-w-6xl max-h-[90vh] 
+                         hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-4 sm:p-6 w-full max-w-7xl max-h-[95vh] 
                          overflow-y-auto custom-scrollbar"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">Editar Caja</h2>
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-white">Editar Caja</h2>
                 <Button variant="ghost" size="sm" onClick={() => setShowEditModal(false)}>
                   <X className="h-4 w-4" />
                 </Button>
@@ -1914,62 +1936,62 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     {/* Información de la caja */}
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-white">Información de la Caja</CardTitle>
+                        <CardTitle className="text-white text-base sm:text-lg">Información de la Caja</CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-3 sm:space-y-4">
                         <div>
-                          <Label htmlFor="edit-nombre" className="text-white">Nombre</Label>
+                          <Label htmlFor="edit-nombre" className="text-white text-sm">Nombre</Label>
                           <Input
                             id="edit-nombre"
                             name="nombre"
                             value={editingCaja.nombre}
                             onChange={handleEditChange}
-                            className="bg-white/5 border-white/20 text-white"
+                            className="bg-white/5 border-white/20 text-white text-sm sm:text-base h-9 sm:h-10"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="edit-precio" className="text-white">Precio (VP)</Label>
+                          <Label htmlFor="edit-precio" className="text-white text-sm">Precio (VP)</Label>
                           <Input
                             id="edit-precio"
                             name="precio"
                             type="number"
                             value={editingCaja.precio}
                             onChange={handleEditChange}
-                            className="bg-white/5 border-white/20 text-white"
+                            className="bg-white/5 border-white/20 text-white text-sm sm:text-base h-9 sm:h-10"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="edit-imagen_url" className="text-white">URL de imagen</Label>
+                          <Label htmlFor="edit-imagen_url" className="text-white text-sm">URL de imagen</Label>
                           <Input
                             id="edit-imagen_url"
                             name="imagen_url"
                             value={editingCaja.imagen_url}
                             onChange={handleEditChange}
-                            className="bg-white/5 border-white/20 text-white"
+                            className="bg-white/5 border-white/20 text-white text-sm sm:text-base h-9 sm:h-10"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="edit-categoria" className="text-white">Categoría</Label>
+                          <Label htmlFor="edit-categoria" className="text-white text-sm">Categoría</Label>
                           <Input
                             id="edit-categoria"
                             name="categoria"
                             value={editingCaja.categoria || ""}
                             onChange={handleEditChange}
-                            className="bg-white/5 border-white/20 text-white"
+                            className="bg-white/5 border-white/20 text-white text-sm sm:text-base h-9 sm:h-10"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="edit-categoria_titulo" className="text-white">Título de categoría</Label>
+                          <Label htmlFor="edit-categoria_titulo" className="text-white text-sm">Título de categoría</Label>
                           <Input
                             id="edit-categoria_titulo"
                             name="categoria_titulo"
                             value={editingCaja.categoria_titulo || ""}
                             onChange={handleEditChange}
-                            className="bg-white/5 border-white/20 text-white"
+                            className="bg-white/5 border-white/20 text-white text-sm sm:text-base h-9 sm:h-10"
                           />
                         </div>
                         <div className="flex items-center space-x-2">
@@ -1981,7 +2003,7 @@ export default function AdminPage() {
                             onChange={handleEditChange}
                             className="w-4 h-4"
                           />
-                          <Label htmlFor="edit-esta_disponible" className="text-white">Disponible</Label>
+                          <Label htmlFor="edit-esta_disponible" className="text-white text-sm">Disponible</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <input
@@ -1992,7 +2014,7 @@ export default function AdminPage() {
                             onChange={handleEditChange}
                             className="w-4 h-4"
                           />
-                          <Label htmlFor="edit-es_diaria" className="text-white">Es caja diaria</Label>
+                          <Label htmlFor="edit-es_diaria" className="text-white text-sm">Es caja diaria</Label>
                         </div>
                       </CardContent>
                     </Card>
@@ -2000,18 +2022,18 @@ export default function AdminPage() {
                     {/* Probabilidades */}
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-white">Probabilidades por Tier</CardTitle>
+                        <CardTitle className="text-white text-base sm:text-lg">Probabilidades por Tier</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           {editProbabilidades.map((prob) => (
-                            <div key={prob.content_tier_id} className="grid grid-cols-7 gap-2 items-center">
-                              <div className="col-span-3 flex items-center">
+                            <div key={prob.content_tier_id} className="grid grid-cols-5 sm:grid-cols-7 gap-2 items-center">
+                              <div className="col-span-2 sm:col-span-3 flex items-center">
                                 <div
-                                  className="w-3 h-3 rounded-full mr-2"
+                                  className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
                                   style={{ backgroundColor: prob.content_tier?.color || "#fff" }}
                                 />
-                                <span className="text-white text-sm">{prob.content_tier?.nombre}</span>
+                                <span className="text-white text-xs sm:text-sm truncate">{prob.content_tier?.nombre}</span>
                               </div>
                               <div className="col-span-2">
                                 <Input
@@ -2022,17 +2044,17 @@ export default function AdminPage() {
                                   value={prob.probabilidad}
                                   onChange={(e) => handleEditProbabilidadChange(prob.content_tier_id, parseFloat(e.target.value))}
                                   disabled={prob.cantidad_skins === 0}
-                                  className="bg-white/5 border-white/20 text-white text-sm"
+                                  className="bg-white/5 border-white/20 text-white text-xs sm:text-sm h-8 sm:h-9"
                                 />
                               </div>
-                              <div className="col-span-2 text-xs text-white/80 text-center">
+                              <div className="col-span-1 sm:col-span-2 text-xs text-white/80 text-center">
                                 {prob.cantidad_skins} skin{prob.cantidad_skins === 1 ? "" : "s"}
                               </div>
                             </div>
                           ))}
                         </div>
-                        <div className="flex justify-between mt-4 pt-2 border-t border-white/10">
-                          <span className="text-white">Total:</span>
+                        <div className="flex justify-between mt-3 sm:mt-4 pt-2 border-t border-white/10">
+                          <span className="text-white text-sm">Total:</span>
                           <span className={
                             Math.abs(editProbabilidades.reduce((sum, p) => sum + p.probabilidad, 0) - 1) < 0.001
                               ? "text-green-400"
@@ -2046,26 +2068,26 @@ export default function AdminPage() {
                   </div>
 
                   {/* Selección de Skins */}
-                  <Card className="mt-6">
+                  <Card className="mt-4 sm:mt-6">
                     <CardHeader>
-                      <CardTitle className="text-white">Selección de Skins</CardTitle>
+                      <CardTitle className="text-white text-base sm:text-lg">Selección de Skins</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="mb-4 flex gap-4 items-center">
+                      <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
                         <Input
                           placeholder="Buscar bundles..."
                           value={editBundleSearchTerm}
                           onChange={(e) => setEditBundleSearchTerm(e.target.value)}
-                          className="max-w-md bg-white/5 border-white/20 text-white"
+                          className="max-w-full sm:max-w-md bg-white/5 border-white/20 text-white text-sm sm:text-base h-9 sm:h-10"
                         />
                         <Input
                           placeholder="Buscar skins/armas..."
                           value={editSkinSearchTerm}
                           onChange={(e) => setEditSkinSearchTerm(e.target.value)}
-                          className="max-w-md bg-white/5 border-white/20 text-white"
+                          className="max-w-full sm:max-w-md bg-white/5 border-white/20 text-white text-sm sm:text-base h-9 sm:h-10"
                         />
                         {bundles.length > 0 && (
-                          <Button variant="outline" onClick={toggleAllBundlesEdit}>
+                          <Button variant="outline" onClick={toggleAllBundlesEdit} className="w-full sm:w-auto text-xs sm:text-sm">
                             {bundles.filter(bundle =>
                               bundle.displayName.toLowerCase().includes(editBundleSearchTerm.toLowerCase())
                             ).length > 0 && bundles.filter(bundle =>
@@ -2075,13 +2097,13 @@ export default function AdminPage() {
                               : "Expandir Todos"}
                           </Button>
                         )}
-                        <div className="ml-auto text-white/70">
+                        <div className="ml-auto text-white/70 text-sm">
                           {editSelectedSkins.length} skins seleccionadas
                         </div>
                       </div>
 
-                      <div className="max-h-96 overflow-y-auto custom-scrollbar">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div className="max-h-80 sm:max-h-96 overflow-y-auto custom-scrollbar">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                           {bundles.filter(bundle =>
                             bundle.displayName.toLowerCase().includes(editBundleSearchTerm.toLowerCase())
                           ).map((bundle) => (
@@ -2101,12 +2123,12 @@ export default function AdminPage() {
                                 <Image
                                   src={bundle.displayIcon}
                                   alt={bundle.displayName}
-                                  width={32}
-                                  height={32}
-                                  className="rounded"
+                                  width={24}
+                                  height={24}
+                                  className="rounded flex-shrink-0 sm:w-8 sm:h-8"
                                 />
-                                <div className="flex-1">
-                                  <h3 className="text-sm font-medium text-white">{bundle.displayName}</h3>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="text-xs sm:text-sm font-medium text-white truncate">{bundle.displayName}</h3>
                                   <p className="text-xs text-white/60">
                                     {getFilteredSkinsForBundleEdit(bundle.uuid).length} skins
                                     {editSkinSearchTerm && (
@@ -2117,7 +2139,7 @@ export default function AdminPage() {
                                   </p>
                                 </div>
                                 <div className={`transition-transform ${editExpandedBundles.includes(bundle.uuid) ? "rotate-90" : ""}`}>
-                                  <ChevronRight className="h-4 w-4 text-white/60" />
+                                  <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-white/60" />
                                 </div>
                               </div>
 
@@ -2128,7 +2150,7 @@ export default function AdminPage() {
                                       <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary mx-auto" />
                                     </div>
                                   ) : (
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                       {getFilteredSkinsForBundleEdit(bundle.uuid).length > 0 ? (
                                         getFilteredSkinsForBundleEdit(bundle.uuid).map((skin) => (
                                           <div
@@ -2155,8 +2177,8 @@ export default function AdminPage() {
                                                 <Image
                                                   src={skin.imagen_url}
                                                   alt={skin.nombre}
-                                                  width={80}
-                                                  height={80}
+                                                  width={60}
+                                                  height={60}
                                                   quality={100}
                                                   className="object-contain w-full h-full"
                                                 />
@@ -2168,7 +2190,7 @@ export default function AdminPage() {
                                           </div>
                                         ))
                                       ) : (
-                                        <div className="col-span-2 text-center py-4 text-white/60 text-sm">
+                                        <div className="col-span-2 sm:col-span-3 text-center py-4 text-white/60 text-sm">
                                           {editSkinSearchTerm ? `No hay skins que coincidan con "${editSkinSearchTerm}"` : 'No hay skins disponibles'}
                                         </div>
                                       )}
@@ -2185,17 +2207,17 @@ export default function AdminPage() {
 
                   {/* Skins Seleccionadas */}
                   {editSelectedSkins.length > 0 && (
-                    <Card className="mt-6">
+                    <Card className="mt-4 sm:mt-6">
                       <CardHeader>
-                        <CardTitle className="text-white flex items-center justify-between">
+                        <CardTitle className="text-white flex items-center justify-between text-base sm:text-lg">
                           Skins Seleccionadas
-                          <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/40">
+                          <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/40 text-xs">
                             {editSelectedSkins.length} skins
                           </Badge>
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-80 overflow-y-auto">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3 max-h-60 sm:max-h-80 overflow-y-auto">
                           {editSelectedSkins.map((skin) => (
                             <div
                               key={skin.id}
@@ -2203,7 +2225,7 @@ export default function AdminPage() {
                             >
                               <button
                                 onClick={() => toggleEditSkinSelection(skin)}
-                                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500/80 hover:bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                className="absolute top-1 right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-red-500/80 hover:bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
                                 title="Quitar skin"
                               >
                                 ×
@@ -2213,10 +2235,10 @@ export default function AdminPage() {
                                   <Image
                                     src={skin.imagen_url}
                                     alt={skin.nombre}
-                                    width={80}
-                                    height={80}
+                                    width={60}
+                                    height={60}
                                     quality={100}
-                                    className="object-contain w-full h-full"
+                                    className="object-contain w-full h-full scale-75"
                                   />
                                 )}
                               </div>
@@ -2247,11 +2269,11 @@ export default function AdminPage() {
                   )}
 
                   {/* Botones de acción */}
-                  <div className="flex justify-end gap-2 mt-6">
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-2 mt-4 sm:mt-6">
                     <Button 
                       variant="secondary"
-                      className="!text-white/70 hover:!bg-white/10 active:!bg-white/20 transition-all duration-200 
-                                 rounded-xl border border-transparent hover:border-white/10 active:scale-95 bg-transparent"
+                      className="w-full sm:w-auto !text-white/70 hover:!bg-white/10 active:!bg-white/20 transition-all duration-200 
+                                 rounded-xl border border-transparent hover:border-white/10 active:scale-95 bg-transparent text-sm"
                       onClick={() => setShowEditModal(false)}
                     >
                       Cancelar
@@ -2259,9 +2281,9 @@ export default function AdminPage() {
                     <Button 
                       onClick={saveEditChanges} 
                       disabled={isUpdating}
-                      className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg 
+                      className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg 
                                  shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 
-                                 hover:to-red-600/30 active:scale-95 transition-all duration-200"
+                                 hover:to-red-600/30 active:scale-95 transition-all duration-200 text-sm"
                     >
                       {isUpdating ? "Guardando..." : "Guardar Cambios"}
                     </Button>
@@ -2275,4 +2297,3 @@ export default function AdminPage() {
     </div>
   );
 }
-

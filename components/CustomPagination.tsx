@@ -69,27 +69,27 @@ const CustomPagination: React.FC<CustomPaginationProps> = ({
   return (
     <nav aria-label="Page navigation">
       <LayoutGroup>
-        <ul className="flex items-center justify-center gap-1 md:gap-1">
+        <ul className="flex items-center justify-center gap-1 sm:gap-1 md:gap-2">
           <li>
             <button
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`mr-1 flex items-center justify-center px-3 h-9 md:px-3 md:h-10
+              className={`mr-1 flex items-center justify-center px-2 h-8 sm:px-3 sm:h-9 md:px-3 md:h-10
                           disabled:opacity-50 disabled:cursor-not-allowed
                           rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg 
                           shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 
                           hover:to-red-600/30 active:scale-95 transition-all duration-200`}
               aria-label="Previous page"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
             </button>
           </li>
 
           {pageNumbers.map((pageNumber, index) => {
             if (pageNumber === DOTS) {
               return (
-                <li key={`${DOTS}-${index}`} className="px-1 md:px-2">
-                  <span className="text-gray-400">...</span>
+                <li key={`${DOTS}-${index}`} className="px-0.5 sm:px-1 md:px-2">
+                  <span className="text-gray-400 text-sm">...</span>
                 </li>
               );
             }
@@ -100,7 +100,7 @@ const CustomPagination: React.FC<CustomPaginationProps> = ({
                 <motion.button
                   onClick={() => onPageChange(pageNumber as number)}
                   className={`relative flex items-center justify-center rounded-xl
-                              px-3 h-9 md:px-4 md:h-10 text-sm font-medium
+                              px-2 h-8 sm:px-3 sm:h-9 md:px-4 md:h-10 text-xs sm:text-sm font-medium
                               active:scale-95 transition-transform duration-150
                               ${
                                 isActive
@@ -108,8 +108,8 @@ const CustomPagination: React.FC<CustomPaginationProps> = ({
                                   : "text-white bg-gray-800 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 transition-colors duration-150"
                               }
                               ${
-                                pageNumbers.length > 5
-                                  ? "px-2 md:px-3 h-8 md:h-9 text-xs md:text-sm"
+                                pageNumbers.length > 7
+                                  ? "px-1.5 sm:px-2 md:px-3 h-7 sm:h-8 md:h-9 text-xs"
                                   : ""
                               }
                             `}
@@ -132,14 +132,14 @@ const CustomPagination: React.FC<CustomPaginationProps> = ({
             <button
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`ml-1 flex items-center justify-center h-9 md:px-3 md:h-10
+              className={`ml-1 flex items-center justify-center px-2 h-8 sm:px-3 sm:h-9 md:px-3 md:h-10
                           disabled:opacity-50 disabled:cursor-not-allowed
                           rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg 
                           shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 
                           hover:to-red-600/30 active:scale-95 transition-all duration-200`}
               aria-label="Next page"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
             </button>
           </li>
         </ul>

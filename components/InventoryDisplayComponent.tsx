@@ -136,21 +136,16 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
       }
       if (!currentApiContentTiers) {
         currentApiContentTiers = await fetchAllContentTiersFromApi();
-        console.warn("[InventoryDebug] currentApiContentTiers from API:", currentApiContentTiers); // Log después de fetch
         if (isMounted) setAllApiContentTiersState(currentApiContentTiers);
       } else {
-        console.warn("[InventoryDebug] currentApiContentTiers from state:", currentApiContentTiers); // Log si ya estaba en estado
       }
 
       if (!currentApiSkins || !currentApiContentTiers || currentApiContentTiers.length === 0) { // Añadida comprobación de longitud
-        console.error("[InventoryDebug] Essential API data missing or empty. Skins:", currentApiSkins, "Tiers:", currentApiContentTiers);
         throw new Error("Failed to load essential Valorant API data or data is empty.");
       }
 
       const skinsMap = new Map(currentApiSkins.map(s => [s.uuid, s]));
       const tiersMap = new Map(currentApiContentTiers.map(t => [t.uuid, t])); // Usar t.uuid como clave
-      console.warn("[InventoryDebug] tiersMap created:", tiersMap); 
-      console.warn("[InventoryDebug] tiersMap keys:", Array.from(tiersMap.keys()));
 
       const { data: inventoryData, error: inventoryError } = await supabase
         .from('inventario_usuario')
@@ -170,13 +165,6 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
         let skinName = apiSkin?.displayName || "Unknown Skin";
         let skinIcon = apiSkin ? getBestDisplayIcon(apiSkin) : '/images/placeholder_icon.webp';
         let apiTier = apiSkin?.contentTierUuid ? tiersMap.get(apiSkin.contentTierUuid) : null;
-        
-        if (!apiTier && apiSkin?.contentTierUuid) {
-          console.warn(`[InventoryDebug] Tier no encontrado en tiersMap: Skin '${apiSkin.displayName}' tiene contentTierUuid '${apiSkin.contentTierUuid}'. Este UUID no está en tu tabla content_tiers. Keys en tiersMap:`, Array.from(tiersMap.keys()));
-        }
-        if (!apiSkin?.contentTierUuid) {
-          console.warn(`[InventoryDebug] Skin sin contentTierUuid: '${apiSkin?.displayName}'`);
-        }
 
         return {
           id: item.id, 
@@ -406,90 +394,91 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
   }
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 pt-12 pb-12 min-h-screen bg-background text-white">
+    <div className="px-4 sm:px-6 lg:px-8 pt-16 md:pt-12 pb-12 min-h-screen bg-background text-white">
       
       {/* Header and Filters */}
       <div className="mb-8 sticky top-0 z-30 bg-background/80 backdrop-blur-md py-4 rounded-b-xl shadow-lg">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <h1 className="text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
-            / INVENTARIO
-          </h1>
-          </div>
-          <div className="mt-6 flex flex-col md:flex-row gap-4 items-center">
-            <div className="relative w-full md:flex-grow group">
-              <div className="relative flex items-center rounded-xl border-2 border-slate-700 focus-within:border-primary bg-slate-800/50 backdrop-blur-sm text-sm focus-within:outline-none focus-within:ring-0 transition-all duration-300">
-                <span className="pl-3 pr-2 flex items-center pointer-events-none">
-                  <RiSearch2Line className="w-5 h-5 text-white/50 group-focus-within:text-primary transition-colors duration-300" />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o bundle..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1 py-2.5 bg-transparent appearance-none focus:outline-none text-white placeholder:text-muted-foreground/70 pr-10"
-                />
-                {searchTerm && (
-                  <button
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
-                    onClick={() => setSearchTerm("")}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
+          <div className="flex flex-col gap-4">
+            <h1 className="text-2xl md:text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
+              / INVENTARIO
+            </h1>
+          
+            <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
+              <div className="relative flex-grow group">
+                <div className="relative flex items-center rounded-xl border-2 border-slate-700 focus-within:border-primary bg-slate-800/50 backdrop-blur-sm text-sm focus-within:outline-none focus-within:ring-0 transition-all duration-300">
+                  <span className="pl-3 pr-2 flex items-center pointer-events-none">
+                    <RiSearch2Line className="w-5 h-5 text-white/50 group-focus-within:text-primary transition-colors duration-300" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre o bundle..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-1 py-2.5 bg-transparent appearance-none focus:outline-none text-white placeholder:text-muted-foreground/70 pr-10"
+                  />
+                  {searchTerm && (
+                    <button
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                      onClick={() => setSearchTerm("")}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="flex gap-4 w-full md:w-auto">
-              {allApiContentTiersState && (
-                <Select value={filterTier || ''} onValueChange={(value: string) => setFilterTier(value === 'all' ? null : value)}>
-                  <SelectTrigger className="w-full md:w-[180px] bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150">
-                    <Filter className="h-4 w-4 mr-2 inline-block opacity-70" />
-                    <SelectValue placeholder="Filtrar Rareza" />
+              <div className="flex flex-col sm:flex-row gap-3 lg:gap-4 min-w-0">
+                {allApiContentTiersState && (
+                  <Select value={filterTier || ''} onValueChange={(value: string) => setFilterTier(value === 'all' ? null : value)}>
+                    <SelectTrigger className="w-full sm:w-[180px] bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150">
+                      <Filter className="h-4 w-4 mr-2 inline-block opacity-70" />
+                      <SelectValue placeholder="Filtrar Rareza" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 text-white rounded-md shadow-lg border-slate-700">
+                      <SelectItem value="all" className="hover:bg-slate-700 rounded-md">Todas las Rarezas</SelectItem>
+                      {allApiContentTiersState.map(tier => (
+                        <SelectItem 
+                          key={tier.uuid}
+                          value={tier.uuid}
+                          className="hover:bg-slate-700 rounded-md active:bg-slate-700"
+                          style={{ color: (tier.highlightColor && tier.highlightColor.length >= 6) ? `#${tier.highlightColor.substring(0, 6)}` : 'white' }}
+                        >
+                          {tier.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <Select value={sortOption} onValueChange={(value: string) => setSortOption(value)}>
+                  <SelectTrigger className="w-full sm:w-[160px] bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150">
+                    <SelectValue placeholder="Ordenar por:">
+                      {sortOptionsConfig.find(opt => opt.value === sortOption)?.label || "Ordenar por..."}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 text-white rounded-md shadow-lg border-slate-700">
-                    <SelectItem value="all" className="hover:bg-slate-700 rounded-md">Todas las Rarezas</SelectItem>
-                    {allApiContentTiersState.map(tier => (
+                    {sortOptionsConfig.map(option => (
                       <SelectItem 
-                        key={tier.uuid}
-                        value={tier.uuid}
-                        className="hover:bg-slate-700 rounded-md active:bg-slate-700"
-                        style={{ color: (tier.highlightColor && tier.highlightColor.length >= 6) ? `#${tier.highlightColor.substring(0, 6)}` : 'white' }}
+                        key={option.value} 
+                        value={option.value} 
+                        className="hover:bg-slate-700 rounded-md"
                       >
-                        {tier.displayName}
+                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              )}
-              <Select value={sortOption} onValueChange={(value: string) => setSortOption(value)}>
-                <SelectTrigger className="w-full md:w-auto bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150">
-                  <SelectValue placeholder="Ordenar por:">
-                    {sortOptionsConfig.find(opt => opt.value === sortOption)?.label || "Ordenar por..."}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 text-white rounded-md shadow-lg border-slate-700">
-                  {sortOptionsConfig.map(option => (
-                    <SelectItem 
-                      key={option.value} 
-                      value={option.value} 
-                      className="hover:bg-slate-700 rounded-md"
-                    >
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {selectedItems.size > 0 && (
-        <div className="sticky top-36 z-20 mb-6">
+        <div className="sticky top-24 md:top-36 z-20 mb-6">
           <div className="container mx-auto px-4">
             <div className="bg-slate-800/80 backdrop-blur-md p-4 rounded-lg shadow-md flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
-              <p className="text-white text-sm sm:text-base">{selectedItems.size} skin(s) seleccionada(s)</p>
-              <div className="flex gap-2 sm:gap-3">
+              <p className="text-white text-sm sm:text-base text-center sm:text-left">{selectedItems.size} skin(s) seleccionada(s)</p>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
                 <Button 
                   onClick={() => {
                     const allVisibleCardIds = new Set(processedSkins.map(s => s.uniqueCardId!));
@@ -510,7 +499,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                   }}
                   variant="outline"
                   size="sm"
-                  className="rounded-xl border-slate-600 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 h-auto"
+                  className="rounded-xl border-slate-600 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 h-auto w-full sm:w-auto"
                 >
                   { processedSkins.length > 0 && processedSkins.every(s => selectedItems.has(s.uniqueCardId!)) ? "Deseleccionar Todas" : "Seleccionar Todas" }
                 </Button>
@@ -518,7 +507,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                   onClick={handleDeleteSelected} 
                   variant="destructive" 
                   size="sm" 
-                  className='rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r active:scale-95 active:shadow-inner text-xs px-3 py-1.5 h-auto'
+                  className='rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r active:scale-95 active:shadow-inner text-xs px-3 py-1.5 h-auto w-full sm:w-auto'
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Eliminar {selectedItems.size > 0 ? selectedItems.size : ''} skin(s)
                 </Button>
@@ -529,15 +518,15 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
       )}
 
       {loading && userSkins.length === 0 && <InventoryLoading className="mt-10" />}
-      {!loading && error && <p className="text-red-400 text-center mt-10"><XCircle className="inline mr-2" />{error}</p>}
-      {!loading && !error && userSkins.length === 0 && <EmptyInventory className="mt-10"/>}
+      {!loading && error && <p className="text-red-400 text-center mt-10 mx-4"><XCircle className="inline mr-2" />{error}</p>}
+      {!loading && !error && userSkins.length === 0 && <EmptyInventory className="mt-10 mx-4"/>}
 
       {processedSkins.length > 0 && (
         <div className="container mx-auto px-4">
           <motion.div 
             key={`${searchTerm}-${filterTier || 'all'}`}
             layout 
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 pb-10"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 md:gap-4 lg:gap-6 pb-10"
           >
             {processedSkins.map((skin, index) => {
               let cardStyle: React.CSSProperties = {}; // Estilo por defecto
@@ -589,7 +578,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                       alt={`Fondo para ${skin.contentTier.nombre}`}
                       layout="fill"
                       objectFit="contain"
-                      className="absolute inset-0 z-0 p-4 opacity-20 transform scale-125 rotate-12"
+                      className="absolute inset-0 z-0 p-4 opacity-50 transform scale-125 rotate-12"
                       priority={index < 10}
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
@@ -601,24 +590,24 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                     src={skin.skinIcon}
                     alt={skin.skinName}
                     fill
-                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    className="object-contain p-4 group-hover:scale-105 transition-transform duration-300 z-10"
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, (max-width: 1536px) 16vw, 14vw"
+                    className="object-contain p-3 md:p-4 group-hover:scale-105 transition-transform duration-300 z-10"
                     style={imageTransformStyle}
                     priority={index < 12}
                   />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-10">
-                    <h3 className="font-semibold text-primary" title={skin.skinName}>{skin.skinName}</h3>
+                  <div className="absolute bottom-0 left-0 right-0 p-2 md:p-4 bg-gradient-to-t from-black/80 to-transparent z-10">
+                    <h3 className="font-semibold text-primary text-xs sm:text-sm md:text-base truncate" title={skin.skinName}>{skin.skinName}</h3>
                     {skin.contentTier.nombre && 
                       <p 
-                        className="text-sm text-slate-300 truncate" 
+                        className="text-xs sm:text-sm text-slate-300 truncate" 
                         title={skin.contentTier.nombre} 
                       >
                         {skin.contentTier.nombre}
                       </p>
                     }
                   </div>
-                  <div className={`absolute top-2 left-2 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${selectedItems.has(skin.uniqueCardId!) ? 'bg-primary border-white' : 'bg-slate-700/80 border-slate-600 hover:bg-slate-600/80'}`}>
-                    {selectedItems.has(skin.uniqueCardId!) && <div className="w-2 h-2 bg-white rounded-full"></div>}
+                  <div className={`absolute top-1 left-1 md:top-2 md:left-2 w-4 h-4 md:w-5 md:h-5 rounded-full border-2 flex items-center justify-center transition-all ${selectedItems.has(skin.uniqueCardId!) ? 'bg-primary border-white' : 'bg-slate-700/80 border-slate-600 hover:bg-slate-600/80'}`}>
+                    {selectedItems.has(skin.uniqueCardId!) && <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-white rounded-full"></div>}
                   </div>
                 </motion.div>
               );
@@ -636,11 +625,11 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
         classNames={{
           body: "py-6 px-8 flex flex-col items-center gap-5",
           backdrop: "bg-black/70 backdrop-blur-md",
-          base: "border border-white/10 bg-gradient-to-b from-backgroundAlt to-background text-white rounded-2xl shadow-[0_10px_50px_-12px_rgba(0,0,0,0.4)] overflow-hidden",
+          base: "border border-white/10 bg-gradient-to-b from-backgroundAlt to-background text-white rounded-2xl shadow-[0_10px_50px_-12px_rgba(0,0,0,0.4)] overflow-hidden mx-4",
           header:
             "w-full border-b border-white/10 pb-4 flex flex-col items-center gap-3",
           footer:
-            "w-full border-t border-white/10 pt-4 flex justify-end gap-3",
+            "w-full border-t border-white/10 pt-4 flex flex-col sm:flex-row justify-end gap-3",
         }}
         radius="lg"
       >
@@ -653,18 +642,18 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                 <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20 opacity-50" />
                 <AlertTriangle className="h-8 w-8 text-red-400 drop-shadow-md relative z-10" />
               </div>
-              <span className="text-2xl font-bold text-white drop-shadow-sm">
+              <span className="text-xl md:text-2xl font-bold text-white drop-shadow-sm text-center">
                 ¿Eliminar Skins?
               </span>
             </ModalHeader>
             <ModalBody className="relative z-10">
-              <p className="text-white/80 text-center text-base">
+              <p className="text-white/80 text-center text-sm md:text-base">
                 ¿Estás seguro de que deseas eliminar {selectedItems.size} skin(s) seleccionada(s)?
               </p>
             </ModalBody>
             <ModalFooter className="relative z-10">
               <HerouiButton
-                className="!text-white/70 hover:!bg-white/10 active:!bg-white/20 transition-all duration-200 rounded-xl border border-transparent hover:border-white/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="!text-white/70 hover:!bg-white/10 active:!bg-white/20 transition-all duration-200 rounded-xl border border-transparent hover:border-white/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                 variant="light"
                 onPress={onDeleteModalClose}
                 disabled={isDeletingItems}
@@ -672,12 +661,12 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
                 Cancelar
               </HerouiButton>
               <HerouiButton
-                className="bg-red-600/20 hover:bg-red-600/30 text-white border border-red-500/20 hover:border-red-500/30 font-semibold px-6 rounded-xl transition-colors duration-300 shadow-lg shadow-red-900/20 active:scale-95 active:shadow-inner disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600/20"
+                className="bg-red-600/20 hover:bg-red-600/30 text-white border border-red-500/20 hover:border-red-500/30 font-semibold px-6 rounded-xl transition-colors duration-300 shadow-lg shadow-red-900/20 active:scale-95 active:shadow-inner disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600/20 w-full sm:w-auto"
                 onPress={confirmDeleteSelected}
                 disabled={isDeletingItems}
               >
                 {isDeletingItems ? (
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 justify-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
                     Eliminando...
                   </span>

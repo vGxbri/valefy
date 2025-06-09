@@ -814,27 +814,27 @@ export default function MejorasPage() {
   return (
     <div className="px-4 sm:px-6 lg:px-8 pt-12 pb-12 min-h-screen bg-background text-white">
       {/* Header */}
-      <div className="mb-8">
-      <h1 className="text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
+      <div className="mb-6 sm:mb-8">
+      <h1 className="text-2xl sm:text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
         / MEJORAR
       </h1>
       </div>
 
       {/* Sección Superior: Skins Seleccionadas */}
-      <div className="mb-8">
-        <div className="bg-backgroundAlt/10 border border-white/10 rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+      <div className="mb-6 sm:mb-8">
+        <div className="bg-backgroundAlt/10 border border-white/10 rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-4 sm:p-6">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4 sm:mb-6 gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-white mb-2">Skins Seleccionadas</h2>
-              <p className="text-slate-400">Selecciona hasta {maxSelectedSkins} skins para mejorar</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">Skins Seleccionadas</h2>
+              <p className="text-slate-400 text-sm sm:text-base">Selecciona hasta {maxSelectedSkins} skins para mejorar</p>
             </div>
-            <div className="flex flex-col items-end mt-4 md:mt-0">
-              <div className="text-right mb-4">
-                <div className="text-3xl font-bold text-red-500">{successPercentage}%</div>
-                <div className="text-sm text-slate-400">Probabilidad de éxito</div>
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 w-full lg:w-auto">
+              <div className="text-left sm:text-right">
+                <div className="text-2xl sm:text-3xl font-bold text-red-500">{successPercentage}%</div>
+                <div className="text-xs sm:text-sm text-slate-400">Probabilidad de éxito</div>
             </div>
               
-              <Button variant="default" className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200"
+              <Button variant="default" className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base"
               disabled={selectedSkins.length === 0}
               onClick={handleImprovement}
               >
@@ -844,8 +844,8 @@ export default function MejorasPage() {
             </div>
         </div>
 
-          {/* Grid de skins seleccionadas - Grid fijo de 5 posiciones */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 min-h-[200px]">
+          {/* Grid de skins seleccionadas - Grid responsive */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 min-h-[180px] sm:min-h-[200px]">
             {Array.from({ length: maxSelectedSkins }).map((_, index) => {
               const skin = selectedSkins[index];
               
@@ -881,7 +881,7 @@ export default function MejorasPage() {
                       aria-label={`Deseleccionar ${skin.nombre}`}
                       type="button"
                     >
-                      <X className="w-12 h-12 text-white" />
+                      <X className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" />
                     </button>
                     {/* Imagen de fondo del tier */}
                     {skin.content_tier?.uuid_api && skin.content_tier.uuid_api !== 'default' && (
@@ -890,7 +890,7 @@ export default function MejorasPage() {
                         alt={`Fondo para ${skin.content_tier.nombre}`}
                         layout="fill"
                         objectFit="contain" // O "cover" si prefieres que llene y recorte
-                        className="absolute inset-0 z-0 p-4 opacity-20 transform scale-125 rotate-12"
+                        className="absolute inset-0 z-0 p-2 sm:p-3 md:p-4 opacity-60 transform scale-125 rotate-12"
                         priority={index < 10}
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
@@ -904,18 +904,18 @@ export default function MejorasPage() {
                       src={skin.imagen_url || '/images/placeholder_icon.webp'}
                       alt={skin.nombre}
                       fill
-                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 20vw"
-                      className="object-contain p-4 group-hover:scale-105 transition-transform duration-300 z-10"
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                      className="object-contain p-2 sm:p-3 md:p-4 group-hover:scale-105 transition-transform duration-300 z-10"
                       style={imageTransformStyle}
                     />
 
                     {/* Información de la skin */}
-                    <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent z-10">
-                      <h3 className="font-medium text-primary text-sm truncate" title={skin.nombre}>
+                    <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 bg-gradient-to-t from-black/80 to-transparent z-10">
+                      <h3 className="font-medium text-primary text-xs sm:text-sm truncate" title={skin.nombre}>
                         {skin.nombre}
                       </h3>
                       {skin.content_tier?.nombre && (
-                        <p className="text-xs text-slate-300 truncate" title={skin.content_tier.nombre}>
+                        <p className="text-[10px] sm:text-xs text-slate-300 truncate" title={skin.content_tier.nombre}>
                           {skin.content_tier.nombre}
                         </p>
                 )}
@@ -930,8 +930,8 @@ export default function MejorasPage() {
                     className="flex flex-col aspect-[3/4] overflow-hidden rounded-xl border-2 border-dashed border-slate-600 bg-slate-800/30 transition-all duration-150 items-center justify-center"
                   >
                     <div className="text-slate-500 text-center">
-                      <div className="w-12 h-12 border-2 border-slate-600 border-dashed rounded-xl mb-2 mx-auto"></div>
-                      <p className="text-xs">Slot {index + 1}</p>
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 border-2 border-slate-600 border-dashed rounded-xl mb-1 sm:mb-2 mx-auto"></div>
+                      <p className="text-[10px] sm:text-xs">Slot {index + 1}</p>
             </div>
             </div>
                 );
@@ -942,16 +942,16 @@ export default function MejorasPage() {
       </div>
 
       {/* Sección Inferior: Inventario */}
-      <div className="bg-backgroundAlt/10 border border-white/10 rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-6">
+      <div className="bg-backgroundAlt/10 border border-white/10 rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-4 sm:p-6">
         {/* Header del inventario */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <h2 className="text-2xl font-bold text-white">Tu Inventario</h2>
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-white">Tu Inventario</h2>
           
           {/* Filtros */}
-          <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full lg:w-auto">
           {/* Filtro de ordenamiento */}
             <Select value={sortOrder} onValueChange={setSortOrder}>
-              <SelectTrigger className="w-full md:w-48 bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150">
+              <SelectTrigger className="w-full sm:w-48 bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150 text-sm sm:text-base">
                 <ArrowDownWideNarrow className="h-4 w-4 mr-2 inline-block opacity-70" />
                 <SelectValue placeholder="Ordenar por" />
               </SelectTrigger>
@@ -979,7 +979,7 @@ export default function MejorasPage() {
           {/* Filtro de rareza */}
             {allSupabaseTiers && (
               <Select value={filterTier} onValueChange={setFilterTier}>
-                <SelectTrigger className="w-full md:w-48 bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150">
+                <SelectTrigger className="w-full sm:w-48 bg-slate-800 border-2 border-slate-700 text-white rounded-xl hover:border-slate-600 focus:ring-1 focus:ring-primary focus:border-primary transition-colors duration-150 text-sm sm:text-base">
                   <Filter className="h-4 w-4 mr-2 inline-block opacity-70" />
                   <SelectValue placeholder="Filtrar Rareza" />
                 </SelectTrigger>
@@ -1008,16 +1008,16 @@ export default function MejorasPage() {
         {/* Grid del inventario */}
         {isLoading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
+            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-primary" />
           </div>
         ) : filteredInventory.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-slate-400 text-lg">
+            <p className="text-slate-400 text-base sm:text-lg">
               {userInventory.length === 0 ? "No hay skins en tu inventario" : "No se encontraron skins"}
               </p>
             </div>
           ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
             {filteredInventory.map((skin, index) => {
               const isSelected = selectedSkins.some(s => s.id === skin.id);
               const weaponType = getWeaponType(skin.nombre);
@@ -1026,7 +1026,7 @@ export default function MejorasPage() {
                 transform: `scale(${weaponStyles.baseScale})${weaponStyles.hasRotation ? ' rotate(12deg)' : ''}`,
               };
 
-                             // Verificar si esta skin puede ser seleccionada (mismo tier que las ya seleccionadas)
+               // Verificar si esta skin puede ser seleccionada (mismo tier que las ya seleccionadas)
                const canBeSelected = selectedSkins.length === 0 || 
                  selectedSkins[0].content_tier?.uuid_api === skin.content_tier?.uuid_api;
 
@@ -1057,7 +1057,7 @@ export default function MejorasPage() {
                         alt={`Fondo para ${skin.content_tier.nombre}`}
                         layout="fill"
                         objectFit="contain" // O "cover" si prefieres que llene y recorte
-                        className="absolute inset-0 z-0 p-4 opacity-20 transform scale-125 rotate-12"
+                        className="absolute inset-0 z-0 p-2 sm:p-3 md:p-4 opacity-60 transform scale-125 rotate-12"
                         priority={index < 10}
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
@@ -1071,24 +1071,24 @@ export default function MejorasPage() {
                     src={skin.imagen_url || '/images/placeholder_icon.webp'}
                           alt={skin.nombre}
                           fill
-                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    className="object-contain p-4 group-hover:scale-105 transition-transform duration-300 z-10"
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
+                    className="object-contain p-2 sm:p-3 md:p-4 group-hover:scale-105 transition-transform duration-300 z-10"
                     style={imageTransformStyle}
                   />
 
                   {/* Información de la skin */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-10">
-                    <h3 className="font-semibold text-primary" title={skin.nombre}>{skin.nombre}</h3>
+                  <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 md:p-4 bg-gradient-to-t from-black/80 to-transparent z-10">
+                    <h3 className="font-semibold text-primary text-xs sm:text-sm leading-tight" title={skin.nombre}>{skin.nombre}</h3>
                     {skin.content_tier?.nombre && (
-                      <p className="text-sm text-slate-300 truncate" title={skin.content_tier.nombre}>
+                      <p className="text-[10px] sm:text-xs text-slate-300 truncate" title={skin.content_tier.nombre}>
                         {skin.content_tier.nombre}
                       </p>
                       )}
                     </div>
 
                   {/* Indicador de selección */}
-                  <div className={`absolute top-2 left-2 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-primary border-white' : 'bg-slate-700/80 border-slate-600 hover:bg-slate-600/80'}`}>
-                    {isSelected && <div className="w-2 h-2 bg-white rounded-full"></div>}
+                  <div className={`absolute top-1.5 sm:top-2 left-1.5 sm:left-2 w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-primary border-white' : 'bg-slate-700/80 border-slate-600 hover:bg-slate-600/80'}`}>
+                    {isSelected && <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full"></div>}
                     </div>
                 </button>
               );
@@ -1116,16 +1116,16 @@ export default function MejorasPage() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: -20 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="p-8 max-w-md w-full"
+              className="p-6 sm:p-8 max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header del modal */}
-              <div className="text-center mb-6">
+              <div className="text-center mb-4 sm:mb-6">
                 <motion.h3
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3, duration: 0.4 }}
-                  className="font-bold inline-block mt-10 text-3xl font-bold text-foreground font-[Raleway] font-semibold 
+                  className="font-bold inline-block mt-6 sm:mt-10 text-2xl sm:text-3xl font-bold text-foreground font-[Raleway] font-semibold 
                              italic tracking-widest [text-shadow:_0px_0px_20px_rgba(255,255,255,0.35)] 
                              bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
                 >
@@ -1138,7 +1138,7 @@ export default function MejorasPage() {
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.5, duration: 0.5, ease: "easeOut" }}
-                className="mb-6"
+                className="mb-4 sm:mb-6"
               >
                 {selectedSkins.length < 5 ? (
                   // Nueva ruleta circular para menos de 5 skins
@@ -1165,9 +1165,9 @@ export default function MejorasPage() {
                   />
                 ) : (
                   // Ruleta original para 5 skins (no debería mostrarse, pero por seguridad)
-                  <div className="relative w-full h-40 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl overflow-hidden border border-slate-600 flex items-center justify-center">
+                  <div className="relative w-full h-32 sm:h-40 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl overflow-hidden border border-slate-600 flex items-center justify-center">
                     {/* Barra de porcentaje */}
-                    <div className="w-4/5 h-8 bg-gray-700 rounded-full overflow-hidden relative">
+                    <div className="w-4/5 h-6 sm:h-8 bg-gray-700 rounded-full overflow-hidden relative">
                       <motion.div
                         className="h-full bg-gradient-to-r from-red-500 to-green-500 rounded-full relative"
                         style={{ width: `${successPercentage}%` }}
@@ -1185,7 +1185,7 @@ export default function MejorasPage() {
                       
                       {/* Texto del porcentaje */}
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">{successPercentage}%</span>
+                        <span className="text-white font-bold text-sm sm:text-lg">{successPercentage}%</span>
                       </div>
                     </div>
                   </div>
@@ -1198,18 +1198,18 @@ export default function MejorasPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7, duration: 0.4 }}
-                  className="flex justify-center gap-4"
+                  className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4"
                 >
                   <Button
                     onClick={() => setShowRouletteModal(false)}
                     variant="outline"
-                    className="rounded-xl border-slate-600 hover:bg-slate-700 text-slate-300 px-6 py-3"
+                    className="rounded-xl border-slate-600 hover:bg-slate-700 text-slate-300 px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base order-2 sm:order-1"
                   >
                     Cancelar
                   </Button>
                   <Button
                     onClick={handleRouletteConfirm}
-                    className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-6 py-3"
+                    className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base order-1 sm:order-2"
                   >
                     {selectedSkins.length < 5 ? 'Girar Ruleta' : 'Confirmar Mejora'}
                   </Button>
@@ -1239,16 +1239,16 @@ export default function MejorasPage() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 0 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="p-8 max-w-md w-full"
+              className="p-6 sm:p-8 max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header del modal */}
-              <div className="text-center mb-6">
+              <div className="text-center mb-4 sm:mb-6">
                 <motion.h3
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3, duration: 0.4 }}
-                  className="font-bold inline-block text-3xl font-bold text-foreground font-[Raleway] font-semibold 
+                  className="font-bold inline-block text-2xl sm:text-3xl font-bold text-foreground font-[Raleway] font-semibold 
                              italic tracking-widest [text-shadow:_0px_0px_20px_rgba(255,255,255,0.35)] 
                              bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
                 >
@@ -1261,7 +1261,7 @@ export default function MejorasPage() {
                     initial={{ scale: 1, opacity: 0, x: 0, y: 0 }}
                     animate={{ scale: 1, opacity: 1, x: 0, y: 0 }}
                     transition={{ delay: 0.4, duration: 0.4, type: "spring", stiffness: 300 }}
-                    className="inline-block mt-4 px-3 py-1 rounded-xl text-sm font-bold 
+                    className="inline-block mt-3 sm:mt-4 px-3 py-1 rounded-xl text-sm font-bold 
                                bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg 
                                shadow-red-900/20 border border-red-500/20 backdrop-blur-sm
                                active:scale-95 transition-all duration-200"
@@ -1276,16 +1276,16 @@ export default function MejorasPage() {
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.5, duration: 0.5, ease: "easeOut" }}
-                className="relative w-full h-64 overflow-hidden mb-6"
+                className="relative w-full h-48 sm:h-56 md:h-64 overflow-hidden mb-4 sm:mb-6"
               >
                 {/* Imagen de la skin */}
-                <div className="relative w-full h-full flex items-center justify-center p-4 ">
+                <div className="relative w-full h-full flex items-center justify-center p-3 sm:p-4">
                     <Image 
                       src={`/skins-bg/${rewardSkin.contentTierUuid}.png`}
                       alt={`Fondo para ${rewardSkin.contentTierUuid}`}
                       layout="fill"
                       objectFit="contain"
-                      className="absolute inset-0 z-0 p-4 opacity-20 transform scale-125 rotate-12"
+                      className="absolute inset-0 z-0 p-3 sm:p-4 opacity-80 transform scale-125 rotate-12"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                         console.warn(`No se encontró la imagen de fondo para el tier: /skins-bg/${rewardSkin.contentTierUuid}.png`); // Usar skin.contentTier.id
@@ -1305,7 +1305,7 @@ export default function MejorasPage() {
                         src={getBestDisplayIcon(rewardSkin) || ''}
                         alt={rewardSkin.displayName}
                         fill
-                        className="object-contain p-4 group-hover:scale-105 transition-transform duration-300 z-10"
+                        className="object-contain p-3 sm:p-4 group-hover:scale-105 transition-transform duration-300 z-10"
                         style={imageTransformStyle}
                         priority={true}
                       />
@@ -1321,9 +1321,9 @@ export default function MejorasPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6, duration: 0.4 }}
-                className="text-center mb-6"
+                className="text-center mb-4 sm:mb-6"
               >
-                <h3 className="text-2xl font-bold text-white mb-2">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-2 leading-tight">
                   {rewardSkin.displayName}
                 </h3>
               </motion.div>
@@ -1341,7 +1341,7 @@ export default function MejorasPage() {
                     setRewardSkin(null);
                     setIsNewSkin(false);
                   }}
-                  className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-8 py-3"
+                  className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 active:scale-95 transition-all duration-200 px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-base"
                 >
                   ¡Excelente!
                 </Button>

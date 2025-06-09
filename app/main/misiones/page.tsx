@@ -481,16 +481,16 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-background text-white">
-      <div className="flex flex-col gap-8 pl-16 md:pr-12 lg:pr-16 pt-12 pb-12 min-h-screen bg-background w-full max-w-full flex-1">
+      <div className="flex flex-col gap-6 sm:gap-8 px-4 sm:px-6 md:px-8 lg:pl-16 lg:pr-12 xl:pr-16 pt-8 sm:pt-12 pb-8 sm:pb-12 min-h-screen bg-background w-full max-w-full flex-1">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white font-[Raleway] font-semibold italic tracking-widest">
             / MISIONES
           </h1>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
           <StatCard
             title="Total VP Ganados"
             value={totalVP.toLocaleString()}
@@ -516,19 +516,22 @@ export default function Page() {
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <TabsList className="grid w-full grid-cols-3 bg-backgroundAlt/20 backdrop-blur-xl border border-white/10 rounded-2xl px-1 py-0">
-              <TabsTrigger value="reclamar" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl">
-                <Gift className="h-4 w-4" />
-                Reclamar
+              <TabsTrigger value="reclamar" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl text-xs sm:text-sm">
+                <Gift className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Reclamar</span>
+                <span className="xs:hidden">Reclamar</span>
               </TabsTrigger>
-              <TabsTrigger value="disponibles" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl">
-                <Target className="h-4 w-4" />
-                En progreso
+              <TabsTrigger value="disponibles" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl text-xs sm:text-sm">
+                <Target className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">En progreso</span>
+                <span className="xs:hidden">En progreso</span>
               </TabsTrigger>
-              <TabsTrigger value="completadas" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl">
-                <CheckCircle2 className="h-4 w-4" />
-                Completadas
+              <TabsTrigger value="completadas" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-primary/20 data-[state=active]:border-primary/30 rounded-xl text-xs sm:text-sm">
+                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Completadas</span>
+                <span className="xs:hidden">Completadas</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -538,30 +541,30 @@ export default function Page() {
             const progreso = m.progreso || { actual: 0, objetivo: 1 };
             return !m.completada && progreso.actual >= progreso.objetivo;
           }).length > 0 && (
-            <div className="mb-6 flex">
+            <div className="mb-4 sm:mb-6 flex">
               <Button
                 onClick={reclamarTodasLasRecompensas}
                 disabled={isClaimingAll}
-                className="rounded-xl bg-gradient-to-r from-primary/20 to-primary/30 text-white border border-primary/30 hover:bg-gradient-to-r hover:from-primary/30 hover:to-primary/40 transition-all duration-300 px-4 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-primary/20 to-primary/30 text-white border border-primary/30 hover:bg-gradient-to-r hover:from-primary/30 hover:to-primary/40 transition-all duration-300 px-4 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 size="lg"
               >
                 {isClaimingAll ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2" />
-                    Reclamando...
+                    <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-t-2 border-b-2 border-white mr-2" />
+                    <span className="text-sm sm:text-base">Reclamando...</span>
                   </>
                 ) : (
                   <>
-                    <Gift className="h-5 w-5 mr-2" />
-                    Reclamar Todas
+                    <Gift className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                    <span className="text-sm sm:text-base">Reclamar Todas</span>
                   </>
                 )}
               </Button>
             </div>
           )}
 
-          <TabsContent value={activeTab} className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <TabsContent value={activeTab} className="mt-4 sm:mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {misionesFiltradas.map((misionUsuario) => {
                 const IconComponent = getIconComponent(misionUsuario.mision.icono);
                 const puedeReclamar = !misionUsuario.completada && 
@@ -574,7 +577,7 @@ export default function Page() {
                 return (
                   <div 
                     key={misionUsuario.id} 
-                    className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-backgroundAlt/20 to-background/40 backdrop-blur-xl border transition-all duration-300 p-6 shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] ${
+                    className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-backgroundAlt/20 to-background/40 backdrop-blur-xl border transition-all duration-300 p-4 sm:p-6 shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] ${
                       misionUsuario.completada 
                         ? "border-green-500/20" 
                         : puedeReclamar 
@@ -583,22 +586,22 @@ export default function Page() {
                     }`}
                   >
                     {/* Reclamar */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${
+                    <div className="flex items-start justify-between mb-3 sm:mb-4">
+                      <div className="flex items-center gap-2 sm:gap-3 flex-1">
+                        <div className={`p-1.5 sm:p-2 rounded-lg ${
                           misionUsuario.completada 
                             ? "bg-green-500/20" 
                             : "bg-primary/20"
                         }`}>
-                          <IconComponent className={`h-5 w-5 ${
+                          <IconComponent className={`h-4 w-4 sm:h-5 sm:w-5 ${
                             misionUsuario.completada 
                               ? "text-green-400" 
                               : "text-primary"
                           }`} />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-white text-lg font-semibold">{misionUsuario.mision.nombre}</h3>
-                          <p className="text-white/60 text-sm">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-white text-base sm:text-lg font-semibold leading-tight">{misionUsuario.mision.nombre}</h3>
+                          <p className="text-white/60 text-xs sm:text-sm line-clamp-2">
                             {misionUsuario.mision.descripcion}
                           </p>
                         </div>
@@ -606,58 +609,61 @@ export default function Page() {
                     </div>
 
                     {/* En Progreso */}
-                    <div className="mb-4">
-                      <div className="flex justify-between text-sm mb-2">
+                    <div className="mb-3 sm:mb-4">
+                      <div className="flex justify-between text-xs sm:text-sm mb-2">
                         <span className="text-white/70">Progreso</span>
-                        <span className="text-white">
+                        <span className="text-white font-medium">
                           {misionUsuario.progreso.actual}/{misionUsuario.progreso.objetivo}
                         </span>
                       </div>
-                      <div className="w-full bg-white/10 rounded-full h-2">
+                      <div className="w-full bg-white/10 rounded-full h-1.5 sm:h-2">
                         <div 
-                          className="bg-primary h-2 rounded-full transition-all duration-300"
+                          className="bg-primary h-1.5 sm:h-2 rounded-full transition-all duration-300"
                           style={{ width: `${porcentaje}%` }}
                         />
                       </div>
                     </div>
 
                     {/* Completadas */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Coins className="h-4 w-4 text-primary" />
-                        <span className="text-white font-semibold">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <Coins className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
+                        <span className="text-white font-semibold text-sm sm:text-base">
                           {misionUsuario.mision.recompensa_vp} VP
                         </span>
                       </div>
 
                       {misionUsuario.completada ? (
-                        <div className="flex items-center gap-2 text-green-400">
-                          <CheckCircle2 className="h-4 w-4" />
-                          <span className="text-sm">Completada</span>
+                        <div className="flex items-center gap-1 sm:gap-2 text-green-400">
+                          <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <span className="text-xs sm:text-sm">Completada</span>
                         </div>
                       ) : puedeReclamar ? (
                         <Button
                           onClick={() => reclamarRecompensa(misionUsuario)}
-                          className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30"
+                          className="rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 text-white shadow-lg shadow-red-900/20 border border-red-500/20 hover:bg-gradient-to-r hover:from-red-500/30 hover:to-red-600/30 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
                           size="sm"
                           disabled={claimingMisionId === misionUsuario.id}
                         >
                           {claimingMisionId === misionUsuario.id ? (
                             <>
-                              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-1" />
-                              Reclamando...
+                              <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-t-2 border-b-2 border-white mr-1" />
+                              <span className="hidden sm:inline">Reclamando...</span>
+                              <span className="sm:hidden">...</span>
                             </>
                           ) : (
                             <span className="flex items-center">
-                              <Gift className="h-4 w-4 mr-1" />
-                              Reclamar
+                              <Gift className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                              <span className="hidden sm:inline">Reclamar</span>
+                              <span className="sm:hidden">Claim</span>
                             </span>
                           )}
                         </Button>
                       ) : (
-                        <Button variant="secondary" size="sm" disabled className="text-white/50 rounded-xl">
-                          <Clock className="h-4 w-4 mr-1" />
-                          En progreso
+                        <Button variant="secondary" size="sm" disabled className="text-white/50 rounded-xl text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2">
+                          <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                          <span className="hidden sm:inline">En progreso</span>
+                          <span className="sm:hidden">Active</span>
                         </Button>
                       )}
                     </div>
@@ -675,15 +681,15 @@ export default function Page() {
             </div>
 
             {misionesFiltradas.length === 0 && (
-              <div className="text-center py-12">
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-backgroundAlt/20 to-background/40 backdrop-blur-xl border border-white/10 p-12 shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)]">
-                  <CircleOff className="h-16 w-16 text-white/80 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-white mb-2">
+              <div className="text-center py-8 sm:py-12">
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-backgroundAlt/20 to-background/40 backdrop-blur-xl border border-white/10 p-8 sm:p-12 shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)]">
+                  <CircleOff className="h-12 w-12 sm:h-16 sm:w-16 text-white/80 mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">
                     {activeTab === "reclamar" && "No hay misiones para reclamar"}
                     {activeTab === "disponibles" && "No hay misiones en progreso"}
                     {activeTab === "completadas" && "No hay misiones completadas"}
                   </h3>
-                  <p className="text-white/60">
+                  <p className="text-white/60 text-sm sm:text-base">
                     {activeTab === "reclamar" && "Completa algunas actividades para desbloquear recompensas."}
                     {activeTab === "disponibles" && "Completa actividades para avanzar en tus misiones activas."}
                     {activeTab === "completadas" && "Aún no has completado ninguna misión."}

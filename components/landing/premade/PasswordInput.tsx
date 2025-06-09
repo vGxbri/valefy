@@ -79,8 +79,8 @@ const PasswordInput = ({
 
   return (
     <div className="space-y-2 w-full">
-      <div className="flex justify-between">
-        <p className="text-sm text-alternative/70 w-max">
+      <div className="flex justify-between items-start">
+        <p className="text-xs sm:text-sm text-alternative/70 w-max flex-1 pr-2">
           3. Elige una contraseña segura para tu cuenta.
         </p>
         <HoverCard openDelay={200}>
@@ -88,18 +88,18 @@ const PasswordInput = ({
             <Info
               className={`cursor-pointer ${
                 STRENGTH_CONFIG.colors[calculateStrength.score]
-              } transition-all`}
-              size={20}
+              } transition-all flex-shrink-0`}
+              size={18}
             />
           </HoverCardTrigger>
-          <HoverCardContent className="bg-background/90 backdrop-blur-sm border border-white/10">
+          <HoverCardContent className="bg-background/90 backdrop-blur-sm border border-white/10 w-64 sm:w-auto">
             <ul aria-label="Requisitos de contraseña" className="space-y-1.5">
               {calculateStrength.requirements.map((req, index) => (
                 <li key={index} className="flex items-center space-x-2">
                   {req.met ? (
-                    <Check className="text-emerald-500" size={16} />
+                    <Check className="text-emerald-500 flex-shrink-0" size={14} />
                   ) : (
-                    <X className="text-white/50" size={16} />
+                    <X className="text-white/50 flex-shrink-0" size={14} />
                   )}
                   <span
                     className={`text-xs ${
@@ -116,7 +116,7 @@ const PasswordInput = ({
       </div>
       <div className="relative">
         <input
-          className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-white pr-10"
+          className="w-full px-3 sm:px-4 py-2 sm:py-2.5 pr-8 sm:pr-10 text-sm sm:text-base bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-white"
           id={id}
           name={name}
           placeholder=""
@@ -126,39 +126,39 @@ const PasswordInput = ({
         />
         <button
           aria-label={isVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
-          className="absolute inset-y-0 right-0 outline-none flex items-center justify-center w-10 text-white/50 hover:text-white"
+          className="absolute inset-y-0 right-0 outline-none flex items-center justify-center w-8 sm:w-10 text-white/50 hover:text-white"
           type="button"
           onClick={() => setIsVisible((prev) => !prev)}
         >
-          {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+          {isVisible ? <EyeOff size={14} className="sm:w-4 sm:h-4" /> : <Eye size={14} className="sm:w-4 sm:h-4" />}
         </button>
       </div>
 
-      <div className="flex gap-2 w-full justify-between mt-2">
+      <div className="flex gap-1 sm:gap-2 w-full justify-between mt-2">
         <span
           className={`${
             calculateStrength.score >= 1 ? "bg-green-500/20" : "bg-white/5"
-          } p-1 rounded-full w-full`}
+          } p-0.5 sm:p-1 rounded-full w-full`}
         />
         <span
           className={`${
             calculateStrength.score >= 2 ? "bg-green-500/40" : "bg-white/5"
-          } p-1 rounded-full w-full`}
+          } p-0.5 sm:p-1 rounded-full w-full`}
         />
         <span
           className={`${
             calculateStrength.score >= 3 ? "bg-green-500/60" : "bg-white/5"
-          } p-1 rounded-full w-full`}
+          } p-0.5 sm:p-1 rounded-full w-full`}
         />
         <span
           className={`${
             calculateStrength.score >= 4 ? "bg-green-500/80" : "bg-white/5"
-          } p-1 rounded-full w-full`}
+          } p-0.5 sm:p-1 rounded-full w-full`}
         />
         <span
           className={`${
             calculateStrength.score >= 5 ? "bg-green-500" : "bg-white/5"
-          } p-1 rounded-full w-full`}
+          } p-0.5 sm:p-1 rounded-full w-full`}
         />
       </div>
     </div>

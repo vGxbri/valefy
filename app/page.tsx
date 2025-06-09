@@ -125,30 +125,30 @@ export default function LandingPage() {
           </div>
 
           {/* Contenedor centrado para el título */}
-          <div className="container mx-auto max-w-7xl px-6 flex items-center justify-center relative h-full mt-64">
+          <div className="container mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-center relative h-full mt-32 sm:mt-48 md:mt-56 lg:mt-64">
             {/* Título y botón centrados */}
-            <div className="flex flex-col items-center justify-center text-center max-w-3xl">
-              <h1 className="inline-block mb-6 text-wrap">
-                <span className="tracking-tight inline font-bold text-[5.4rem] !important leading-none">
+            <div className="flex flex-col items-center justify-center text-center max-w-xs sm:max-w-lg md:max-w-2xl lg:max-w-3xl">
+              <h1 className="inline-block mb-4 sm:mb-6 text-wrap">
+                <span className="tracking-tight inline font-bold text-3xl sm:text-4xl md:text-5xl lg:text-[5.4rem] !important leading-none">
                   Tu nuevo{" "}
                 </span>
-                <span className="tracking-tight inline font-bold text-[5.4rem] !important leading-none text-primary text-shadow-lg">
+                <span className="tracking-tight inline font-bold text-3xl sm:text-4xl md:text-5xl lg:text-[5.4rem] !important leading-none text-primary text-shadow-lg">
                   mejor simulador{" "}
                 </span>
-                <span className="tracking-tight inline font-bold text-[5.4rem] !important leading-none">
+                <span className="tracking-tight inline font-bold text-3xl sm:text-4xl md:text-5xl lg:text-[5.4rem] !important leading-none">
                   de cajas de Valorant
                 </span>
               </h1>
 
               <button
-                className="relative bg-primary text-white font-medium text-[17px] px-4 py-[0.35em] pl-5 h-[2.8em] rounded-[0.9em] flex items-center overflow-hidden cursor-pointer shadow-[inset_0_0_1.6em_-0.6em_#0A141D] group"
+                className="relative bg-primary text-white font-medium text-sm sm:text-base md:text-[17px] px-3 sm:px-4 py-[0.35em] pl-4 sm:pl-5 h-[2.5em] sm:h-[2.8em] rounded-[0.8em] sm:rounded-[0.9em] flex items-center overflow-hidden cursor-pointer shadow-[inset_0_0_1.6em_-0.6em_#0A141D] group"
                 // Llamar a openAuthModal con 'register'
                 onClick={() => openAuthModal("register")}
               >
-                <span className="mr-10">Unirme ahora</span>
-                <div className="absolute right-[0.3em] bg-white h-[2.2em] w-[2.2em] rounded-[0.7em] flex items-center justify-center transition-all duration-300 group-hover:w-[calc(100%-0.6em)] shadow-[0.1em_0.1em_0.6em_0.2em_#d2d2d4] active:scale-95">
+                <span className="mr-8 sm:mr-10">Unirme ahora</span>
+                <div className="absolute right-[0.3em] bg-white h-[1.9em] sm:h-[2.2em] w-[1.9em] sm:w-[2.2em] rounded-[0.6em] sm:rounded-[0.7em] flex items-center justify-center transition-all duration-300 group-hover:w-[calc(100%-0.6em)] shadow-[0.1em_0.1em_0.6em_0.2em_#d2d2d4] active:scale-95">
                   <svg
-                    className="w-[1.1em] transition-transform duration-300 text-[#7b52b9] group-hover:translate-x-[0.1em]"
+                    className="w-[0.9em] sm:w-[1.1em] transition-transform duration-300 text-[#7b52b9] group-hover:translate-x-[0.1em]"
                     height="24"
                     viewBox="0 0 24 24"
                     width="24"
@@ -166,11 +166,11 @@ export default function LandingPage() {
           </div>
 
           {/* Carruseles con skins aleatorias */}
-          <div className="w-full overflow-hidden mt-56 relative">
+          <div className="w-full overflow-hidden mt-32 sm:mt-40 md:mt-48 lg:mt-56 relative">
             {/* Separador visual superior */}
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
 
-            <div className="mt-8 mb-4">
+            <div className="mt-6 sm:mt-8 mb-3 sm:mb-4">
               <ImageCarousel
                 direction="left"
                 skins={carouselSkins1}
@@ -191,59 +191,59 @@ export default function LandingPage() {
 
         {/* Sección de Timeline */}
         <div
-          className="py-16"
+          className="py-8 sm:py-12 md:py-16"
           id="funcionamiento"
         >
-          <div className="container mx-auto max-w-7xl px-6 mb-10" />
+          <div className="container mx-auto max-w-7xl px-4 sm:px-6 mb-6 sm:mb-8 md:mb-10" />
 
           <Timeline data={timelineData} />
         </div>
 
         {/* Sección de Preguntas Frecuentes */}
         <div
-          className="py-16 relative"
+          className="py-8 sm:py-12 md:py-16 relative"
           id="faq"
         >
           {/* Separador visual superior */}
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
 
-          <div className="container mx-auto max-w-6xl px-6">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold mb-4 text-white">
+          <div className="container mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="text-center mb-8 sm:mb-10 md:mb-12">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 text-white">
                 Preguntas <span className="text-primary">Frecuentes</span>
               </h2>
-              <p className="text-white/70 max-w-2xl mx-auto">
+              <p className="text-white/70 max-w-2xl mx-auto text-sm sm:text-base">
                 Todo lo que necesitas saber sobre nosotros.
               </p>
             </div>
-            <AccordionContainer className="md:grid-cols-2 grid-cols-1">
+            <AccordionContainer className="md:grid-cols-2 grid-cols-1 gap-4 sm:gap-6">
               <AccordionWrapper>
                 <Accordion defaultValue={"item-1"}>
                   <AccordionItem value="item-1">
-                    <AccordionHeader className="2xl:text-base text-sm">
+                    <AccordionHeader className="text-sm sm:text-base 2xl:text-base">
                       ¿Cómo obtengo VP para abrir cajas?
                     </AccordionHeader>
 
-                    <AccordionPanel className="2xl:text-base text-sm">
+                    <AccordionPanel className="text-sm sm:text-base 2xl:text-base">
                       <div className="space-y-3">
                         <p className="leading-relaxed text-white/90">
                           En Valefy obtienes VP (Valorant Points) de múltiples formas completamente gratuitas:
                         </p>
                         <ul className="space-y-2 ml-4">
                           <li className="flex items-start gap-2">
-                            <span className="text-primary text-sm mt-1">·</span>
+                            <span className="text-primary text-sm mt-1 flex-shrink-0">·</span>
                             <span><strong className="text-white">2000 VP de bienvenida:</strong> Al registrarte recibes VP inmediatamente para empezar.</span>
                           </li>
                           <li className="flex items-start gap-2">
-                            <span className="text-primary text-sm mt-1">·</span>
+                            <span className="text-primary text-sm mt-1 flex-shrink-0">·</span>
                             <span><strong className="text-white">Misiones diarias:</strong> Login diario (50 VP), abrir cajas (25-100 VP), conseguir skins específicas (100-250 VP).</span>
                           </li>
                           <li className="flex items-start gap-2">
-                            <span className="text-primary text-sm mt-1">·</span>
+                            <span className="text-primary text-sm mt-1 flex-shrink-0">·</span>
                             <span><strong className="text-white">Misiones especiales:</strong> Conseguir skins Ultra Edition (250 VP), eliminar duplicados (75 VP).</span>
                           </li>
                           <li className="flex items-start gap-2">
-                            <span className="text-primary text-sm mt-1">·</span>
+                            <span className="text-primary text-sm mt-1 flex-shrink-0">·</span>
                             <span><strong className="text-white">Renovación automática:</strong> Más de 15 misiones disponibles que se renuevan constantemente.</span>
                           </li>
                         </ul>
@@ -252,42 +252,42 @@ export default function LandingPage() {
                   </AccordionItem>
 
                   <AccordionItem value="item-2">
-                    <AccordionHeader className="2xl:text-base text-sm">
+                    <AccordionHeader className="text-sm sm:text-base 2xl:text-base">
                       ¿Qué tipos de cajas están disponibles y cuánto cuestan?
                     </AccordionHeader>
 
-                    <AccordionPanel className="2xl:text-base text-sm">
+                    <AccordionPanel className="text-sm sm:text-base 2xl:text-base">
                       <div className="space-y-4">
                         <p className="leading-relaxed text-white/90">
                           Ofrecemos tres tipos de cajas con precios y probabilidades diferentes:
                         </p>
                         <div className="grid gap-3">
-                          <div className="bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-lg p-4 border border-green-500/20">
-                            <div className="flex justify-between items-center mb-2">
-                              <h4 className="text-green-400 font-semibold">Caja Diaria</h4>
-                              <span className="text-green-400 font-bold">GRATIS</span>
+                          <div className="bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-lg p-3 sm:p-4 border border-green-500/20">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2">
+                              <h4 className="text-green-400 font-semibold text-sm sm:text-base">Caja Diaria</h4>
+                              <span className="text-green-400 font-bold text-sm sm:text-base">GRATIS</span>
                             </div>
-                            <p className="text-sm text-white/80 mb-2">Se renueva automáticamente cada 24 horas</p>
+                            <p className="text-xs sm:text-sm text-white/80 mb-2">Se renueva automáticamente cada 24 horas</p>
                             <div className="text-xs text-white/70">
                               Probabilidades estándar: 55.17% Select, 26.91% Deluxe, 15.93% Premium, 1.99% Ultra
                             </div>
                           </div>
-                          <div className="bg-gradient-to-r from-blue-500/10 to-blue-600/10 rounded-lg p-4 border border-blue-500/20">
-                            <div className="flex justify-between items-center mb-2">
-                              <h4 className="text-blue-400 font-semibold">Caja Premium</h4>
-                              <span className="text-blue-400 font-bold">100-500 VP</span>
+                          <div className="bg-gradient-to-r from-blue-500/10 to-blue-600/10 rounded-lg p-3 sm:p-4 border border-blue-500/20">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2">
+                              <h4 className="text-blue-400 font-semibold text-sm sm:text-base">Caja Premium</h4>
+                              <span className="text-blue-400 font-bold text-sm sm:text-base">100-500 VP</span>
                             </div>
-                            <p className="text-sm text-white/80 mb-2">Mejores probabilidades para tiers altos</p>
+                            <p className="text-xs sm:text-sm text-white/80 mb-2">Mejores probabilidades para tiers altos</p>
                             <div className="text-xs text-white/70">
                               Bonificación +15% para Premium y Ultra Edition
                             </div>
                           </div>
-                          <div className="bg-gradient-to-r from-purple-500/10 to-purple-600/10 rounded-lg p-4 border border-purple-500/20">
-                            <div className="flex justify-between items-center mb-2">
-                              <h4 className="text-purple-400 font-semibold">Caja Ultra</h4>
-                              <span className="text-purple-400 font-bold">1000+ VP</span>
+                          <div className="bg-gradient-to-r from-purple-500/10 to-purple-600/10 rounded-lg p-3 sm:p-4 border border-purple-500/20">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2">
+                              <h4 className="text-purple-400 font-semibold text-sm sm:text-base">Caja Ultra</h4>
+                              <span className="text-purple-400 font-bold text-sm sm:text-base">1000+ VP</span>
                             </div>
-                            <p className="text-sm text-white/80 mb-2">Máximas probabilidades y garantías</p>
+                            <p className="text-xs sm:text-sm text-white/80 mb-2">Máximas probabilidades y garantías</p>
                             <div className="text-xs text-white/70">
                               Garantía de tier Premium o superior + bonificación +25%
                             </div>
@@ -298,38 +298,38 @@ export default function LandingPage() {
                   </AccordionItem>
 
                   <AccordionItem value="item-3">
-                    <AccordionHeader className="2xl:text-base text-sm">
+                    <AccordionHeader className="text-sm sm:text-base 2xl:text-base">
                       ¿Las probabilidades son exactas a Valorant oficial?
                     </AccordionHeader>
 
-                    <AccordionPanel className="2xl:text-base text-sm">
+                    <AccordionPanel className="text-sm sm:text-base 2xl:text-base">
                       <div className="space-y-4">
                         <p className="leading-relaxed text-white/90">
                           <strong>¡Absolutamente sí!</strong> Hemos replicado exactamente el sistema de probabilidades de Riot Games:
                         </p>
-                        <div className="bg-gradient-to-r from-primary/10 to-purple-500/10 rounded-lg p-5 border border-primary/20">
-                          <h5 className="text-white font-semibold mb-3 text-center">Probabilidades Oficiales</h5>
-                          <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-gradient-to-r from-primary/10 to-purple-500/10 rounded-lg p-4 sm:p-5 border border-primary/20">
+                          <h5 className="text-white font-semibold mb-3 text-center text-sm sm:text-base">Probabilidades Oficiales</h5>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                             <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                              <span className="text-gray-300 text-sm">Select Edition</span>
-                              <span className="text-white font-mono text-sm font-bold">55.17%</span>
+                              <span className="text-gray-300 text-xs sm:text-sm">Select Edition</span>
+                              <span className="text-white font-mono text-xs sm:text-sm font-bold">55.17%</span>
                             </div>
                             <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                              <span className="text-green-400 text-sm">Deluxe Edition</span>
-                              <span className="text-white font-mono text-sm font-bold">26.91%</span>
+                              <span className="text-green-400 text-xs sm:text-sm">Deluxe Edition</span>
+                              <span className="text-white font-mono text-xs sm:text-sm font-bold">26.91%</span>
                             </div>
                             <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                              <span className="text-blue-400 text-sm">Premium Edition</span>
-                              <span className="text-white font-mono text-sm font-bold">15.93%</span>
+                              <span className="text-blue-400 text-xs sm:text-sm">Premium Edition</span>
+                              <span className="text-white font-mono text-xs sm:text-sm font-bold">15.93%</span>
                             </div>
                             <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                              <span className="text-purple-400 text-sm">Ultra Edition</span>
-                              <span className="text-white font-mono text-sm font-bold">1.99%</span>
+                              <span className="text-purple-400 text-xs sm:text-sm">Ultra Edition</span>
+                              <span className="text-white font-mono text-xs sm:text-sm font-bold">1.99%</span>
                             </div>
                           </div>
                         </div>
                         <div className="bg-primary/5 rounded-lg p-3 border border-primary/10">
-                          <p className="text-primary text-sm font-medium flex items-center gap-2">
+                          <p className="text-primary text-xs sm:text-sm font-medium flex items-center gap-2">
                             <span>✓</span>
                             Usamos la API oficial de Riot Games para obtener todas las skins y sus clasificaciones
                           </p>
@@ -343,16 +343,16 @@ export default function LandingPage() {
               <AccordionWrapper>
                 <Accordion defaultValue={"item-4"}>
                   <AccordionItem value="item-4">
-                    <AccordionHeader className="2xl:text-base text-sm">
+                    <AccordionHeader className="text-sm sm:text-base 2xl:text-base">
                       ¿Puedo usar las skins en Valorant real?
                     </AccordionHeader>
 
-                    <AccordionPanel className="2xl:text-base text-sm">
+                    <AccordionPanel className="text-sm sm:text-base 2xl:text-base">
                       <div className="space-y-4">
-                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 sm:p-4">
                           <div className="flex items-center gap-2 mb-2">
-                            <span className="text-amber-400 text-lg">⚠️</span>
-                            <span className="text-amber-200 font-medium">Importante:</span>
+                            <span className="text-amber-400 text-base sm:text-lg">⚠️</span>
+                            <span className="text-amber-200 font-medium text-sm sm:text-base">Importante:</span>
                           </div>
                           <p className="leading-relaxed text-white/90">
                             <strong>No</strong>, las skins obtenidas en Valefy son exclusivamente para el simulador. 
@@ -369,20 +369,20 @@ export default function LandingPage() {
                   </AccordionItem>
 
                   <AccordionItem value="item-5">
-                    <AccordionHeader className="2xl:text-base text-sm">
+                    <AccordionHeader className="text-sm sm:text-base 2xl:text-base">
                       ¿Qué estadísticas y características incluye?
                     </AccordionHeader>
 
-                    <AccordionPanel className="2xl:text-base text-sm">
+                    <AccordionPanel className="text-sm sm:text-base 2xl:text-base">
                       <div className="space-y-4">
                         <p className="leading-relaxed text-white/90">
                           Valefy incluye un sistema completo de seguimiento y estadísticas en tiempo real:
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-lg p-4 border border-blue-500/20">
+                          <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-lg p-3 sm:p-4 border border-blue-500/20">
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="text-blue-400 text-sm">📊</span>
-                              <div className="text-blue-400 text-sm font-medium">Estadísticas Detalladas</div>
+                              <span className="text-blue-400 text-xs sm:text-sm">📊</span>
+                              <div className="text-blue-400 text-xs sm:text-sm font-medium">Estadísticas Detalladas</div>
                             </div>
                             <ul className="text-xs text-white/80 space-y-1">
                               <li>• Total de cajas abiertas</li>
@@ -391,10 +391,10 @@ export default function LandingPage() {
                               <li>• Probabilidad personal vs esperada</li>
                             </ul>
                           </div>
-                          <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-lg p-4 border border-green-500/20">
+                          <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-lg p-3 sm:p-4 border border-green-500/20">
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="text-green-400 text-sm">📦</span>
-                              <div className="text-green-400 text-sm font-medium">Gestión de Inventario</div>
+                              <span className="text-green-400 text-xs sm:text-sm">📦</span>
+                              <div className="text-green-400 text-xs sm:text-sm font-medium">Gestión de Inventario</div>
                             </div>
                             <ul className="text-xs text-white/80 space-y-1">
                               <li>• Filtrado por tier, arma, bundle</li>
@@ -403,10 +403,10 @@ export default function LandingPage() {
                               <li>• Búsqueda avanzada</li>
                             </ul>
                           </div>
-                          <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-lg p-4 border border-purple-500/20">
+                          <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-lg p-3 sm:p-4 border border-purple-500/20">
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="text-purple-400 text-sm">🎯</span>
-                              <div className="text-purple-400 text-sm font-medium">Sistema de Misiones</div>
+                              <span className="text-purple-400 text-xs sm:text-sm">🎯</span>
+                              <div className="text-purple-400 text-xs sm:text-sm font-medium">Sistema de Misiones</div>
                             </div>
                             <ul className="text-xs text-white/80 space-y-1">
                               <li>• 15+ misiones activas simultáneas</li>
@@ -415,10 +415,10 @@ export default function LandingPage() {
                               <li>• Recompensas de 25-500 VP</li>
                             </ul>
                           </div>
-                          <div className="bg-gradient-to-br from-red-500/10 to-red-600/10 rounded-lg p-4 border border-red-500/20">
+                          <div className="bg-gradient-to-br from-red-500/10 to-red-600/10 rounded-lg p-3 sm:p-4 border border-red-500/20">
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="text-red-400 text-sm">⚡</span>
-                              <div className="text-red-400 text-sm font-medium">Características Técnicas</div>
+                              <span className="text-red-400 text-xs sm:text-sm">⚡</span>
+                              <div className="text-red-400 text-xs sm:text-sm font-medium">Características Técnicas</div>
                             </div>
                             <ul className="text-xs text-white/80 space-y-1">
                               <li>• Apertura múltiple (hasta 5 cajas)</li>
@@ -433,15 +433,15 @@ export default function LandingPage() {
                   </AccordionItem>
 
                   <AccordionItem value="item-6">
-                    <AccordionHeader className="2xl:text-base text-sm">
+                    <AccordionHeader className="text-sm sm:text-base 2xl:text-base">
                       ¿Es completamente gratis? ¿Hay límites o pagos ocultos?
                     </AccordionHeader>
 
-                    <AccordionPanel className="2xl:text-base text-sm">
+                    <AccordionPanel className="text-sm sm:text-base 2xl:text-base">
                       <div className="space-y-4">
-                        <div className="bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-lg p-4 border border-green-500/20 text-center">
-                          <div className="text-2xl font-bold text-green-400 mb-1">100% GRATUITO</div>
-                          <p className="text-green-300 text-sm">Sin pagos, sin límites, sin trucos</p>
+                        <div className="bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-lg p-3 sm:p-4 border border-green-500/20 text-center">
+                          <div className="text-xl sm:text-2xl font-bold text-green-400 mb-1">100% GRATUITO</div>
+                          <p className="text-green-300 text-xs sm:text-sm">Sin pagos, sin límites, sin trucos</p>
                         </div>
                         
                         <div className="space-y-3">

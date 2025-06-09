@@ -633,6 +633,7 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                   <CreditosDisplay />
                 </SidebarMenuItem>
+                {/*
                 <SidebarMenuItem>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -693,6 +694,7 @@ export function AppSidebar() {
                     </PopoverContent>
                   </Popover>
                 </SidebarMenuItem>
+                */}
 
                 <SidebarMenuItem>
                   <button

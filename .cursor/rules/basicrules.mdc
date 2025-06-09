@@ -3,12 +3,9 @@ description:
 globs: 
 alwaysApply: true
 ---
-Begin every task with a review of [memory.md] in root if it exists. After finishing a feature, capture new or changed items inside [memory.md], including important decisions that were made, solutions to recurring problems, etc.
 Tackle one todo item at a time, touching only code that is clearly related. Always think through ripple effects before editing.
 Search the codebase for existing implementations before writing new code.
 Prefer simple, incremental fixes; avoid drastic pattern or tech shifts unless all existing options are exhausted. If you *must* replace a pattern, remove the old one to prevent duplication.
-Keep an `architecture.md` that outlines components, interactions, and design rationales. Update it after structural changes and call out unnecessary global state or tight coupling.
-Keep files under ~300 LOC; refactor when they grow larger.
 Use small, single-responsibility functions, consistent naming, and clear doc-strings / JSDoc.
 Avoid one-off scripts committed to the repo.
 Validate inputs, cover edge cases, and document assumptions. Treat failure paths as first-class citizens.
