@@ -218,7 +218,7 @@ export default function LandingPage() {
             </div>
             <AccordionContainer className="md:grid-cols-2 grid-cols-1 gap-4 sm:gap-6">
               <AccordionWrapper>
-                <Accordion defaultValue={"item-1"}>
+                <Accordion>
                   <AccordionItem value="item-1">
                     <AccordionHeader className="text-sm sm:text-base 2xl:text-base">
                       ¿Cómo obtengo VP para abrir cajas?
@@ -285,7 +285,7 @@ export default function LandingPage() {
                           <div className="bg-gradient-to-r from-purple-500/10 to-purple-600/10 rounded-lg p-3 sm:p-4 border border-purple-500/20">
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2">
                               <h4 className="text-purple-400 font-semibold text-sm sm:text-base">Caja Ultra</h4>
-                              <span className="text-purple-400 font-bold text-sm sm:text-base">1000+ VP</span>
+                              <span className="text-purple-400 font-bold text-sm sm:text-base">2000+ VP</span>
                             </div>
                             <p className="text-xs sm:text-sm text-white/80 mb-2">Máximas probabilidades y garantías</p>
                             <div className="text-xs text-white/70">
@@ -341,7 +341,7 @@ export default function LandingPage() {
               </AccordionWrapper>
 
               <AccordionWrapper>
-                <Accordion defaultValue={"item-4"}>
+                <Accordion>
                   <AccordionItem value="item-4">
                     <AccordionHeader className="text-sm sm:text-base 2xl:text-base">
                       ¿Puedo usar las skins en Valorant real?
