@@ -113,9 +113,9 @@ export default function LandingPage() {
       <div className="">
         <Navbar />
         {/* Contenedor principal con altura fija */}
-        <div className="relative overflow-hidden min-h-screen" id="inicio">
-          {/* Contenedor del Aurora con altura y posición explícitas */}
-          <div className="absolute inset-0 w-full min-h-screen" style={{ height: "calc(100vh + 100px)" }}>
+        <div className="relative overflow-hidden" id="inicio">
+          {/* Contenedor del Aurora con altura y posición explícitas - Solo visible en pantallas XL+ (1280px+) */}
+          <div className="absolute inset-0 w-full hidden xl:block" style={{ height: "calc(100vh + 100px)" }}>
             <Aurora
               amplitude={0.8}
               blend={0.8}
@@ -124,31 +124,37 @@ export default function LandingPage() {
             />
           </div>
 
+          {/* Fondo alternativo para dispositivos menores a 1280px */}
+          <div className="absolute inset-0 w-full xl:hidden bg-gradient-to-br from-background via-backgroundAlt/30 to-background" style={{ height: "calc(100vh + 100px)" }} />
+
           {/* Contenedor centrado para el título */}
-          <div className="container mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-center relative min-h-screen mt-20 sm:mt-24 md:mt-32 lg:mt-48 xl:mt-56 2xl:mt-64">
+          <div className="container mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-center relative mt-28 sm:mt-36 md:mt-36 lg:mt-48 xl:mt-48 2xl:mt-56">
             {/* Título y botón centrados */}
             <div className="flex flex-col items-center justify-center text-center max-w-xs sm:max-w-lg md:max-w-2xl lg:max-w-3xl px-2 sm:px-0">
-              <h1 className="inline-block mb-6 sm:mb-8 md:mb-6 text-wrap">
-                <span className="tracking-tight inline font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-[5.4rem] !important leading-tight sm:leading-none">
+              <h1 className="mb-4 sm:mb-4 md:mb-4 lg:mb-6 xl:mb-8 sm:space-y-[-0.8rem] md:space-y-[-1rem] lg:space-y-[-1.5rem] xl:space-y-[-1.5rem]">
+                {/* Primera línea */}
+                <div className="tracking-tight font-bold text-[2rem] sm:text-[3rem] md:text-[3.6rem] lg:text-[4.8rem] xl:text-[5.4rem] leading-tight">
                   Tu nuevo{" "}
-                </span>
-                <span className="tracking-tight inline font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-[5.4rem] !important leading-tight sm:leading-none text-primary text-shadow-lg">
-                  mejor simulador{" "}
-                </span>
-                <span className="tracking-tight inline font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-[5.4rem] !important leading-tight sm:leading-none">
-                  de cajas de Valorant
-                </span>
+                  <span className="text-primary text-shadow-lg">mejor</span>
+                </div>
+                {/* Segunda línea */}
+                <div className="tracking-tight font-bold text-[2rem] sm:text-[3rem] md:text-[3.6rem] lg:text-[4.8rem] xl:text-[5.4rem] leading-tight">
+                  <span className="text-primary text-shadow-lg">simulador</span> de cajas
+                </div>
+                {/* Tercera línea */}
+                <div className="tracking-tight font-bold text-[2rem] sm:text-[3rem] md:text-[3.6rem] lg:text-[4.8rem] xl:text-[5.4rem] leading-tight">
+                  de Valorant
+                </div>
               </h1>
 
               <button
-                className="relative bg-primary text-white font-medium text-sm sm:text-base md:text-[17px] px-5 sm:px-6 py-[0.4em] pl-6 sm:pl-6 h-[3em] sm:h-[3em] md:h-[2.8em] rounded-[1em] sm:rounded-[1em] md:rounded-[0.9em] flex items-center overflow-hidden cursor-pointer shadow-[inset_0_0_1.6em_-0.6em_#0A141D] group w-full max-w-[220px] sm:max-w-none sm:w-auto"
+                className="relative bg-primary text-white font-medium text-sm sm:text-base md:text-[17px] px-3 sm:px-6 py-[0.35em] sm:py-[0.4em] pl-4 sm:pl-6 h-[2.3em] sm:h-[3em] md:h-[2.8em] rounded-[0.8em] sm:rounded-[1em] md:rounded-[0.9em] flex items-center overflow-hidden cursor-pointer shadow-[inset_0_0_1.6em_-0.6em_#0A141D] group w-full max-w-[150px] sm:max-w-none sm:w-auto"
                 // Llamar a openAuthModal con 'register'
                 onClick={() => openAuthModal("register")}
               >
-                <span className="mr-8 sm:mr-10">Unirme ahora</span>
-                <div className="absolute right-[0.3em] bg-white h-[2.4em] sm:h-[2.4em] md:h-[2.2em] w-[2.4em] sm:w-[2.4em] md:w-[2.2em] rounded-[0.8em] sm:rounded-[0.8em] md:rounded-[0.7em] flex items-center justify-center transition-all duration-300 group-hover:w-[calc(100%-0.6em)] shadow-[0.1em_0.1em_0.6em_0.2em_#d2d2d4] active:scale-95">
-                  <svg
-                    className="w-[1em] sm:w-[1.1em] transition-transform duration-300 text-[#7b52b9] group-hover:translate-x-[0.1em]"
+                <span className="mr-6 sm:mr-10">Unirme ahora</span>
+                <div className="absolute right-[0.3em] bg-white h-[1.7em] sm:h-[2.4em] md:h-[2.2em] w-[1.7em] sm:w-[2.4em] md:w-[2.2em] rounded-[0.6em] sm:rounded-[0.8em] md:rounded-[0.7em] flex items-center justify-center transition-all duration-300 group-hover:w-[calc(100%-0.6em)] shadow-[0.1em_0.1em_0.6em_0.2em_#d2d2d4] active:scale-95">
+                    <svg className="w-[0.9em] sm:w-[1.1em] transition-transform duration-300 text-[#7b52b9] group-hover:translate-x-[0.1em]"
                     height="24"
                     viewBox="0 0 24 24"
                     width="24"
@@ -166,7 +172,7 @@ export default function LandingPage() {
           </div>
 
           {/* Carruseles con skins aleatorias */}
-          <div className="w-full overflow-hidden mt-24 sm:mt-32 md:mt-40 lg:mt-48 xl:mt-56 relative">
+          <div className="w-full overflow-hidden mt-16 sm:mt-20 md:mt-24 lg:mt-32 xl:mt-40 relative">
             {/* Separador visual superior */}
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
 
