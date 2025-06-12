@@ -29,17 +29,17 @@ export const Timeline = ({ data }: { data: TimelineEntry[] }) => {
   const opacityTransform = useTransform(scrollYProgress, [0, 0.1], [0, 1]);
 
   return (
-    <div ref={containerRef} className="w-full bg-background font-sans px-4 sm:px-6 md:px-10">
-      <div ref={ref} className="relative max-w-7xl mx-auto pb-16 sm:pb-20">
+    <div ref={containerRef} className="w-full bg-background font-sans px-3 sm:px-4 md:px-6 lg:px-10">
+      <div ref={ref} className="relative max-w-7xl mx-auto pb-12 sm:pb-16 md:pb-20">
         {data.map((item, index) => (
           <div
             key={index}
-            className="flex justify-start pt-8 sm:pt-10 md:pt-28 md:gap-10"
+            className="flex justify-start pt-6 sm:pt-8 md:pt-10 lg:pt-28 md:gap-10"
           >
-            <div className="sticky flex flex-col md:flex-row z-40 items-center top-32 sm:top-40 self-start max-w-xs lg:max-w-sm md:w-full">
-              <div className="h-10 w-10 sm:h-12 sm:w-12 absolute left-2 sm:left-3 md:left-3 rounded-full bg-background/80 backdrop-blur-sm border border-primary/20 flex items-center justify-center shadow-lg shadow-primary/10">
-                <div className="h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
-                  <div className="h-2 w-2 sm:h-3 sm:w-3 rounded-full bg-primary animate-pulse" />
+            <div className="sticky flex flex-col md:flex-row z-40 items-center top-24 sm:top-28 md:top-32 lg:top-40 self-start max-w-xs lg:max-w-sm md:w-full">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 absolute left-2 sm:left-2 md:left-3 rounded-full bg-background/80 backdrop-blur-sm border border-primary/20 flex items-center justify-center shadow-lg shadow-primary/10">
+                <div className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
+                  <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 md:h-3 md:w-3 rounded-full bg-primary animate-pulse" />
                 </div>
               </div>
               <h3 className="hidden md:block text-xl md:pl-20 md:text-3xl font-bold text-white/80">
@@ -47,15 +47,14 @@ export const Timeline = ({ data }: { data: TimelineEntry[] }) => {
               </h3>
             </div>
 
-            <div className="relative pl-16 sm:pl-20 pr-3 sm:pr-4 md:pl-4 w-full">
-              <h3 className="md:hidden block text-lg sm:text-xl md:text-2xl mb-3 sm:mb-4 text-left font-bold text-white/80">
+            <div className="relative pl-12 sm:pl-16 md:pl-20 lg:pl-4 pr-2 sm:pr-3 md:pr-4 w-full">
+              <h3 className="md:hidden block text-base sm:text-lg md:text-xl lg:text-2xl mb-2 sm:mb-3 md:mb-4 text-left font-bold text-white/80">
                 {item.title}
               </h3>
               <motion.div
-                className="transform transition-all duration-300 hover:scale-[1.02]"
-                initial={{ opacity: 0, y: 20 }}
+                className="transform transition-all duration-300"
+                initial={{ opacity: 1, y: 20 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                viewport={{ once: true }}
                 whileInView={{ opacity: 1, y: 0 }}
               >
                 {item.content}
@@ -64,7 +63,7 @@ export const Timeline = ({ data }: { data: TimelineEntry[] }) => {
           </div>
         ))}
         <div
-          className="absolute left-6 sm:left-8 md:left-8 top-0 overflow-hidden w-[2px] bg-[linear-gradient(to_bottom,var(--tw-gradient-stops))] from-transparent from-[0%] via-white/20 to-transparent to-[99%] [mask-image:linear-gradient(to_bottom,transparent_0%,black_10%,black_90%,transparent_100%)]"
+          className="absolute left-4 sm:left-6 md:left-8 top-0 overflow-hidden w-[2px] bg-[linear-gradient(to_bottom,var(--tw-gradient-stops))] from-transparent from-[0%] via-white/20 to-transparent to-[99%] [mask-image:linear-gradient(to_bottom,transparent_0%,black_10%,black_90%,transparent_100%)]"
           style={{
             height: height + "px",
           }}

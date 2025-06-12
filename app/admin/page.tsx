@@ -70,6 +70,44 @@ interface AdminStats {
   cajasDisponibles: number;
   skinsUnicas: number;
   usuariosOAuth: number;
+  // Nuevas estadísticas basadas en logs
+  totalSkinsObtenidas: number;
+  totalSkinsEliminadas: number;
+  totalIntentosMejora: number;
+  totalMejorasExitosas: number;
+  totalMisionesCompletadas: number;
+  vpTotalGastado: number;
+  vpTotalGanado: number;
+  usuariosActivosHoy: number;
+  usuariosActivosSemana: number;
+  promedioSkinsUsuario: number;
+  tasaExitoMejoras: number;
+}
+
+interface CajaPopular {
+  id: string;
+  nombre: string;
+  imagen_url: string;
+  precio: number;
+  total_aperturas: number;
+  revenue_generado: number;
+}
+
+interface SkinsPopulares {
+  skin_id: string;
+  skin_nombre: string;
+  tier_nombre: string;
+  tier_color: string;
+  total_obtenidas: number;
+}
+
+interface EstadisticasPorTier {
+  tier_id: string;
+  tier_nombre: string;
+  tier_color: string;
+  total_skins: number;
+  total_obtenidas: number;
+  porcentaje_obtencion: number;
 }
 
 interface Caja {
@@ -192,8 +230,24 @@ export default function AdminPage() {
     totalRevenue: 0,
     cajasDisponibles: 0,
     skinsUnicas: 0,
-    usuariosOAuth: 0
+    usuariosOAuth: 0,
+    // Nuevas estadísticas basadas en logs
+    totalSkinsObtenidas: 0,
+    totalSkinsEliminadas: 0,
+    totalIntentosMejora: 0,
+    totalMejorasExitosas: 0,
+    totalMisionesCompletadas: 0,
+    vpTotalGastado: 0,
+    vpTotalGanado: 0,
+    usuariosActivosHoy: 0,
+    usuariosActivosSemana: 0,
+    promedioSkinsUsuario: 0,
+    tasaExitoMejoras: 0
   });
+  
+  const [cajasPopulares, setCajasPopulares] = useState<CajaPopular[]>([]);
+  const [skinsPopulares, setSkinsPopulares] = useState<SkinsPopulares[]>([]);
+  const [estadisticasPorTier, setEstadisticasPorTier] = useState<EstadisticasPorTier[]>([]);
   
   const [cajas, setCajas] = useState<Caja[]>([]);
   const [cajaSkins, setCajaSkins] = useState<CajaSkin[]>([]);
@@ -282,7 +336,10 @@ export default function AdminPage() {
         loadDashboardStats(),
         loadCajas(),
         loadCajaSkins(),
-        loadContentTiers()
+        loadContentTiers(),
+        loadCajasPopulares(),
+        loadSkinsPopulares(),
+        loadEstadisticasPorTier()
       ]);
     } catch (error) {
       console.error("Error al cargar datos:", error);
@@ -303,14 +360,17 @@ export default function AdminPage() {
         { count: totalBoxes },
         { count: totalBoxesOpened },
         { count: cajasDisponibles },
-        { count: usuariosOAuth }
+        { data: usuariosOAuthData }
       ] = await Promise.all([
         supabase.from("usuarios").select("*", { count: "exact", head: true }),
         supabase.from("cajas").select("*", { count: "exact", head: true }),
         supabase.from("inventario_usuario").select("*", { count: "exact", head: true }),
         supabase.from("cajas").select("*", { count: "exact", head: true }).eq("esta_disponible", true),
-        supabase.from("usuarios").select("*", { count: "exact", head: true }).eq("oauth", true)
+        supabase.from("usuarios").select("oauth").neq("oauth", null)
       ]);
+
+      // Contar usuarios OAuth (oauth no es null y no es false)
+      const usuariosOAuth = usuariosOAuthData?.filter(u => u.oauth && u.oauth !== false).length || 0;
 
       // Contar skins únicas
       const { data: skinsUnicas } = await supabase
@@ -321,18 +381,168 @@ export default function AdminPage() {
           data: result.data ? Array.from(new Set(result.data.map(item => item.skin_id))) : []
         }));
 
+      // Obtener estadísticas simples basadas en logs
+      const { count: totalLogs } = await supabase.from("logs_caja_abierta").select("*", { count: "exact", head: true });
+      const { count: totalMejoras } = await supabase.from("logs_skin_mejorada").select("*", { count: "exact", head: true });
+      const { count: mejorasExitosas } = await supabase.from("logs_skin_mejorada").select("*", { count: "exact", head: true }).eq("exitoso", true);
+      const { count: totalMisiones } = await supabase.from("logs_historial_recompensas").select("*", { count: "exact", head: true });
+      
+      const promedioSkins = (totalUsers || 0) > 0 ? Math.round(((totalBoxesOpened || 0) / (totalUsers || 1)) * 100) / 100 : 0;
+      const tasaExito = (totalMejoras || 0) > 0 ? Math.round(((mejorasExitosas || 0) / (totalMejoras || 1)) * 100 * 100) / 100 : 0;
+      
       setStats({
         totalUsers: totalUsers || 0,
         totalBoxes: totalBoxes || 0,
         totalSkins: skinsUnicas?.length || 0,
         totalBoxesOpened: totalBoxesOpened || 0,
-        totalRevenue: (totalBoxesOpened || 0) * 250, // Estimación
+        totalRevenue: (totalBoxesOpened || 0) * 250,
         cajasDisponibles: cajasDisponibles || 0,
         skinsUnicas: skinsUnicas?.length || 0,
-        usuariosOAuth: usuariosOAuth || 0
+        usuariosOAuth: usuariosOAuth || 0,
+        totalSkinsObtenidas: totalLogs || 0,
+        totalSkinsEliminadas: 0,
+        totalIntentosMejora: totalMejoras || 0,
+        totalMejorasExitosas: mejorasExitosas || 0,
+        totalMisionesCompletadas: totalMisiones || 0,
+        vpTotalGastado: 0,
+        vpTotalGanado: 0,
+        usuariosActivosHoy: 0,
+        usuariosActivosSemana: 0,
+        promedioSkinsUsuario: promedioSkins,
+        tasaExitoMejoras: tasaExito
       });
     } catch (error) {
       console.error("Error al cargar estadísticas:", error);
+    }
+  };
+
+  const loadDetailedStats = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return {
+      totalSkinsObtenidas: 0,
+      totalSkinsEliminadas: 0,
+      totalIntentosMejora: 0,
+      totalMejorasExitosas: 0,
+      totalMisionesCompletadas: 0,
+      vpTotalGastado: 0,
+      vpTotalGanado: 0,
+      usuariosActivosHoy: 0,
+      usuariosActivosSemana: 0,
+      promedioSkinsUsuario: 0,
+      tasaExitoMejoras: 0
+    };
+
+    try {
+      // Usar consultas SQL directas para mayor confiabilidad
+      const [
+        totalCajasResult,
+        totalMejorasResult, 
+        mejorasExitosasResult,
+        usuariosActivosHoyResult,
+        usuariosActivosSemanaResult,
+        totalInventarioResult,
+        totalUsuariosResult,
+        totalVPGastadoResult,
+        totalVPGanadoResult,
+        totalMisionesResult
+      ] = await Promise.all([
+        // Total de cajas abiertas (aproximación de skins obtenidas)
+        supabase.rpc('count_logs', { table_name: 'logs_caja_abierta' }).then(r => r.data || 0),
+        // Total de intentos de mejora
+        supabase.rpc('count_logs', { table_name: 'logs_skin_mejorada' }).then(r => r.data || 0),
+        // Mejoras exitosas
+        supabase.from('logs_skin_mejorada').select('*', { count: 'exact', head: true }).eq('exitoso', true),
+        // Usuarios activos hoy
+        supabase.rpc('usuarios_activos_periodo', { horas: 24 }).then(r => r.data || 0),
+        // Usuarios activos semana
+        supabase.rpc('usuarios_activos_periodo', { horas: 168 }).then(r => r.data || 0),
+        // Total items en inventario
+        supabase.from('inventario_usuario').select('*', { count: 'exact', head: true }),
+        // Total usuarios
+        supabase.from('usuarios').select('*', { count: 'exact', head: true }),
+        // VP total gastado
+        supabase.rpc('sum_column', { table_name: 'logs_caja_abierta', column_name: 'costo' }).then(r => r.data || 0),
+        // VP total ganado en misiones
+        supabase.rpc('sum_column', { table_name: 'logs_historial_recompensas', column_name: 'vp_otorgados' }).then(r => r.data || 0),
+        // Total misiones completadas
+        supabase.from('logs_historial_recompensas').select('*', { count: 'exact', head: true })
+      ]);
+
+      // Cálculos más simples
+      const totalInventarioItems = totalInventarioResult.count || 0;
+      const totalUsuarios = totalUsuariosResult.count || 0;
+      const promedioSkinsUsuario = totalUsuarios > 0 ? Math.round((totalInventarioItems / totalUsuarios) * 100) / 100 : 0;
+      
+      const totalIntentosMejora = totalMejorasResult;
+      const totalMejorasExitosas = mejorasExitosasResult.count || 0;
+      const tasaExitoMejoras = totalIntentosMejora > 0 ? Math.round(((totalMejorasExitosas) / totalIntentosMejora) * 100 * 100) / 100 : 0;
+
+      return {
+        totalSkinsObtenidas: totalCajasResult, // Aproximación: cada caja da al menos 1 skin
+        totalSkinsEliminadas: 0, // Simplificamos por ahora
+        totalIntentosMejora,
+        totalMejorasExitosas,
+        totalMisionesCompletadas: totalMisionesResult.count || 0,
+        vpTotalGastado: totalVPGastadoResult,
+        vpTotalGanado: totalVPGanadoResult,
+        usuariosActivosHoy: usuariosActivosHoyResult,
+        usuariosActivosSemana: usuariosActivosSemanaResult,
+        promedioSkinsUsuario,
+        tasaExitoMejoras
+      };
+    } catch (error) {
+      console.error("Error al cargar estadísticas detalladas:", error);
+      
+      // Fallback con consultas más simples
+      try {
+        const [
+          { count: totalCajas },
+          { count: totalMejoras },
+          { count: mejorasExitosas },
+          { count: totalInventario },
+          { count: totalUsuarios },
+          { count: totalMisiones }
+        ] = await Promise.all([
+          supabase.from('logs_caja_abierta').select('*', { count: 'exact', head: true }),
+          supabase.from('logs_skin_mejorada').select('*', { count: 'exact', head: true }),
+          supabase.from('logs_skin_mejorada').select('*', { count: 'exact', head: true }).eq('exitoso', true),
+          supabase.from('inventario_usuario').select('*', { count: 'exact', head: true }),
+          supabase.from('usuarios').select('*', { count: 'exact', head: true }),
+          supabase.from('logs_historial_recompensas').select('*', { count: 'exact', head: true })
+        ]);
+
+        const promedioSkinsUsuario = (totalUsuarios || 0) > 0 ? Math.round(((totalInventario || 0) / (totalUsuarios || 1)) * 100) / 100 : 0;
+        const tasaExitoMejoras = (totalMejoras || 0) > 0 ? Math.round(((mejorasExitosas || 0) / (totalMejoras || 1)) * 100 * 100) / 100 : 0;
+
+        return {
+          totalSkinsObtenidas: totalCajas || 0,
+          totalSkinsEliminadas: 0,
+          totalIntentosMejora: totalMejoras || 0,
+          totalMejorasExitosas: mejorasExitosas || 0,
+          totalMisionesCompletadas: totalMisiones || 0,
+          vpTotalGastado: 0, // Simplificado
+          vpTotalGanado: 0, // Simplificado
+          usuariosActivosHoy: 0, // Simplificado
+          usuariosActivosSemana: 0, // Simplificado
+          promedioSkinsUsuario,
+          tasaExitoMejoras
+        };
+      } catch (fallbackError) {
+        console.error("Error en fallback:", fallbackError);
+        return {
+          totalSkinsObtenidas: 0,
+          totalSkinsEliminadas: 0,
+          totalIntentosMejora: 0,
+          totalMejorasExitosas: 0,
+          totalMisionesCompletadas: 0,
+          vpTotalGastado: 0,
+          vpTotalGanado: 0,
+          usuariosActivosHoy: 0,
+          usuariosActivosSemana: 0,
+          promedioSkinsUsuario: 0,
+          tasaExitoMejoras: 0
+        };
+      }
     }
   };
 
@@ -387,6 +597,188 @@ export default function AdminPage() {
       setContentTiers(data as unknown as ContentTier[] || []);
     } catch (error) {
       console.error("Error al cargar content tiers:", error);
+    }
+  };
+
+  const loadCajasPopulares = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    try {
+      // Primero obtener logs de apertura
+      const { data: logsApertura, error: logsError } = await supabase
+        .from("logs_caja_abierta")
+        .select("caja_id, costo");
+
+      if (logsError) throw logsError;
+
+      // Obtener información de todas las cajas
+      const { data: todasLasCajas, error: cajasError } = await supabase
+        .from("cajas")
+        .select("id, nombre, imagen_url, precio");
+
+      if (cajasError) throw cajasError;
+
+      // Crear mapa de cajas para fácil acceso
+      const cajasMap = new Map();
+      todasLasCajas?.forEach((caja: any) => {
+        cajasMap.set(caja.id, caja);
+      });
+
+      // Agrupar por caja y calcular estadísticas
+      const estadisticasMap = new Map<string, {
+        id: string;
+        nombre: string;
+        imagen_url: string;
+        precio: number;
+        total_aperturas: number;
+        revenue_generado: number;
+      }>();
+
+      (logsApertura || []).forEach((log: any) => {
+        const cajaId = log.caja_id;
+        const cajaInfo = cajasMap.get(cajaId);
+        
+        if (cajaInfo) {
+          if (!estadisticasMap.has(cajaId)) {
+            estadisticasMap.set(cajaId, {
+              id: cajaId,
+              nombre: cajaInfo.nombre || 'Sin nombre',
+              imagen_url: cajaInfo.imagen_url || '/free_cage.png',
+              precio: cajaInfo.precio || 0,
+              total_aperturas: 0,
+              revenue_generado: 0
+            });
+          }
+
+          const cajaData = estadisticasMap.get(cajaId)!;
+          cajaData.total_aperturas += 1;
+          cajaData.revenue_generado += log.costo || 0;
+        }
+      });
+
+      // Convertir a array y ordenar por popularidad
+      const cajasPopularesArray = Array.from(estadisticasMap.values())
+        .sort((a, b) => b.total_aperturas - a.total_aperturas)
+        .slice(0, 10);
+
+      setCajasPopulares(cajasPopularesArray);
+    } catch (error) {
+      console.error("Error al cargar cajas populares:", error);
+      setCajasPopulares([]);
+    }
+  };
+
+  const loadSkinsPopulares = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    try {
+      // Obtener skins más obtenidas desde logs de cajas
+      const { data: logsCajas, error } = await supabase
+        .from("logs_caja_abierta")
+        .select("skins_conseguidas");
+
+      if (error) throw error;
+
+      // Contar frecuencia de cada skin
+      const skinFrequency = new Map<string, {
+        skin_id: string;
+        skin_nombre: string;
+        tier_nombre: string;
+        tier_color: string;
+        count: number;
+      }>();
+
+             (logsCajas || []).forEach((log: any) => {
+         if (Array.isArray(log.skins_conseguidas)) {
+           log.skins_conseguidas.forEach((skin: any) => {
+             const skinId = skin.skin_id;
+             if (!skinFrequency.has(skinId)) {
+               skinFrequency.set(skinId, {
+                 skin_id: skinId,
+                 skin_nombre: skin.skin_nombre || 'Sin nombre',
+                 tier_nombre: skin.tier_nombre || 'Sin tier',
+                 tier_color: skin.tier_color || '#FFFFFF',
+                 count: 0
+               });
+             }
+             skinFrequency.get(skinId)!.count += 1;
+           });
+         }
+       });
+
+      // Convertir a array y ordenar por frecuencia
+      const skinsPopularesArray = Array.from(skinFrequency.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10)
+        .map(skin => ({
+          skin_id: skin.skin_id,
+          skin_nombre: skin.skin_nombre,
+          tier_nombre: skin.tier_nombre,
+          tier_color: skin.tier_color,
+          total_obtenidas: skin.count
+        }));
+
+      setSkinsPopulares(skinsPopularesArray);
+    } catch (error) {
+      console.error("Error al cargar skins populares:", error);
+    }
+  };
+
+  const loadEstadisticasPorTier = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    try {
+      // Obtener todos los tiers
+      const { data: tiers, error: tiersError } = await supabase
+        .from("content_tiers")
+        .select("*");
+
+      if (tiersError) throw tiersError;
+
+      // Obtener estadísticas por tier
+      const estadisticasTiers = await Promise.all(
+        (tiers || []).map(async (tier: any) => {
+          // Contar total de skins disponibles en este tier
+          const { count: totalSkins } = await supabase
+            .from("cajas_skins")
+            .select("*", { count: "exact", head: true })
+            .eq("content_tier_id", tier.id);
+
+          // Contar cuántas veces se han obtenido skins de este tier
+          const { data: logsCajas } = await supabase
+            .from("logs_caja_abierta")
+            .select("skins_conseguidas");
+
+                     let totalObtenidas = 0;
+           (logsCajas || []).forEach((log: any) => {
+             if (Array.isArray(log.skins_conseguidas)) {
+               log.skins_conseguidas.forEach((skin: any) => {
+                 if (skin.tier_id === tier.uuid_api) {
+                   totalObtenidas += 1;
+                 }
+               });
+             }
+           });
+
+                     const porcentajeObtencion = (totalSkins || 0) > 0 ? (totalObtenidas / (totalSkins || 1)) * 100 : 0;
+
+          return {
+            tier_id: tier.id,
+            tier_nombre: tier.nombre,
+            tier_color: tier.color,
+            total_skins: totalSkins || 0,
+            total_obtenidas: totalObtenidas,
+            porcentaje_obtencion: Math.round(porcentajeObtencion * 100) / 100
+          };
+        })
+      );
+
+      setEstadisticasPorTier(estadisticasTiers);
+    } catch (error) {
+      console.error("Error al cargar estadísticas por tier:", error);
     }
   };
 
@@ -1273,7 +1665,7 @@ export default function AdminPage() {
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="space-y-4 sm:space-y-6">
-            {/* Stats Grid */}
+            {/* Stats Grid Principal */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <StatCard
                 title="Total Usuarios"
@@ -1283,41 +1675,78 @@ export default function AdminPage() {
                 color="primary"
               />
               <StatCard
-                title="Cajas Totales"
-                value={stats.totalBoxes}
-                subtitle={`${stats.cajasDisponibles} disponibles`}
+                title="Cajas Abiertas"
+                value={stats.totalBoxesOpened.toLocaleString()}
+                subtitle={`${stats.totalBoxes} cajas disponibles`}
                 icon={Package}
                 color="green-500"
               />
               <StatCard
-                title="Cajas Abiertas"
-                value={stats.totalBoxesOpened.toLocaleString()}
-                subtitle="Total histórico"
-                icon={Box}
+                title="Skins Obtenidas"
+                value={stats.totalSkinsObtenidas.toLocaleString()}
+                subtitle={`Promedio: ${stats.promedioSkinsUsuario}/usuario`}
+                icon={Layers}
                 color="blue-500"
               />
               <StatCard
-                title="Skins Únicas"
-                value={stats.skinsUnicas}
-                subtitle="En el sistema"
-                icon={Layers}
+                title="VP Gastado"
+                value={stats.vpTotalGastado.toLocaleString()}
+                subtitle={`${stats.vpTotalGanado.toLocaleString()} VP ganados`}
+                icon={DollarSign}
                 color="purple-500"
               />
             </div>
 
+            {/* Stats Grid Actividad */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <StatCard
+                title="Usuarios Activos Hoy"
+                value={stats.usuariosActivosHoy}
+                subtitle="Últimas 24 horas"
+                icon={Activity}
+                color="green-500"
+              />
+              <StatCard
+                title="Usuarios Activos (7d)"
+                value={stats.usuariosActivosSemana}
+                subtitle="Última semana"
+                icon={TrendingUp}
+                color="blue-500"
+              />
+              <StatCard
+                title="Mejoras Exitosas"
+                value={stats.totalMejorasExitosas}
+                subtitle={`${stats.tasaExitoMejoras}% tasa de éxito`}
+                icon={Star}
+                color="yellow-500"
+              />
+              <StatCard
+                title="Misiones Completadas"
+                value={stats.totalMisionesCompletadas.toLocaleString()}
+                subtitle={`${stats.totalSkinsEliminadas.toLocaleString()} skins eliminadas`}
+                icon={CheckCircle}
+                color="orange-500"
+              />
+            </div>
+
             {/* Overview Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+              {/* Cajas Más Populares */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-white text-base sm:text-lg">
                     <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     Cajas Más Populares
                   </CardTitle>
+                  <CardDescription className="text-white/60">Basado en aperturas reales</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 sm:space-y-4">
-                    {cajas.slice(0, 5).map((caja, index) => (
+                    {cajasPopulares.slice(0, 5).map((caja, index) => (
                       <div key={caja.id} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-2xl bg-white/5">
+                        <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/20 text-primary text-xs font-bold">
+                          {index + 1}
+                        </div>
                         <div className="w-8 h-8 sm:w-10 sm:h-10 overflow-hidden flex-shrink-0">
                           <Image
                             src={caja.imagen_url}
@@ -1329,10 +1758,43 @@ export default function AdminPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs sm:text-sm font-medium text-white truncate">{caja.nombre}</p>
-                          <p className="text-xs text-white/60">{caja.precio} VP</p>
+                          <p className="text-xs text-white/60">{caja.total_aperturas} aperturas</p>
                         </div>
-                        <Badge variant={caja.esta_disponible ? "default" : "secondary"} className="text-white/90 text-xs">
-                          {caja.esta_disponible ? "Disponible" : "No disponible"}
+                        <div className="text-right">
+                          <p className="text-xs font-medium text-primary/80">{caja.revenue_generado.toLocaleString()} VP</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Skins Más Obtenidas */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white text-base sm:text-lg">
+                    <Star className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                    Skins Más Obtenidas
+                  </CardTitle>
+                  <CardDescription className="text-white/60">Top skins en logs</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 sm:space-y-4">
+                    {skinsPopulares.slice(0, 5).map((skin, index) => (
+                      <div key={skin.skin_id} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-white/5">
+                        <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/20 text-primary text-xs font-bold">
+                          {index + 1}
+                        </div>
+                        <div 
+                          className="w-3 h-3 sm:w-4 sm:h-4 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: skin.tier_color }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-white truncate">{skin.skin_nombre}</p>
+                          <p className="text-xs" style={{ color: skin.tier_color }}>{skin.tier_nombre}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {skin.total_obtenidas}
                         </Badge>
                       </div>
                     ))}
@@ -1340,34 +1802,39 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
+              {/* Resumen de Actividad */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-white text-base sm:text-lg">
-                    <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                    Tiers de Contenido
+                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                    Resumen de Actividad
                   </CardTitle>
+                  <CardDescription className="text-white/60">Estadísticas generales del sistema</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3 sm:space-y-4">
-                    {contentTiers.map((tier, index) => (
-                      <div key={tier.id} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-white/5">
-                        <div 
-                          className="w-3 h-3 sm:w-4 sm:h-4 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: tier.color }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-white truncate">{tier.nombre}</p>
-                          <p className="text-xs text-white/60">Grado {tier.grado}</p>
-                        </div>
-                        <Badge variant="outline" className="text-xs">
-                          {cajaSkins.filter(cs => cs.content_tier_id === tier.id).length} skins
-                        </Badge>
-                      </div>
-                    ))}
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div className="bg-white/5 rounded-2xl p-3 sm:p-4 text-center border border-white/10 hover:border-white/20 transition-all">
+                      <div className="text-xl sm:text-2xl font-bold text-white mb-1">{stats.totalIntentosMejora.toLocaleString()}</div>
+                      <div className="text-xs sm:text-sm text-white/60">Intentos de Mejora</div>
+                    </div>
+                    <div className="bg-white/5 rounded-2xl p-3 sm:p-4 text-center border border-white/10 hover:border-green-400/20 transition-all">
+                      <div className="text-xl sm:text-2xl font-bold text-white mb-1">{stats.totalMejorasExitosas.toLocaleString()}</div>
+                      <div className="text-xs sm:text-sm text-white/60">Mejoras Exitosas</div>
+                    </div>
+                    <div className="bg-white/5 rounded-2xl p-3 sm:p-4 text-center border border-white/10 hover:border-blue-400/20 transition-all">
+                      <div className="text-xl sm:text-2xl font-bold text-white mb-1">{stats.totalSkinsObtenidas.toLocaleString()}</div>
+                      <div className="text-xs sm:text-sm text-white/60">Skins Obtenidas</div>
+                    </div>
+                    <div className="bg-white/5 rounded-2xl p-3 sm:p-4 text-center border border-white/10 hover:border-orange-400/20 transition-all">
+                      <div className="text-xl sm:text-2xl font-bold text-white mb-1">{stats.totalMisionesCompletadas.toLocaleString()}</div>
+                      <div className="text-xs sm:text-sm text-white/60">Misiones Completadas</div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+
           </TabsContent>
 
           {/* Boxes Tab */}

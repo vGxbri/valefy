@@ -126,7 +126,7 @@ export function ImageCarousel({
                   src={`/skins-bg/${item.contentTier.id}.png`}
                   alt={`Fondo para ${item.contentTier.nombre}`}
                   fill
-                  className="absolute inset-0 z-0 p-3 sm:p-4 opacity-60 transform scale-150 rotate-12 object-contain"
+                  className="absolute inset-0 z-0 p-3 sm:p-4 opacity-5x0 transform scale-150 rotate-12 object-contain"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}

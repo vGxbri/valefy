@@ -12,7 +12,6 @@ const navLinks = [
   { name: "Inicio", href: "#inicio" },
   { name: "Funcionamiento", href: "#funcionamiento" },
   { name: "FAQ", href: "#faq" },
-  { name: "Contacto", href: "#contacto" },
 ];
 
 export default function Navbar() {
@@ -69,22 +68,22 @@ export default function Navbar() {
       />
       <motion.nav
         animate={{ y: isVisible ? 0 : -100 }}
-        className={`fixed top-4 left-0 right-0 mx-auto w-[95%] max-w-7xl z-50 ${
+        className={`fixed top-2 sm:top-4 left-0 right-0 mx-auto w-[96%] sm:w-[95%] max-w-7xl z-50 ${
           isScrolled ? "bg-background/80" : "bg-background/40"
-        } ${isAuthModalOpen ? "backdrop-blur-lg" : "backdrop-blur-md"} border border-white/5 rounded-3xl shadow-lg transition-all duration-300`}
+        } ${isAuthModalOpen ? "backdrop-blur-lg" : "backdrop-blur-md"} border border-white/5 rounded-2xl sm:rounded-3xl shadow-lg transition-all duration-300`}
         initial={{ y: 0 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
       >
-        <div className="px-6 py-3 flex justify-between items-center">
+        <div className="px-3 sm:px-6 py-2 sm:py-3 flex justify-between items-center">
           {/* Contenedor del Logo (flex: 1 para ocupar espacio) */}
           <div className="flex-1 flex justify-start">
             <Link className="flex items-center gap-1 pt-1" href="/">
               <Image
                 alt="Valefy Logo"
                 className="object-contain"
-                height={20}
+                height={18}
                 src="/logo-valefy.png"
-                width={90}
+                width={80}
               />
             </Link>
           </div>
@@ -105,14 +104,14 @@ export default function Navbar() {
           {/* Contenedor del Botón de acción (flex: 1 para ocupar espacio) */}
           <div className="flex-1 flex justify-end">
             <button
-              className="relative bg-primary text-white font-medium text-[15px] px-4 py-[0.35em] pl-5 h-[2.5em] rounded-[0.9em] flex items-center overflow-hidden cursor-pointer shadow-[inset_0_0_1.6em_-0.6em_#0A141D] group"
+              className="relative bg-primary text-white font-medium text-sm sm:text-[15px] px-3 sm:px-4 py-[0.35em] pl-4 sm:pl-5 h-[2.3em] sm:h-[2.5em] rounded-[0.8em] sm:rounded-[0.9em] flex items-center overflow-hidden cursor-pointer shadow-[inset_0_0_1.6em_-0.6em_#0A141D] group"
               // Llamar a openAuthModal con 'login'
               onClick={() => openAuthModal("login")}
             >
-              <span className="mr-8">Iniciar Sesión</span>
-              <div className="absolute right-[0.3em] bg-white h-[1.9em] w-[1.9em] rounded-[0.7em] flex items-center justify-center transition-all duration-300 group-hover:w-[calc(100%-0.6em)] shadow-[0.1em_0.1em_0.6em_0.2em_#d2d2d4] active:scale-95">
+              <span className="mr-6 sm:mr-8">Iniciar Sesión</span>
+              <div className="absolute right-[0.3em] bg-white h-[1.7em] sm:h-[1.9em] w-[1.7em] sm:w-[1.9em] rounded-[0.6em] sm:rounded-[0.7em] flex items-center justify-center transition-all duration-300 group-hover:w-[calc(100%-0.6em)] shadow-[0.1em_0.1em_0.6em_0.2em_#d2d2d4] active:scale-95">
                 <svg
-                  className="w-[1em] transition-transform duration-300 text-[#7b52b9] group-hover:translate-x-[0.1em]"
+                  className="w-[0.9em] sm:w-[1em] transition-transform duration-300 text-[#7b52b9] group-hover:translate-x-[0.1em]"
                   height="24"
                   viewBox="0 0 24 24"
                   width="24"

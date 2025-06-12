@@ -57,54 +57,54 @@ export const timelineData = processSteps.map((step, index) => ({
     <>
       {/* Paso 1: Registro y aventura */}
       {index === 0 && (
-        <div className="bg-backgroundAlt/10 border border-white/10 rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-8">
-          <div className="flex flex-col gap-6">
-            <div className="flex items-start gap-6">
-              <div className="text-5xl bg-primary/15 p-4 rounded-2xl shadow-lg">
+        <div className="bg-backgroundAlt/10 border border-white/10 rounded-xl sm:rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)] p-4 sm:p-6 md:p-8">
+          <div className="flex flex-col gap-4 sm:gap-6">
+            <div className="flex items-start gap-4 sm:gap-6">
+              <div className="text-3xl sm:text-4xl md:text-5xl bg-primary/15 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl shadow-lg">
                 {step.icon}
               </div>
               <div className="flex-1">
-                <h4 className="text-2xl font-bold text-white mb-3">
+                <h4 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-2 sm:mb-3">
                   Tu aventura comienza aquí
                 </h4>
-                <p className="text-white/80 leading-relaxed mb-4">
+                <p className="text-white/80 leading-relaxed mb-3 sm:mb-4 text-sm sm:text-base">
                   Crear tu cuenta en Valefy es el primer paso hacia una experiencia única con las skins de Valorant. 
                   En menos de un minuto estarás explorando nuestro mundo lleno de posibilidades.
                 </p>
-                <div className="flex items-center gap-3 px-4 py-2 bg-primary/10 rounded-lg border border-primary/20">
+                <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 bg-primary/10 rounded-lg border border-primary/20">
                   <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                  <span className="font-medium">¡Te damos la bienvenida con 2000 VP!</span>
+                  <span className="font-medium text-sm sm:text-base">¡Te damos la bienvenida con 2000 VP!</span>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               {step.features.map((feature, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-3 p-4 rounded-xl bg-white/5 hover:bg-primary/5 transition-all duration-300 border border-white/5 hover:border-primary/20"
+                  className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white/5 hover:bg-primary/5 transition-all duration-300 border border-white/5 hover:border-primary/20"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white font-bold text-sm">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white font-bold text-xs sm:text-sm">
                     ✓
                   </div>
-                  <p className="text-white/90 text-sm font-medium">{feature}</p>
+                  <p className="text-white/90 text-xs sm:text-sm font-medium">{feature}</p>
                 </div>
               ))}
             </div>
 
-            <div className="border-t border-white/10 pt-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1 text-center p-4 rounded-xl border border-primary/20 bg-primary/10">
-                  <div className="text-2xl font-bold text-primary">2000 VP</div>
-                  <div className="text-sm">Regalo de bienvenida</div>
+            <div className="border-t border-white/10 pt-4 sm:pt-6">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <div className="flex-1 text-center p-3 sm:p-4 rounded-lg sm:rounded-xl border border-primary/20 bg-primary/10">
+                  <div className="text-xl sm:text-2xl font-bold text-primary">2000 VP</div>
+                  <div className="text-xs sm:text-sm">Regalo de bienvenida</div>
                 </div>
-                <div className="flex-1 text-center p-4 rounded-xl border border-primary/20 bg-primary/10">
-                  <div className="text-2xl font-bold text-primary">30s</div>
-                  <div className="text-sm">Registro ultra rápido</div>
+                <div className="flex-1 text-center p-3 sm:p-4 rounded-lg sm:rounded-xl border border-primary/20 bg-primary/10">
+                  <div className="text-xl sm:text-2xl font-bold text-primary">30s</div>
+                  <div className="text-xs sm:text-sm">Registro ultra rápido</div>
                 </div>
-                <div className="flex-1 text-center p-4 rounded-xl border border-primary/20 bg-primary/10">
-                  <div className="text-2xl font-bold text-primary">∞</div>
-                  <div className="text-sm">Acceso sin límites</div>
+                <div className="flex-1 text-center p-3 sm:p-4 rounded-lg sm:rounded-xl border border-primary/20 bg-primary/10">
+                  <div className="text-xl sm:text-2xl font-bold text-primary">∞</div>
+                  <div className="text-xs sm:text-sm">Acceso sin límites</div>
                 </div>
               </div>
             </div>
@@ -114,70 +114,70 @@ export const timelineData = processSteps.map((step, index) => ({
 
       {/* Paso 2: Cajas y catálogo */}
       {index === 1 && (
-        <div className="bg-backgroundAlt/10 border border-white/10 rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)]">
-          <div className="p-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <div className="text-5xl bg-primary/15 p-4 rounded-2xl shadow-lg transition-transform">
+        <div className="bg-backgroundAlt/10 border border-white/10 rounded-xl sm:rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)]">
+          <div className="p-4 sm:p-6 md:p-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="text-3xl sm:text-4xl md:text-5xl bg-primary/15 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl shadow-lg transition-transform">
                   {step.icon}
                 </div>
                 <div>
-                  <h4 className="text-2xl font-bold text-white">Explora todo el catálogo de Valorant</h4>
-                  <p className="text-primary font-medium">Más de 1000 skins oficiales esperándote</p>
+                  <h4 className="text-lg sm:text-xl md:text-2xl font-bold text-white">Explora todo el catálogo de Valorant</h4>
+                  <p className="text-primary font-medium text-sm sm:text-base">Más de 1000 skins oficiales esperándote</p>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-white">1000+</div>
-                <div className="text-white/60 text-sm">Skins disponibles</div>
+              <div className="text-center sm:text-right">
+                <div className="text-2xl sm:text-3xl font-bold text-white">1000+</div>
+                <div className="text-white/60 text-xs sm:text-sm">Skins disponibles</div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-              <div className="rounded-xl p-5 border border-primary/20 bg-primary/10">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                    <span className="text-primary text-lg">📦</span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+              <div className="rounded-lg sm:rounded-xl p-4 sm:p-5 border border-primary/20 bg-primary/10">
+                <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <span className="text-primary text-base sm:text-lg">📦</span>
                   </div>
                   <div>
-                    <h5 className="text-white font-semibold">Caja Diaria</h5>
-                    <p className="text-primary/90 text-sm font-medium">Gratis cada 24h</p>
+                    <h5 className="text-white font-semibold text-sm sm:text-base">Caja Diaria</h5>
+                    <p className="text-primary/90 text-xs sm:text-sm font-medium">Gratis cada 24h</p>
                   </div>
                 </div>
-                <div className="space-y-1 text-sm text-white/80">
+                <div className="space-y-1 text-xs sm:text-sm text-white/80">
                   <div>• Renovación automática</div>
                   <div>• Sin límite de uso</div>
                   <div>• Todas las raridades disponibles</div>
                 </div>
               </div>
 
-              <div className="rounded-xl p-5 border border-primary/20 bg-primary/10">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                    <span className="text-primary text-lg">🔍</span>
+              <div className="rounded-lg sm:rounded-xl p-4 sm:p-5 border border-primary/20 bg-primary/10">
+                <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <span className="text-primary text-base sm:text-lg">🔍</span>
                   </div>
                   <div>
-                    <h5 className="text-white font-semibold">Explorar Catálogo</h5>
-                    <p className="text-primary/90 text-sm font-medium">Navegación intuitiva</p>
+                    <h5 className="text-white font-semibold text-sm sm:text-base">Explorar Catálogo</h5>
+                    <p className="text-primary/90 text-xs sm:text-sm font-medium">Navegación intuitiva</p>
                   </div>
                 </div>
-                <div className="space-y-1 text-sm text-white/80">
+                <div className="space-y-1 text-xs sm:text-sm text-white/80">
                   <div>• Filtros por rareza y arma</div>
                   <div>• Búsqueda instantánea</div>
                   <div>• Búsqueda por nombre</div>
                 </div>
               </div>
 
-              <div className="rounded-xl p-5 border border-primary/20 bg-primary/10">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                    <span className="text-primary text-lg">✨</span>
+              <div className="rounded-lg sm:rounded-xl p-4 sm:p-5 border border-primary/20 bg-primary/10">
+                <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <span className="text-primary text-base sm:text-lg">✨</span>
                   </div>
                   <div>
-                    <h5 className="text-white font-semibold">Skins Especiales</h5>
-                    <p className="text-primary/90 text-sm font-medium">Ultra raras</p>
+                    <h5 className="text-white font-semibold text-sm sm:text-base">Skins Especiales</h5>
+                    <p className="text-primary/90 text-xs sm:text-sm font-medium">Ultra raras</p>
                   </div>
                 </div>
-                <div className="space-y-1 text-sm text-white/80">
+                <div className="space-y-1 text-xs sm:text-sm text-white/80">
                   <div>• Bundle Elderflame</div>
                   <div>• Ediciones limitadas</div>
                   <div>• Exclusivas de eventos</div>
@@ -185,12 +185,12 @@ export const timelineData = processSteps.map((step, index) => ({
               </div>
             </div>
 
-            <div className="bg-white/5 rounded-xl p-5 border border-white/10">
-              <h5 className="text-white font-semibold mb-3 flex items-center gap-2">
+            <div className="bg-white/5 rounded-lg sm:rounded-xl p-4 sm:p-5 border border-white/10">
+              <h5 className="text-white font-semibold mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">
                 <span className="text-primary">🎯</span>
                 Spinners animados y realistas
               </h5>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
                 <div className="text-center">
                   <div className="text-white font-medium">12s</div>
                   <div className="text-white/60">Animación completa</div>
@@ -215,31 +215,31 @@ export const timelineData = processSteps.map((step, index) => ({
 
       {/* Paso 3: Mejoras y misiones */}
       {index === 2 && (
-        <div className="bg-backgroundAlt/10 border border-white/10 rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)]">
-          <div className="p-8">
-            <div className="flex gap-8">
+        <div className="bg-backgroundAlt/10 border border-white/10 rounded-xl sm:rounded-2xl backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)]">
+          <div className="p-4 sm:p-6 md:p-8">
+            <div className="flex gap-4 sm:gap-6 md:gap-8">
               <div className="flex-1">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="text-4xl bg-primary/15 p-3 rounded-xl">
+                <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                  <div className="text-3xl sm:text-4xl bg-primary/15 p-2 sm:p-3 rounded-lg sm:rounded-xl">
                     {step.icon}
                   </div>
                   <div>
-                    <h4 className="text-xl font-bold text-white mb-2">Potencia tus skins favoritas</h4>
-                    <p className="text-white/80 leading-relaxed">
+                    <h4 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">Potencia tus skins favoritas</h4>
+                    <p className="text-white/80 leading-relaxed text-sm sm:text-base">
                       No solo coleccionas skins, sino que las mejoras y las conviertes en algo único. 
                       Nuestro sistema de mejoras te permite personalizar y potenciar cada skin que obtienes.
                     </p>
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {step.features.map((feature, idx) => (
-                    <div key={idx} className="flex items-start gap-4 p-4 border border-primary/20 bg-primary/10 rounded-xl hover:bg-primary/5 transition-all duration-300">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white font-bold text-sm">
+                    <div key={idx} className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 border border-primary/20 bg-primary/10 rounded-lg sm:rounded-xl hover:bg-primary/5 transition-all duration-300">
+                      <div className="flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white font-bold text-xs sm:text-sm">
                         ✓
                       </div>
                       <div className="flex-1">
-                        <p className="text-white/90 font-medium mb-1">{feature}</p>
+                        <p className="text-white/90 font-medium mb-1 text-xs sm:text-sm">{feature}</p>
                         <div className="w-full h-1 bg-white/10 rounded-full">
                           <div
                             className="h-1 bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-1000"
@@ -255,8 +255,8 @@ export const timelineData = processSteps.map((step, index) => ({
 
             </div>
 
-            <div className="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="flex items-center gap-6 text-sm text-white/60">
+            <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
+              <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 text-xs sm:text-sm text-white/60">
                 <span className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                   Mejoras en tiempo real
