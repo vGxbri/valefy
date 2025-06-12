@@ -47,14 +47,6 @@ export default function Footer() {
     },
   ];
 
-  // Navigation links
-  const navLinks = [
-    { name: "Inicio", href: "/" },
-    { name: "Características", href: "/#caracteristicas" },
-    { name: "Cómo funciona", href: "/#como-funciona" },
-    { name: "FAQ", href: "/#faq" },
-  ];
-
   // Legal links
   const legalLinks = [
     { name: "Términos de servicio", href: "/terminos" },
@@ -75,9 +67,9 @@ export default function Footer() {
       <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl opacity-50" />
       
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 relative z-10">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 sm:gap-10 mb-12 sm:mb-16">
+        <div className="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-16 mb-12 sm:mb-16 max-w-5xl mx-auto">
           {/* Logo y descripción */}
-          <div className="sm:col-span-2 lg:col-span-5 space-y-4 sm:space-y-6">
+          <div className="flex-1 space-y-4 sm:space-y-6 text-center lg:text-left min-w-0">
             <Link 
               className="inline-block transform transition-transform duration-300 hover:scale-105" 
               href="/"
@@ -91,12 +83,12 @@ export default function Footer() {
               />
             </Link>
             
-            <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
+            <p className="text-slate-400 text-sm sm:text-base leading-relaxed text-balance">
               El mejor simulador de cajas de Valorant. Experimenta la emoción
               sin gastar dinero real.
             </p>
             
-            <div className="flex space-x-3 sm:space-x-5 mt-4 sm:mt-6">
+            <div className="flex justify-center lg:justify-start space-x-3 sm:space-x-5 mt-4 sm:mt-6">
               {socialLinks.map((link) => (
                 <motion.a
                   key={link.name}
@@ -119,31 +111,8 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Enlaces de navegación */}
-          <div className="lg:col-span-2">
-            <h4 className="text-white font-semibold mb-3 sm:mb-5 text-base sm:text-lg">Enlaces</h4>
-            <ul className="space-y-2 sm:space-y-3">
-              {navLinks.map((link) => (
-                <li key={link.name}>
-                  <motion.div
-                    initial="initial"
-                    whileHover="hover"
-                  >
-                    <Link
-                      className="text-slate-400 hover:text-primary transition-colors flex items-center group text-sm sm:text-base"
-                      href={link.href}
-                    >
-                      <ChevronRight className="h-3 w-0 sm:h-4 opacity-0 group-hover:w-3 sm:group-hover:w-4 group-hover:opacity-100 transition-all duration-300 text-primary" />
-                      <motion.span variants={linkAnimation}>{link.name}</motion.span>
-                    </Link>
-                  </motion.div>
-                </li>
-              ))}
-            </ul>
-          </div>
-
           {/* Enlaces legales */}
-          <div className="lg:col-span-2">
+          <div className="text-center lg:text-left flex-1">
             <h4 className="text-white font-semibold mb-3 sm:mb-5 text-base sm:text-lg">Legal</h4>
             <ul className="space-y-2 sm:space-y-3">
               {legalLinks.map((link) => (
@@ -153,7 +122,7 @@ export default function Footer() {
                     whileHover="hover"
                   >
                     <Link
-                      className="text-slate-400 hover:text-primary transition-colors flex items-center group text-sm sm:text-base"
+                      className="text-slate-400 hover:text-primary transition-colors flex items-center justify-center lg:justify-start group text-sm sm:text-base"
                       href={link.href}
                     >
                       <ChevronRight className="h-3 w-0 sm:h-4 opacity-0 group-hover:w-3 sm:group-hover:w-4 group-hover:opacity-100 transition-all duration-300 text-primary" />
@@ -166,13 +135,13 @@ export default function Footer() {
           </div>
 
           {/* Contacto */}
-          <div className="sm:col-span-2 lg:col-span-3">
+          <div className="text-center lg:text-left flex-1">
             <h4 className="text-white font-semibold mb-3 sm:mb-5 text-base sm:text-lg">Contacto</h4>
             <ul className="space-y-3 sm:space-y-4">
               <li>
                 <a 
                   href="mailto:soporte@valefy.com" 
-                  className="text-slate-400 hover:text-primary transition-colors flex items-center gap-2 sm:gap-3 group text-sm sm:text-base"
+                  className="text-slate-400 hover:text-primary transition-colors flex items-center justify-center lg:justify-start gap-2 sm:gap-3 group text-sm sm:text-base"
                 >
                   <div className="p-1.5 sm:p-2 bg-slate-800/70 rounded-lg border border-slate-700/50 group-hover:border-primary/30 group-hover:bg-primary/10 transition-all duration-300 flex-shrink-0">
                     <Mail className="h-3 w-3 sm:h-4 sm:w-4 text-primary/80" />
@@ -185,7 +154,7 @@ export default function Footer() {
                   href="https://discord.gg/valefy" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-slate-400 hover:text-primary transition-colors flex items-center gap-2 sm:gap-3 group text-sm sm:text-base"
+                  className="text-slate-400 hover:text-primary transition-colors flex items-center justify-center lg:justify-start gap-2 sm:gap-3 group text-sm sm:text-base"
                 >
                   <div className="p-1.5 sm:p-2 bg-slate-800/70 rounded-lg border border-slate-700/50 group-hover:border-primary/30 group-hover:bg-primary/10 transition-all duration-300 flex-shrink-0">
                     <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 text-primary/80" />
