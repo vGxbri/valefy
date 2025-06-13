@@ -473,7 +473,7 @@ export default function AdminPage() {
       const totalUsuarios = totalUsuariosResult.count || 0;
       const promedioSkinsUsuario = totalUsuarios > 0 ? Math.round((totalInventarioItems / totalUsuarios) * 100) / 100 : 0;
       
-      const totalIntentosMejora = totalMejorasResult;
+      const totalIntentosMejora = totalMejorasResult as number;
       const totalMejorasExitosas = mejorasExitosasResult.count || 0;
       const tasaExitoMejoras = totalIntentosMejora > 0 ? Math.round(((totalMejorasExitosas) / totalIntentosMejora) * 100 * 100) / 100 : 0;
 
