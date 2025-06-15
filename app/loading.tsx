@@ -24,7 +24,7 @@ export default function Loading({
       // Garantizar un tiempo mínimo de visualización
       minLoadingTimer = setTimeout(() => {
         handleExit();
-      }, 3000); // 3 segundos de loading
+      }, 3000);
     };
 
     const handleExit = () => {
@@ -33,7 +33,7 @@ export default function Loading({
         if (onTransitionComplete) {
           onTransitionComplete();
         }
-      }, 2000); // 2 segundos de animación de salida
+      }, 2000);
     };
 
     startLoading();
@@ -62,9 +62,6 @@ export default function Loading({
             <h2 className="text-2xl font-semibold text-white mb-2 animate-fade-in">
               Cargando Valefy
             </h2>
-            <p className="text-white/80 animate-fade-in-delayed">
-              Preparando tu experiencia personalizada...
-            </p>
           </div>
         </div>
       )}

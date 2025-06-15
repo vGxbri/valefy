@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
-// Eliminar importación obsoleta
-import { signIn } from "next-auth/react"; // Importar signIn
-import { FaGoogle, FaDiscord } from "react-icons/fa"; // Importar iconos
-import { useRouter } from "next/navigation"; // Importar useRouter de next/navigation
+import { signIn } from "next-auth/react";
+import { FaGoogle, FaDiscord } from "react-icons/fa";
+import { useRouter } from "next/navigation";
 
 import Stepper from "./Stepper";
 interface AuthModalProps {
@@ -21,10 +20,9 @@ export default function AuthModal({
   const [isRegistered, setIsRegistered] = useState(false);
   const [isLoginView, setIsLoginView] = useState(initialView === "login");
   const [isVisible, setIsVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Estado de carga
-  const [error, setError] = useState<string | null>(null); // Estado de error
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Definición de handleLoginSubmit dentro del componente
   const router = useRouter();
 
   const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -136,16 +134,12 @@ export default function AuthModal({
           exit="hidden"
           initial="hidden"
           variants={backdropVariants}
-          // Se eliminó onClick={onClose} para evitar que el modal se cierre al hacer clic fuera
         >
-          {/* Removed close button from here */}
-
           <motion.div
             className="relative w-full max-w-xs sm:max-w-sm md:max-w-md bg-background border border-white/10 rounded-2xl shadow-xl overflow-hidden"
             variants={modalVariants}
-            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Moved close button inside the modal content area */}
             <button
               aria-label="Cerrar"
               className="absolute top-3 sm:top-4 right-3 sm:right-4 p-1.5 sm:p-2 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors z-20" // Adjusted positioning and styling
@@ -167,7 +161,7 @@ export default function AuthModal({
               </svg>
             </button>
 
-            {/* Decorative elements */}
+            {/* Elementos decorativos */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-primary/50 to-transparent" />
             <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 bg-primary/10 rounded-full filter blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50" />
             <div className="absolute bottom-0 left-0 w-24 sm:w-32 h-24 sm:h-32 bg-primary/10 rounded-full filter blur-3xl translate-y-1/2 -translate-x-1/2 opacity-50" />
@@ -215,20 +209,20 @@ export default function AuthModal({
                       <div className="space-y-3 sm:space-y-4">
                         <div className="mt-4 sm:mt-6">
                           <input
-                            required // Añadir validación básica
+                            required
                             className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-white"
-                            disabled={isLoading} // Deshabilitar mientras carga
-                            name="email" // Añadir name para FormData
+                            disabled={isLoading}
+                            name="email"
                             placeholder="tu@email.com"
                             type="email"
                           />
                         </div>
                         <div className="relative">
                           <input
-                            required // Añadir validación básica
+                            required
                             className="w-full px-3 sm:px-4 py-2 sm:py-2.5 pr-8 sm:pr-10 text-sm sm:text-base bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-white"
-                            disabled={isLoading} // Deshabilitar mientras carga
-                            name="password" // Añadir name para FormData
+                            disabled={isLoading}
+                            name="password"
                             placeholder="Contraseña"
                             type={isVisible ? "text" : "password"}
                           />
@@ -239,7 +233,7 @@ export default function AuthModal({
                                 : "Mostrar contraseña"
                             }
                             className="absolute inset-y-0 right-0 outline-none flex items-center justify-center w-8 sm:w-10 text-white/50 hover:text-white"
-                            disabled={isLoading} // Deshabilitar mientras carga
+                            disabled={isLoading}
                             type="button"
                             onClick={() => setIsVisible((prev) => !prev)}
                           >
@@ -273,8 +267,8 @@ export default function AuthModal({
                         {/* Botón de inicio de sesión */}
                         <button
                           className="w-full bg-primary text-white py-2 sm:py-2.5 rounded-2xl font-medium h-10 sm:h-12 text-sm sm:text-base rounded-[0.9em] bg-primary/40 border-1 border-primary px-4 sm:px-6 font-medium text-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={isLoading} // Deshabilitar mientras carga
-                          type="submit" // Cambiar a type="submit"
+                          disabled={isLoading}
+                          type="submit"
                         >
                           {isLoading ? (
                             <div className="flex items-center justify-center">

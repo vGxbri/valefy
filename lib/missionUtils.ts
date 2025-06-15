@@ -36,8 +36,6 @@ export async function inicializarMisionesUsuario(userId: string) {
     if (misionesExistentes && misionesExistentes > 0) {      
       // Sincronizar misiones nuevas que puedan haberse añadido
       await sincronizarMisionesNuevas(userId);
-      
-      // Aún así, procesar la misión de bienvenida por si no se procesó
       const resultadoBienvenida = await procesarMisionRegistro(userId);
       
       return { 
@@ -79,7 +77,6 @@ export async function inicializarMisionesUsuario(userId: string) {
       let progresoActual = 0;
       if (tipo && ['caja_abierta', 'skin_eliminada', 'mejora_realizada', 'conseguir_skin', 'completar_misiones', 'aniversario', 'conseguir_skin_tier'].includes(tipo)) {
         progresoActual = obtenerProgresoActualPorTipo(estadisticas, tipo, tierUuid);
-        // Limitar el progreso al objetivo para evitar excesos
         progresoActual = Math.min(progresoActual, objetivoDefault);
       }
       
@@ -103,7 +100,7 @@ export async function inicializarMisionesUsuario(userId: string) {
       }
     }
 
-    // 🎯 PROCESAR AUTOMÁTICAMENTE LA MISIÓN DE BIENVENIDA
+    // Procesar automáticamente la misión de bienvenida
     const resultadoBienvenida = await procesarMisionRegistro(userId);
     if (resultadoBienvenida.success) {
     } else {
@@ -337,7 +334,6 @@ function esMisionProgresivaSiguiente(mision: any, estadisticas: any, misionesCom
     .map(m => m.condicion.cantidad)
     .sort((a, b) => a - b);
   
-  // LÓGICA CLAVE: Solo mostrar la SIGUIENTE misión en la secuencia
   if (cantidadesCompletadas.length === 0) {
     // Si no ha completado ninguna, mostrar solo la primera (menor cantidad)
     const primeraCantidad = Math.min(...todasLasCantidades);
@@ -375,7 +371,7 @@ function esMisionProgresivaSiguientePorTier(mision: any, estadisticas: any, misi
     .map(m => m.condicion.cantidad)
     .sort((a, b) => a - b);
   
-  // LÓGICA CLAVE: Solo mostrar la SIGUIENTE misión en la secuencia para este tier
+  // Solo mostrar la siguiente misión en la secuencia para este tier
   if (cantidadesCompletadas.length === 0) {
     // Si no ha completado ninguna de este tier, mostrar solo la primera
     const primeraCantidad = Math.min(...todasLasCantidades);
@@ -637,7 +633,6 @@ export async function procesarMisionLogin(userId: string) {
       .single();
 
     if (progresoError && progresoError.code === 'PGRST116') {
-      // Crear progreso si no existe
       const objetivoDefault = misionLogin.condicion?.cantidad || 1;
       const { data: nuevoProgreso, error: insertError } = await supabase
         .from("misiones_usuario")
@@ -961,9 +956,6 @@ async function verificarMisionesAniversario(userId: string) {
       .single();
 
     if (error || !usuario) return;
-
-    // Calcular días desde el registro (esto debería estar en una columna created_at real)
-    // Por ahora, usaremos una lógica simplificada
     
     // Obtener misiones de aniversario que no tiene el usuario
     const { data: misionesAniversario, error: misionesError } = await supabase
@@ -973,9 +965,6 @@ async function verificarMisionesAniversario(userId: string) {
       .like("condicion", '%aniversario%');
 
     if (misionesError || !misionesAniversario) return;
-
-    // Aquí implementarías la lógica para verificar fechas de aniversario
-    // Por simplicidad, omitiremos esta implementación por ahora
     
   } catch (error) {
     console.error("Error al verificar misiones de aniversario:", error);
@@ -1006,14 +995,14 @@ export async function procesarMisionRegistro(userId: string) {
       .single();
 
     if (progresoExistente && !checkError) {
-      // 🎯 VERIFICAR SI EL PROGRESO YA ESTÁ COMPLETO
+      // Verificar si el progreso ya está completo
       const progreso = progresoExistente.progreso || { actual: 0, objetivo: 1 };
       
       if (progreso.actual >= progreso.objetivo) {
         return { success: true, message: "Misión de registro ya procesada y completada" };
       }
       
-      // 🎯 SI EXISTE PERO NO ESTÁ COMPLETA, ACTUALIZAR EL PROGRESO
+      // Si existe pero no está completa, actualizar el progreso
       const { error: updateError } = await supabase
         .from("misiones_usuario")
         .update({
@@ -1040,7 +1029,7 @@ export async function procesarMisionRegistro(userId: string) {
         usuario_id: userId,
         mision_id: misionBienvenida.id,
         progreso: { actual: 1, objetivo: 1 },
-        completada: false // Listo para reclamar pero no reclamado
+        completada: false
       })
       .select()
       .single();
@@ -1082,7 +1071,7 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
 
     let misionesActualizadas = 0;
 
-    // 🎯 NUEVO: Buscar la misión que corresponde EXACTAMENTE al número de cajas abiertas
+    // Buscar la misión que corresponde EXACTAMENTE al número de cajas abiertas
     const misionExacta = misionesMulti.find(mision => {
       const condicion = mision.condicion;
       const cantidadRequerida = condicion.minimo_por_sesion || condicion.cantidad || 2;
@@ -1100,11 +1089,9 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
       };
     }
 
-    // 🎯 PROCESAR SOLO LA MISIÓN EXACTA
+    // Procesar solo la misión exacta
     const condicion = misionExacta.condicion;
     const cantidadRequerida = condicion.minimo_por_sesion || condicion.cantidad || 2;
-    
-    console.log(`🎯 Procesando misión exacta: ${misionExacta.nombre} para ${cantidadCajasAbiertas} cajas`);
 
     // Buscar progreso de la misión
     let { data: progresoMision, error: progresoError } = await supabase
@@ -1115,7 +1102,7 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
       .single();
 
     if (progresoError && progresoError.code === 'PGRST116') {
-      // Crear progreso si no existe - completar inmediatamente para multi-apertura
+      // Crear progreso si no existe
       const objetivoDefault = condicion.cantidad || 1;
       const { data: nuevoProgreso, error: insertError } = await supabase
         .from("misiones_usuario")
@@ -1123,7 +1110,7 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
           usuario_id: userId,
           mision_id: misionExacta.id,
           progreso: { actual: objetivoDefault, objetivo: objetivoDefault },
-          completada: false // Listo para reclamar
+          completada: false
         })
         .select()
         .single();
@@ -1134,7 +1121,6 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
       }
       
       misionesActualizadas++;
-      console.log(`✅ Misión ${misionExacta.nombre} creada y completada`);
       
     } else if (progresoMision) {
       
@@ -1146,14 +1132,13 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
           .from("misiones_usuario")
           .update({
             progreso: { actual: objetivoDefault, objetivo: objetivoDefault },
-            completada: false, // Resetear para que pueda ser reclamada de nuevo
+            completada: false,
             fecha_completada: null
           })
           .eq("id", progresoMision.id);
 
         if (!resetError) {
           misionesActualizadas++;
-          console.log(`✅ Misión repetible ${misionExacta.nombre} reseteada y completada`);
         } else {
           console.error("Error al resetear misión repetible:", resetError);
           return { success: false, error: resetError };
@@ -1178,16 +1163,11 @@ export async function procesarMisionMultiApertura(userId: string, cantidadCajasA
 
           if (!updateError) {
             misionesActualizadas++;
-            console.log(`✅ Misión ${misionExacta.nombre} actualizada y completada`);
           } else {
             console.error("Error al actualizar progreso:", updateError);
             return { success: false, error: updateError };
           }
-        } else {
-          console.log(`ℹ️ Misión ${misionExacta.nombre} ya estaba completada`);
         }
-      } else {
-        console.log(`ℹ️ Misión ${misionExacta.nombre} ya está completada y reclamada`);
       }
     } else {
       console.error(`Error inesperado al obtener progreso de misión ${misionExacta.nombre}:`, progresoError);

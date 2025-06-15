@@ -23,7 +23,7 @@ export interface SkinEliminadaLog {
   skins_eliminadas: Array<{
     skin_id: string;
     skin_nombre: string;
-    inventario_id: string; // ID de la fila del inventario
+    inventario_id: string;
   }>;
   motivo?: string;
   contexto?: any;

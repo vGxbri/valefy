@@ -16,7 +16,6 @@ export default function CircularRoulette({
   onSpinComplete,
   children
 }: CircularRouletteProps) {
-  const [currentRotation, setCurrentRotation] = useState(0);
   const [finalRotation, setFinalRotation] = useState(0);
   const [hasResult, setHasResult] = useState(false);
   const [isAnimationComplete, setIsAnimationComplete] = useState(false);

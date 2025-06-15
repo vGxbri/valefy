@@ -221,11 +221,6 @@
   }
   .group:hover .image-hover-white-glow {
     scale: 1.03;
-    /**
-    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.1))
-            drop-shadow(0 0 20px rgba(255, 255, 255, 0.1))
-            drop-shadow(0 0 20px rgba(255, 255, 255, 0.1));
-    */
   }
 
   .div-general-stripecard {

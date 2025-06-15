@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { signIn } from "next-auth/react"; // Importar signIn
-import { FaGoogle, FaDiscord } from "react-icons/fa"; // Importar iconos
+import { signIn } from "next-auth/react";
+import { FaGoogle, FaDiscord } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -8,7 +8,7 @@ import PasswordInput from "@/components/landing/premade/PasswordInput";
 
 interface StepperProps {
   onComplete: () => void;
-  onClose?: () => void; // Add close handler prop
+  onClose?: () => void;
 }
 
 export default function Stepper({ onComplete, onClose }: StepperProps) {
@@ -33,15 +33,11 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
     { regex: /[!-\/:-@[-`{-~]/, text: "Al menos 1 carácter especial" },
   ];
 
-  // Prevent body scrolling when component mounts
   useEffect(() => {
-    // Save the current overflow style
     const originalStyle = window.getComputedStyle(document.body).overflow;
 
-    // Prevent scrolling on mount
     document.body.style.overflow = "hidden";
 
-    // Re-enable scrolling on unmount
     return () => {
       document.body.style.overflow = originalStyle;
     };
@@ -59,7 +55,6 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
     {
       description: "4. Confirma tu contraseña.",
     },
-    // Puedes añadir más pasos aquí en el futuro
   ];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,13 +70,11 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
     const newErrors: Record<string, string> = {};
 
     if (currentStep === 0) {
-      // --- Start of Edit: Restored specific email error messages ---
       if (!formData.email) {
-        newErrors.email = "El email es obligatorio"; // Changed from ''
+        newErrors.email = "El email es obligatorio";
       } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-        newErrors.email = "Email inválido"; // Changed from ''
+        newErrors.email = "Email inválido";
       }
-      // --- End of Edit ---
     }
     if (currentStep === 1) {
       if (!formData.username) {
@@ -262,11 +255,7 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
 
               {index < steps.length - 1 && (
                 <div className="flex-1 h-6 sm:h-8 flex items-center relative mx-1">
-                  {" "}
-                  {/* Adjusted container for centering */}
-                  {/* Background line */}
                   <div className="h-[2px] bg-white/20 w-full absolute left-0 right-0" />
-                  {/* Progress line */}
                   {currentStep > index && (
                     <motion.div
                       animate={{ width: "100%" }}
@@ -305,14 +294,13 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
             <div className="space-y-3 sm:space-y-4">
               <div>
                 <input
-                  required // Added required attribute for HTML5 validation (optional)
+                  required
                   id="email"
                   name="email"
                   placeholder="tu@email.com"
                   type="email"
                   value={formData.email} 
                   onChange={handleInputChange}
-                  // Added styling similar to other inputs
                   className={`w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base bg-white/5 border ${errors.email ? 'border-red-500' : 'border-white/10'} rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-white`}
                 />
                 {errors.email && (
@@ -558,13 +546,9 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
         </button>
       </div>
 
-      {/* Separador y botones sociales movidos aquí, solo para el primer paso */}
       {currentStep === 0 && (
         <>
-          {/* Separador Opcional */}
           <div className="relative flex items-center my-4 sm:my-6 mt-4 sm:mt-6">
-            {" "}
-            {/* Añadido mt-6 */}
             <div className="flex-grow border-t border-white/10" />
             <span className="flex-shrink mx-3 sm:mx-4 text-white/50 text-xs">
               O REGÍSTRATE CON
@@ -572,7 +556,6 @@ export default function Stepper({ onComplete, onClose }: StepperProps) {
             <div className="flex-grow border-t border-white/10" />
           </div>
 
-          {/* Botones de registro social */}
           <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
             <button
               className="w-full flex items-center justify-center px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-colors duration-200"

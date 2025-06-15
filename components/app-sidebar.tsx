@@ -11,12 +11,8 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
-  SidebarFooter,
 } from "@/components/ui/sidebar";
 import {
   Modal,
@@ -27,11 +23,6 @@ import {
   useDisclosure,
   Button,
 } from "@nextui-org/react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -40,11 +31,9 @@ import {
   Boxes,
   CircleFadingArrowUp,
   LogOut,
-  Bell,
   Wallet,
   ListChecks,
   BookOpen,
-  Coins,
   CircleAlert,
   Menu,
   X
@@ -106,7 +95,6 @@ function CreditosDisplay() {
     }
   }, [userId]);
 
-  // 🎯 ESCUCHAR EVENTOS DE ACTUALIZACIÓN DE SALDO
   useEffect(() => {
     const handleSaldoActualizado = () => {
       cargarSaldo();
@@ -262,7 +250,7 @@ function MobileMenu() {
     <>
       {/* Botón del menú móvil */}
       <motion.button
-        className="fixed top-4 left-4 z-50 md:hidden flex items-center justify-center w-12 h-12 rounded-xl bg-backgroundAlt/90 backdrop-blur-xl border border-white/10 shadow-[0_0_25px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_35px_-5px_rgba(0,0,0,0.4)] active:scale-95"
+        className="fixed top-4 right-4 z-50 md:hidden flex items-center justify-center w-12 h-12 rounded-xl bg-backgroundAlt/90 backdrop-blur-xl border border-white/10 shadow-[0_0_25px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_35px_-5px_rgba(0,0,0,0.4)] active:scale-95"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         whileTap={{ scale: 0.95 }}
       >
@@ -307,10 +295,10 @@ function MobileMenu() {
 
             {/* Menú deslizante */}
             <motion.div
-              className="fixed top-0 left-0 z-50 h-full w-80 max-w-[85vw] bg-black/50 backdrop-blur-xl border-r border-white/10 shadow-[0_0_50px_-10px_rgba(0,0,0,0.5)] md:hidden"
-              initial={{ x: "-100%" }}
+              className="fixed top-0 right-0 z-50 h-full w-80 max-w-[85vw] bg-black/50 backdrop-blur-xl border-l border-white/10 shadow-[0_0_50px_-10px_rgba(0,0,0,0.5)] md:hidden"
+              initial={{ x: "100%" }}
               animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
+              exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
             >
               {/* Header del menú móvil */}
@@ -494,20 +482,6 @@ function MobileMenu() {
 export function AppSidebar() {
   const pathname = usePathname();
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: "Nuevo intercambio",
-      description: "Has recibido una nueva propuesta de intercambio",
-      time: "Hace 5 minutos",
-    },
-    {
-      id: 2,
-      title: "Actualización de catálogo",
-      description: "Se han añadido nuevos items al catálogo",
-      time: "Hace 1 hora",
-    },
-  ]);
   const [misionesDisponibles, setMisionesDisponibles] = useState(0);
   const { data: session, status } = useSession();
 
@@ -533,7 +507,6 @@ export function AppSidebar() {
     verificarYProcesarMisiones();
   }, [session, status]);
 
-  // 🎯 ESCUCHAR ACTUALIZACIONES DE MISIONES
   useEffect(() => {
     const handleMisionesActualizadas = async () => {
       if (status === "authenticated" && session?.user?.id) {
@@ -557,10 +530,8 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* Menú móvil - solo visible en pantallas pequeñas */}
       <MobileMenu />
 
-      {/* Sidebar desktop - oculto en pantallas pequeñas */}
       <Sidebar className="hidden md:flex fixed left-4 top-4 z-50 h-[calc(100vh-32px)] w-64 flex-col items-center rounded-2xl border border-white/10 bg-backgroundAlt/10 backdrop-blur-xl shadow-[0_0_45px_-5px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_0_55px_-5px_rgba(0,0,0,0.4)]">
         <div className="flex flex-col items-center w-full py-6 gap-3 border-b border-white/5 relative rounded-t-2xl overflow-hidden bg-gradient-to-b from-white/5 to-transparent">
           <Link className="block w-auto h-auto" href="/main">

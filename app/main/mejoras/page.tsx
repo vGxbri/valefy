@@ -20,41 +20,36 @@ import {
 } from "@/lib/valorantApi";
 import { extractBundleName } from '@/lib/utils';
 import CircularRoulette from "@/components/CircularRoulette";
-import { createClient } from '@/utils/supabase/client';
 import { logSkinMejorada, type SkinMejoradaLog } from '@/lib/logUtils';
 
-// Definición del ContentTier de Supabase (ya existente y correcta)
 type SupabaseContentTier = {
-  id: string; // Supabase content_tier ID (UUID)
+  id: string;
   nombre: string;
   color: string;
-  uuid_api: string; // Valorant API tier UUID
+  uuid_api: string; 
   grado: string;
 };
 
-// Definición de Skin para la página de Mejoras (actualizada sin cantidad)
 type Skin = {
-  id: string; // ID único (DB row ID para esta página)
-  skin_id?: string; // Valorant API skin UUID  
+  id: string;
+  skin_id?: string;
   nombre: string;
   bundleName?: string;
-  content_tier_id: string; // Valorant API tier UUID
-  uuid: string; // Valorant API skin UUID
+  content_tier_id: string;
+  uuid: string;
   imagen_url: string;
   content_tier?: SupabaseContentTier;
   selected?: boolean;
-  fecha_obtencion?: string; // Fecha de obtención para ordenamiento
-  // Agregamos campos para manejar conteo de skins duplicadas
+  fecha_obtencion?: string;
   count?: number;
-  inventoryIds?: string[]; // IDs de las filas en la DB para esta skin
+  inventoryIds?: string[];
 };
 
-// Tipo para los items del inventario del usuario desde la DB (actualizado)
 interface InventoryItemFromDB {
-  id: string; // ID de la fila en inventario_usuario
-  skin_id: string; // Valorant API skin UUID
-  skin_nombre: string | null; // Nombre de la skin (fallback)
-  fecha_obtencion: string; // Fecha de obtención
+  id: string;
+  skin_id: string;
+  skin_nombre: string | null;
+  fecha_obtencion: string;
 }
 
 export default function MejorasPage() {
@@ -243,18 +238,18 @@ export default function MejorasPage() {
         }
 
         return {
-          id: item.id, // Usar el ID de la fila de la DB como ID único
-          skin_id: item.skin_id, // Valorant API Skin UUID
+          id: item.id,
+          skin_id: item.skin_id,
           nombre: skinName,
           bundleName: bundleName,
           content_tier_id: valorantApiTierUuid,
-          uuid: item.skin_id, // Valorant API Skin UUID
+          uuid: item.skin_id,
           imagen_url: imageUrl,
           content_tier: contentTierForSkin,
           selected: false,
-          fecha_obtencion: item.fecha_obtencion, // Incluir fecha de obtención
-          count: 1, // Cada entrada individual tiene count 1
-          inventoryIds: [item.id], // Solo este ID específico
+          fecha_obtencion: item.fecha_obtencion,
+          count: 1,
+          inventoryIds: [item.id],
         };
       })
       .filter(skin => skin.imagen_url && !skin.imagen_url.includes('StandardAnimation'));
@@ -541,8 +536,6 @@ export default function MejorasPage() {
       if (!logResult.success) {
         console.warn('Error al registrar log de mejora exitosa:', logResult.error);
       }
-
-      // 🎯 PROCESAR MISIÓN DE MEJORA
       try {
         const misionResponse = await fetch('/api/misiones/procesar-actividad', {
           method: 'POST',
@@ -556,7 +549,6 @@ export default function MejorasPage() {
         if (!misionResponse.ok) {
           console.warn('Error al procesar misión de mejora:', await misionResponse.text());
         } else {
-          // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - MISIONES
           window.dispatchEvent(new CustomEvent('misionesActualizadas'));
         }
       } catch (missionError) {
@@ -577,7 +569,7 @@ export default function MejorasPage() {
 
     // Si hay menos de 5 skins, CircularRoulette manejará el resultado
     if (selectedSkins.length < 5) {
-      return; // CircularRoulette se encarga del resto a través de onSpinComplete
+      return;
     }
 
     // Para 5 skins (caso original, aunque no debería llegar aquí)
@@ -932,8 +924,8 @@ export default function MejorasPage() {
                     <div className="text-slate-500 text-center">
                       <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 border-2 border-slate-600 border-dashed rounded-xl mb-1 sm:mb-2 mx-auto"></div>
                       <p className="text-[10px] sm:text-xs">Slot {index + 1}</p>
-            </div>
-            </div>
+                    </div>
+                  </div>
                 );
               }
             })}

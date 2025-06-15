@@ -40,7 +40,7 @@ const getSupabaseClient = () => {
 };
 
 // Tipos de cajas disponibles
-type TipoCaja = string; // Ahora puede ser cualquier string, no solo 'premium', 'diaria' o 'ultra'
+type TipoCaja = string;
 
 // Función para crear datos por defecto mientras se cargan los datos reales
 const crearCajaDefault = (tipo: TipoCaja): BoxCaja => {
@@ -48,10 +48,10 @@ const crearCajaDefault = (tipo: TipoCaja): BoxCaja => {
   return {
     id: `${tipo}-default`,
     nombre: `Caja ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`,
-    precio: 1000, // Precio por defecto
-    imagen_url: "/img/caja-default.png", // Imagen por defecto
+    precio: 0,
+    imagen_url: "/default_box.png",
     ruta: `/main/${tipo}`,
-    esta_disponible: true,
+    esta_disponible: false,
   };
 };
 
@@ -79,11 +79,8 @@ const obtenerCajasDisponibles = async (supabase: any): Promise<string[]> => {
     console.error("Error al obtener cajas disponibles:", error);
   }
 
-  // Si hay un error o no hay datos, devolver los tipos básicos
-  return ["premium", "diaria", "ultra"];
+  return ["default"];
 };
-
-// Ya no necesitamos dynamic import para DailyBox, usamos BoxComponent para todos los tipos de cajas
 
 export default function CajaPage() {
   const params = useParams();
@@ -182,12 +179,12 @@ export default function CajaPage() {
           // Calcular puntuación de coincidencia
           let puntuacion = 0;
 
-          // Función helper para normalizar texto (remover tildes, etc.)
+          // Función helper para normalizar texto (quitar tildes, etc.)
           const normalizeText = (text: string) => {
             return text.toLowerCase()
               .normalize("NFD")
-              .replace(/[\u0300-\u036f]/g, "") // Remover tildes
-              .replace(/\s+/g, "-") // Espacios a guiones
+              .replace(/[\u0300-\u036f]/g, "")
+              .replace(/\s+/g, "-")
               .trim();
           };
 
@@ -230,7 +227,6 @@ export default function CajaPage() {
             puntuacion = 40;
           }
 
-          // Si encontramos una mejor coincidencia, actualizarla
           if (puntuacion > maxPuntuacion) {
             maxPuntuacion = puntuacion;
             mejorCoincidencia = tipo;
@@ -291,7 +287,7 @@ export default function CajaPage() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-        // 0. Cargar todos los content_tiers de Supabase para mapeo por ID de Supabase
+        // Cargar todos los content_tiers de Supabase para mapeo por ID de Supabase
         let tiersMapBySupabaseId = new Map();
         try {
           const { data: allTiersFromSupabase, error: allTiersError } = await supabase
@@ -316,7 +312,7 @@ export default function CajaPage() {
         let cajaData: any = null;
         let cajaError = null;
 
-        // Estrategia 1: Buscar por es_diaria si el tipo es 'diaria'
+        // Buscar por es_diaria si el tipo es 'diaria'
         if (tipoValidado === "diaria") {
           const resultadoDiaria = await supabase
             .from("cajas")
@@ -331,7 +327,7 @@ export default function CajaPage() {
 
         // Si no encontramos la caja diaria o no estamos buscando la diaria
         if (!cajaData) {
-          // Estrategia 2: Buscar directamente por la ruta que debería tener la caja
+          // Buscar directamente por la ruta que debería tener la caja
           const rutaEsperada = `/main/${tipoValidado}`;
           const resultadoPorRuta = await supabase
             .from("cajas")
@@ -342,7 +338,7 @@ export default function CajaPage() {
           if (resultadoPorRuta.data) {
             cajaData = resultadoPorRuta.data;
           } else {
-            // Estrategia 3: Buscar usando extraerTipoCaja para mapear correctamente
+            // Buscar usando extraerTipoCaja para mapear correctamente
             const { data: todasLasCajas } = await supabase
               .from("cajas")
               .select("*")
@@ -359,7 +355,7 @@ export default function CajaPage() {
               if (cajaCoincidente) {
                 cajaData = cajaCoincidente;
               } else {
-                // Estrategia 4: Buscar con formato "Caja Tipo" (ej: "Caja Premium") - FALLBACK
+                // Buscar con formato "Caja Tipo" (ej: "Caja Premium") - FALLBACK
                 const tipoCapitalizado =
                   tipoNormalizado.charAt(0).toUpperCase() + tipoNormalizado.slice(1);
                 const resultado1 = await supabase
@@ -371,7 +367,7 @@ export default function CajaPage() {
                 if (resultado1.data) {
                   cajaData = resultado1.data;
                 } else {
-                  // Estrategia 5: Buscar solo con el tipo capitalizado (ej: "Premium") - FALLBACK
+                  // Buscar solo con el tipo capitalizado (ej: "Premium") - FALLBACK
                   const resultado2 = await supabase
                     .from("cajas")
                     .select("*")
@@ -380,9 +376,7 @@ export default function CajaPage() {
 
                   if (resultado2.data) {
                     cajaData = resultado2.data;
-                  } else {
-                    console.warn(`🔍 FETCH DEBUG: No se encontró ninguna caja para el tipo '${tipoValidado}'`);
-                  }
+                  } 
                 }
               }
             }
@@ -803,10 +797,6 @@ export default function CajaPage() {
                 </p>
               )}
             </div>
-            <p className="text-white/60 text-xs sm:text-sm mt-2">
-              Nota: Esta función es solo para pruebas. En producción, la caja se
-              actualizará automáticamente a las 9:00 AM.
-            </p>
           </motion.div>
         )}
 
@@ -866,7 +856,6 @@ export default function CajaPage() {
             )}
           </div>
 
-          {/* New Section for Probabilities and All Skins (Side-by-Side) */}
           {!isLoading && !error && caja && (
             <motion.div 
               className="w-full"
@@ -875,9 +864,7 @@ export default function CajaPage() {
               <div className="relative mb-8 sm:mb-12 mt-6 sm:mt-8">
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
               </div>
-              {/* Probabilities section will be removed */}
 
-              {/* Right Column: All Skins in the Box - Now takes full width and is centered */}
               {cajaSkins && cajaSkins.length > 0 && (
                 <div className="w-full max-w-5xl mx-auto mb-8 sm:mb-12">
                   <div className={`mb-4 sm:mb-6 pt-2 text-center`}>

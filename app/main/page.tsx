@@ -186,7 +186,6 @@ export default function MainPage() {
 
     fetchCajas();
 
-    // Cleanup al desmontar el componente
     return () => {
       isMounted = false;
     };

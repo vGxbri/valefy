@@ -3,7 +3,6 @@
 import React from "react";
 import Image from "next/image";
 
-// Define the props interface
 interface StripeCardProps {
   imageUrl: string;
   title: string;
@@ -11,7 +10,6 @@ interface StripeCardProps {
   disabled?: boolean;
 }
 
-// Update the component to accept props
 function StripeCard({
   imageUrl,
   title,

@@ -19,7 +19,7 @@ import {
 } from "@/lib/boxUtils";
 import { decrementarSaldoLocal } from "@/lib/saldoUtils";
 
-// Estilos globales para animaciones
+// Estilos CSS para animaciones del componente
 const globalStyles = `
 @keyframes pulse {
   0%, 100% {
@@ -71,32 +71,23 @@ const globalStyles = `
   background: radial-gradient(circle, var(--tw-gradient-stops));
 }
 
-/* Ocultar scrollbars en navegadores webkit */
+/* Ocultar scrollbars */
 ::-webkit-scrollbar {
   display: none;
 }
 
-/* Ocultar scrollbars en Firefox */
 * {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-/* Asegurar que las animaciones hover no generen overflow */
+/* Optimización para animaciones hover */
 .hover-safe {
   overflow: hidden;
   backface-visibility: hidden;
   transform: translateZ(0);
 }
 `;
-
-interface ContentTier {
-  id: string;
-  nombre: string;
-  color: string;
-  uuid_api: string;
-  grado?: number;
-}
 
 export interface BoxCaja {
   id: string;
@@ -130,22 +121,14 @@ export default function BoxComponent({
   caja,
   isLoading,
   error,
-  isAdmin = false,
-  onAdminAction,
-  isUpdating = false,
-  updateMessage = null,
-  setShowAdminPanel,
-  showAdminPanel = false,
   cajaSkins: initialCajaSkins = [],
   probabilidades: initialProbabilidades = [],
   supabase,
-  renderInfoSections = true,
 }: BoxComponentProps) {
-  // Sesión del usuario
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated" && !!session?.user;
 
-  // Estados
+  // Estados principales
   const [cajaSkins, setCajaSkins] = useState<Skin[]>(initialCajaSkins);
   const [probabilidades, setProbabilidades] = useState<TierProbabilidad[]>(
     initialProbabilidades,
@@ -159,7 +142,7 @@ export default function BoxComponent({
   const [dailyOpened, setDailyOpened] = useState(false);
   const [resultSkinForSpin, setResultSkinForSpin] = useState<Skin | null>(null);
 
-  // Estados para múltiples cajas
+  // Estados para apertura múltiple
   const [isMultipleMode, setIsMultipleMode] = useState(false);
   const [numberOfBoxes, setNumberOfBoxes] = useState(1);
   const [previousNumberOfBoxes, setPreviousNumberOfBoxes] = useState(1);
@@ -167,42 +150,36 @@ export default function BoxComponent({
   const [multipleSpinItems, setMultipleSpinItems] = useState<Skin[][]>([]);
   const [completedSpinners, setCompletedSpinners] = useState<boolean[]>([]);
 
-  // Contador de renders para debugging
   const renderCountRef = useRef(0);
   renderCountRef.current += 1;
 
-  // Log específico para monitorear cambios en multipleResults
   useEffect(() => {
     if (multipleResults.length === 0) {
     }
   }, [multipleResults]);
 
-  // Referencias
   const spinnerRef = useRef<HTMLDivElement>(null);
+  const ITEM_WIDTH_CAROUSEL = 240;
 
-  // Constante para el ancho de los ítems del carrusel
-  const ITEM_WIDTH_CAROUSEL = 240; // Reducido de 260 a 180 para menos espacio
-
-  // Efecto para cargar los skins de la caja si no se proporcionaron inicialmente
+  // Cargar skins de la caja si no se proporcionaron inicialmente
   useEffect(() => {
     if (caja?.id && initialCajaSkins.length === 0) {
       loadCajaSkins();
     }
   }, [caja]);
 
-  // Efecto para cargar las probabilidades si no se proporcionaron inicialmente
+  // Cargar probabilidades si no se proporcionaron inicialmente
   useEffect(() => {
     if (caja?.id && initialProbabilidades.length === 0) {
       loadProbabilidades();
     }
   }, [caja]);
 
-  // Efecto para formatear el tiempo restante para la próxima actualización (solo para caja diaria)
+  // Timer para caja diaria
   useEffect(() => {
     if (caja?.es_diaria && caja.fecha_actualizacion) {
       const intervalId = setInterval(() => {
         const nextUpdateTime = formatTimeRemaining(caja.fecha_actualizacion!);
-
         setNextUpdate(nextUpdateTime);
       }, 1000);
 
@@ -210,16 +187,14 @@ export default function BoxComponent({
     }
   }, [caja]);
 
-  // Inyectar estilos globales para animaciones
+  // Inyectar estilos CSS
   useEffect(() => {
-    // Solo inyectar los estilos una vez
     if (!document.getElementById('box-component-styles')) {
       const styleEl = document.createElement('style');
       styleEl.id = 'box-component-styles';
       styleEl.innerHTML = globalStyles;
       document.head.appendChild(styleEl);
       
-      // Limpieza al desmontar el componente
       return () => {
         const styleElement = document.getElementById('box-component-styles');
         if (styleElement) {
@@ -229,12 +204,10 @@ export default function BoxComponent({
     }
   }, []);
 
-  // Cargar los skins de la caja
   const loadCajaSkins = async () => {
     if (!caja?.id || !supabase) return;
 
     try {
-      // Obtener los IDs de las skins asociadas a esta caja
       const { data: skinIdsData, error: skinIdsError } = await supabase
         .from("cajas_skins")
         .select("skin_id")
@@ -242,36 +215,26 @@ export default function BoxComponent({
 
       if (skinIdsError) {
         console.error("Error al obtener skins de la caja:", skinIdsError);
-
         return;
       }
 
       if (!skinIdsData || skinIdsData.length === 0) {
         console.log("No hay skins asociadas a esta caja");
-
         return;
       }
 
-      // Extraer los IDs de las skins
       const skinIds = skinIdsData.map((item: any) => item.skin_id);
-
-      // Obtener todas las skins de la API de Valorant
       const allSkins = await getWeaponSkins();
-
-      // Filtrar por los IDs específicos de esta caja
       const matchingSkins = filterSkinsByIds(allSkins, skinIds);
 
       if (matchingSkins.length > 0) {
-        // Formatear las skins para la aplicación
         const formattedSkins: Skin[] = [];
 
         for (const skin of matchingSkins) {
-          // Obtener datos del tier de la skin
           const tierData = supabase
             ? await getTierData(supabase, skin.contentTierUuid)
             : null;
 
-          // Usar la función de utilidad para formatear la skin
           formattedSkins.push(formatSkinForApp(skin, tierData));
         }
 
@@ -282,7 +245,6 @@ export default function BoxComponent({
     }
   };
 
-  // Cargar las probabilidades de la caja
   const loadProbabilidades = async () => {
     if (!caja?.id || !supabase) return;
 
@@ -323,7 +285,6 @@ export default function BoxComponent({
         return;
       }
 
-      // Mapeo defensivo para asegurar el tipo correcto
       const mapped = (data || []).map((item: any) => ({
         id: String(item.id),
         caja_id: String(item.caja_id),
@@ -349,21 +310,16 @@ export default function BoxComponent({
     }
   };
 
-  // Formatear el tiempo restante para la próxima actualización
   const formatTimeRemaining = (fechaActualizacion: string): string => {
     if (!fechaActualizacion) return "Desconocido";
 
-    // Convertir la fecha a objeto Date
     const updateDate = new Date(fechaActualizacion);
-
-    // Obtener el tiempo restante en segundos
     const now = new Date();
     const diffMs = updateDate.getTime() - now.getTime();
     const diffSec = Math.floor(diffMs / 1000);
 
     if (diffSec <= 0) return "Disponible ahora";
 
-    // Calcular horas, minutos y segundos
     const hours = Math.floor(diffSec / 3600);
     const minutes = Math.floor((diffSec % 3600) / 60);
     const seconds = diffSec % 60;
@@ -371,55 +327,41 @@ export default function BoxComponent({
     return `${hours}h ${minutes}m ${seconds}s`;
   };
 
-  // Función para generar items aleatorios para la ruleta - OPTIMIZADA con caché
+  // Generar items para la ruleta
   const generateSpinItems = useMemo(() => {
     return (selectedSkin: Skin) => {
-    if (!cajaSkins || cajaSkins.length === 0) return [];
+      if (!cajaSkins || cajaSkins.length === 0) return [];
 
-      // Generar items para la ruleta de forma optimizada
-    const baseItems: Skin[] = [];
-
-      // Usar la función optimizada específica para el spinner que SÍ modifica los IDs
+      const baseItems: Skin[] = [];
       const randomItemsBefore = selectMultipleRandomSkinsForSpinner(cajaSkins, probabilidades, 80, 'before');
       const randomItemsAfter = selectMultipleRandomSkinsForSpinner(cajaSkins, probabilidades, 80, 'after');
 
-      // Añadir los items antes de la skin ganadora
       baseItems.push(...randomItemsBefore);
-
-    // En la posición central añadimos la skin ganadora
-    baseItems.push({ ...selectedSkin, id: `winner-${selectedSkin.id}` });
-
-      // Completamos con items después
+      baseItems.push({ ...selectedSkin, id: `winner-${selectedSkin.id}` });
       baseItems.push(...randomItemsAfter);
 
-    // Crear una copia al inicio y al final para que parezca infinito
-    return [...baseItems.slice(0, 10), ...baseItems, ...baseItems.slice(0, 10)];
-  };
-  }, [cajaSkins, probabilidades]); // Solo recalcular si cambian las skins o probabilidades
+      return [...baseItems.slice(0, 10), ...baseItems, ...baseItems.slice(0, 10)];
+    };
+  }, [cajaSkins, probabilidades]);
 
-  // Función para animar la ruleta con un efecto de frenado más realista
+  // Animar la ruleta
   const animateSpinner = (finalPosition: number) => {
     if (!spinnerRef.current) return;
 
-    const duration = 12000; // 12 segundos de duración
+    const duration = 12000;
     const spinnerElement = spinnerRef.current;
 
-    // Reset any existing animations and transitions
     spinnerElement.style.animation = 'none';
-    spinnerElement.style.transform = 'translateX(0px)'; // Reset position before transition
-    spinnerElement.style.transition = 'none'; // Clear any existing transition
+    spinnerElement.style.transform = 'translateX(0px)';
+    spinnerElement.style.transition = 'none';
     
-    // Force reflow to apply the reset styles immediately
     void spinnerElement.offsetWidth;
 
-    // Set up the transition with a cubic-bezier for a very long fast spin and quick stop
     spinnerElement.style.transition = `transform ${duration}ms cubic-bezier(0.12, 0.99, 0.62, 1.01)`;
-    
-    // Apply the final transform that will be animated
     spinnerElement.style.transform = `translateX(-${finalPosition}px)`;
   };
 
-  // Función para abrir una o múltiples cajas - OPTIMIZADA
+  // Abrir caja(s)
   const openBox = async () => {
     if (
       !caja ||
@@ -458,24 +400,22 @@ export default function BoxComponent({
         const userId = session.user.id;
 
         if (isMultipleMode && numberOfBoxes > 1) {
-          // Modo múltiples cajas - USAR FUNCIÓN OPTIMIZADA
+          // Apertura múltiple
           const openingResult = await processMultipleBoxOpeningOptimized(
-          userId,
-          caja.id,
-          cajaSkins as any,
-          probabilidades as any,
-          supabase,
+            userId,
+            caja.id,
+            cajaSkins as any,
+            probabilidades as any,
+            supabase,
             caja.precio,
             numberOfBoxes
           );
 
           if (openingResult.success && openingResult.results.length > 0) {
-            // Generar items de spinner para cada resultado
             const spinItemsArray = openingResult.results.map(result => 
               generateSpinItems(result)
             );
             
-            // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP (ya se hizo en la función optimizada)
             if (caja.precio > 0) {
               decrementarSaldoLocal(caja.precio * numberOfBoxes);
             }
@@ -483,7 +423,7 @@ export default function BoxComponent({
             setMultipleResults(openingResult.results);
             setMultipleSpinItems(spinItemsArray);
             setCompletedSpinners(Array(numberOfBoxes).fill(false));
-            setIsPreparingBox(false); // Desactivar el spinner de preparación
+            setIsPreparingBox(false);
             setIsSpinning(true);
           } else {
             console.error("Error al abrir cajas múltiples:", openingResult.error);
@@ -491,7 +431,7 @@ export default function BoxComponent({
             setIsPreparingBox(false);
           }
         } else {
-          // Modo caja única - USAR FUNCIÓN OPTIMIZADA
+          // Apertura única
           const openingResult = await processSingleBoxOpeningOptimized(
             userId,
             caja.id,
@@ -502,19 +442,18 @@ export default function BoxComponent({
           );
 
           if (openingResult.success && openingResult.selectedSkin) {
-            // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP (ya se hizo en la función optimizada)
             if (caja.precio > 0) {
               decrementarSaldoLocal(caja.precio);
             }
             
             const items = generateSpinItems(openingResult.selectedSkin);
             setResultSkinForSpin(openingResult.selectedSkin);
-          setSpinItems(items);
-            setIsPreparingBox(false); // Desactivar el spinner de preparación
-          setIsSpinning(true);
-        } else {
-          console.error("Error al seleccionar skin:", openingResult.error);
-          setIsOpening(false);
+            setSpinItems(items);
+            setIsPreparingBox(false);
+            setIsSpinning(true);
+          } else {
+            console.error("Error al seleccionar skin:", openingResult.error);
+            setIsOpening(false);
             setIsPreparingBox(false);
           }
         }
@@ -530,7 +469,7 @@ export default function BoxComponent({
     }
   };
 
-  // useEffect for handling the animation logic
+  // Manejar animación de la ruleta
   useEffect(() => {
     if (
       isSpinning &&
@@ -542,24 +481,21 @@ export default function BoxComponent({
       const viewportElement = spinnerRef.current.parentElement;
       const viewportWidth = viewportElement.offsetWidth;
       const winningItemIndexInSpinItems = Math.floor(spinItems.length / 2);
-      const itemWidth = ITEM_WIDTH_CAROUSEL; // Usar la constante
+      const itemWidth = ITEM_WIDTH_CAROUSEL;
       const offsetToCenterItemInViewport = (viewportWidth - itemWidth) / 2;
       const finalPosition = winningItemIndexInSpinItems * itemWidth - offsetToCenterItemInViewport;
 
-      // Call the simplified animateSpinner
       animateSpinner(finalPosition);
 
-      const animationDuration = 12000; // Match the transition duration (changed to 12s)
-      const postSpinDelay = 800; // Reducido para transiciones más fluidas
+      const animationDuration = 12000;
+      const postSpinDelay = 800;
 
       const timer = setTimeout(() => {
-        // Usar la función handleSpinnerComplete para consistencia
         handleSpinnerComplete();
       }, animationDuration + postSpinDelay);
 
       return () => {
         clearTimeout(timer);
-        // It's also good practice to clean up the transition if the component unmounts or effect re-runs mid-animation
         if (spinnerRef.current) {
           spinnerRef.current.style.transition = 'none';
         }
@@ -567,32 +503,27 @@ export default function BoxComponent({
     }
   }, [isSpinning, spinItems, resultSkinForSpin, caja]);
 
-  // Función para manejar la finalización de las animaciones del spinner
   const handleSpinnerComplete = (spinnerIndex?: number) => {
     if (isMultipleMode && numberOfBoxes > 1 && spinnerIndex !== undefined) {
-      // Modo múltiples cajas - escalonado
       setCompletedSpinners(prev => {
         const newCompleted = [...prev];
         newCompleted[spinnerIndex] = true;
         
-        // Verificar si todas han terminado
         const allCompleted = newCompleted.every((completed, idx) => idx >= numberOfBoxes || completed);
         
         if (allCompleted) {
-          // Todas han terminado, aplicar transición suave
           setTimeout(() => {
             setIsSpinning(false);
             setIsOpening(false);
             if (caja && caja.es_diaria) {
               setDailyOpened(true);
             }
-          }, 800); // Tiempo optimizado para transición más fluida
+          }, 800);
         }
         
         return newCompleted;
       });
     } else {
-      // Modo caja única - transición mejorada
       setTimeout(() => {
         setResultSkin(resultSkinForSpin);
         setIsSpinning(false);
@@ -601,11 +532,10 @@ export default function BoxComponent({
           setDailyOpened(true);
         }
         setIsOpening(false);
-      }, 400); // Pequeña pausa para transición más suave
+      }, 400);
     }
   };
 
-  // Función para resetear todo cuando se cierra el resultado
   const resetResults = () => {
     setResultSkin(null);
     setMultipleResults([]);
@@ -615,19 +545,19 @@ export default function BoxComponent({
     setIsPreparingBox(false);
   };
 
-  // useEffect para actualizar previousNumberOfBoxes después de las animaciones
+  // Actualizar número anterior de cajas después de animaciones
   useEffect(() => {
     const timer = setTimeout(() => {
       setPreviousNumberOfBoxes(numberOfBoxes);
-    }, 500); // Después de que terminen las animaciones
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [numberOfBoxes]);
 
-  // useEffect para forzar 1 caja en móvil
+  // Forzar 1 caja en móvil
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 640) { // Tailwind's sm breakpoint
+      if (window.innerWidth < 640) {
         if (numberOfBoxes > 1) {
           setNumberOfBoxes(1);
           setIsMultipleMode(false);
@@ -635,10 +565,7 @@ export default function BoxComponent({
       }
     };
 
-    // Verificar inmediatamente al montar
     handleResize();
-
-    // Escuchar cambios de tamaño
     window.addEventListener('resize', handleResize);
 
     return () => {
@@ -646,7 +573,7 @@ export default function BoxComponent({
     };
   }, [numberOfBoxes]);
 
-  // Función para separar la última palabra del nombre
+  // Separar última palabra del nombre para mejor formato
   const formatNameWithLastWordSeparate = (name: string) => {
     const words = name.trim().split(' ');
     if (words.length <= 1) return { firstPart: '', lastWord: name };
@@ -656,8 +583,6 @@ export default function BoxComponent({
     
     return { firstPart, lastWord };
   };
-
-  // Si está cargando, mostrar spinner de carga
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] w-full bg-gradient-to-b from-slate-900/60 to-black/60 rounded-xl shadow-inner p-10">
@@ -668,7 +593,7 @@ export default function BoxComponent({
     );
   }
 
-  // Si hay error, mostrar mensaje de error
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] w-full bg-gradient-to-b from-slate-900/60 to-black/60 rounded-xl shadow-inner p-10">
@@ -694,7 +619,7 @@ export default function BoxComponent({
     );
   }
 
-  // Si no hay caja, mostrar mensaje
+
   if (!caja) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] w-full bg-gradient-to-b from-slate-900/60 to-black/60 rounded-xl shadow-inner p-10">
@@ -709,7 +634,7 @@ export default function BoxComponent({
     );
   }
 
-  // Estados de renderizado - transiciones mejoradas
+  // Estados de renderizado
   const showMultipleResults = multipleResults.length > 0 && !isSpinning && !isOpening && !isPreparingBox;
   const showSingleResult = !!resultSkin && !isSpinning && !isOpening && !isPreparingBox;
   const showSpinners = isSpinning;
@@ -718,10 +643,8 @@ export default function BoxComponent({
 
   return (
     <div className="w-full flex flex-col items-center justify-center py-10">
-      {/* Contenedor con altura fija para evitar saltos */}
       <div className="w-full h-[650px] flex items-center justify-center">
         <AnimatePresence mode="wait">
-        {/* Resultado de caja única */}
         {showSingleResult && (
           <motion.div
             key="single-result"
@@ -755,7 +678,6 @@ export default function BoxComponent({
                         willChange: 'transform'
                       }}
                     >
-                      {/* Tag de NUEVA en esquina superior derecha */}
                       {resultSkin.isNewSkin && (
                         <motion.div
                           initial={{ scale: 1, opacity: 0, x: 0, y: 0 }}
@@ -769,7 +691,6 @@ export default function BoxComponent({
                           ✨ NUEVA
                         </motion.div>
                       )}
-                      {/* Fondo de la tier */}
                       {resultSkin.content_tier?.id && resultSkin.content_tier.id !== 'standard' && (
                         <div className="absolute inset-0 z-0 flex items-center justify-center">
                           <Image
@@ -783,7 +704,6 @@ export default function BoxComponent({
                         </div>
                       )}
                       
-                      {/* Contenido principal */}
                       <div className="relative z-10 h-full flex flex-col items-center justify-center p-4">
                         <motion.div 
                           className="relative w-[260px] md:w-[320px] h-[260px] md:h-[320px] mb-4"
@@ -849,7 +769,7 @@ export default function BoxComponent({
                 </div>
                 </div>
                 
-              {/* Botón para abrir más cajas */}
+
               <motion.div 
                 className="text-center"
                 initial={{ opacity: 0, y: 20 }}
@@ -867,7 +787,6 @@ export default function BoxComponent({
           </motion.div>
         )}
 
-        {/* Resultados múltiples */}
         {showMultipleResults && (
           <motion.div
             key="multiple-results"
@@ -887,7 +806,6 @@ export default function BoxComponent({
                 'gap-1 md:gap-3'
               } min-w-max`}>
                 {multipleResults.map((result, index) => {
-                  // Calcular tamaños responsivos según número de cajas - Simplificado para móvil
                   const getSizes = () => {
                     switch(numberOfBoxes) {
                       case 1: return { 
@@ -953,7 +871,6 @@ export default function BoxComponent({
                         willChange: 'transform'
                       }}
                     >
-                      {/* Tag de NUEVA en esquina superior derecha */}
                       {result.isNewSkin && (
                         <motion.div
                           initial={{ scale: 1, opacity: 0, x: 0, y: 0 }}
@@ -967,7 +884,6 @@ export default function BoxComponent({
                           ✨ NUEVA
                         </motion.div>
                       )}
-                      {/* Fondo de la tier */}
                       {result.content_tier?.uuid_api && result.content_tier.uuid_api !== 'default' && (
                         <div className="absolute inset-0 z-0 flex items-center justify-center">
                           <Image
@@ -982,7 +898,6 @@ export default function BoxComponent({
                       </div>
                       )}
                       
-                      {/* Contenido principal */}
                       <div className="relative z-10 h-full flex flex-col items-center justify-center p-2 sm:p-4">
                         <motion.div 
                           className={`relative ${sizes.imgW} ${sizes.imgH} mb-2 sm:mb-4`}
@@ -1058,7 +973,7 @@ export default function BoxComponent({
                             </div>
                           </div>
             
-            {/* Botón para abrir más cajas */}
+
             <motion.div 
               className="text-center px-4"
               initial={{ opacity: 0, y: 20 }}
@@ -1076,7 +991,6 @@ export default function BoxComponent({
           </motion.div>
         )}
 
-        {/* Spinners */}
         {showSpinners && (
           <motion.div
             key="spinners"
@@ -1091,7 +1005,6 @@ export default function BoxComponent({
             className="w-full h-full flex items-center justify-center"
           >
             {isMultipleMode && numberOfBoxes > 1 ? (
-              // Vista múltiples cajas - Layout horizontal responsive
               <div className="w-full mb-8">
                 <div className="flex justify-center items-center px-2 md:px-4 overflow-x-auto w-full">
                   <div className={`flex justify-center items-center ${
@@ -1102,10 +1015,7 @@ export default function BoxComponent({
                     'gap-1 md:gap-3'
                   } min-w-max`}>
                     {Array.from({ length: numberOfBoxes }).map((_, index) => {
-                      // Calcular duración escalonada: 12s, 13s, 14s, etc.
                       const animationDuration = 12000 + (index * 1000);
-                      
-                      // Calcular tamaños responsivos según número de cajas - Simplificado
                       const getSizes = () => {
                         switch(numberOfBoxes) {
                           case 1: return { 
@@ -1151,7 +1061,6 @@ export default function BoxComponent({
                           transition={{ delay: index * 0.1, duration: 0.4 }}
                         >
                           {multipleSpinItems[index] ? (
-                            // Spinner activo - Sin div contenedor extra
                             <SpinnerAnimation
                               isSpinning={true}
                               spinItems={multipleSpinItems[index]}
@@ -1162,7 +1071,6 @@ export default function BoxComponent({
                               customContainerClass={`${sizes.w} ${sizes.h}`}
                             />
                           ) : (
-                            // Estado inicial - preparando
                             <div className={`${sizes.w} ${sizes.h} rounded-xl bg-slate-800/30 border border-slate-700/30 flex items-center justify-center opacity-50 backdrop-blur-sm shadow-xl`}>
                               <div className="text-white/60 text-center">
                                 <div className={`border-2 border-white/20 rounded-xl mx-auto flex items-center justify-center bg-slate-700/20 ${
@@ -1185,7 +1093,6 @@ export default function BoxComponent({
                 </div>
                 </div>
               ) : (
-              // Vista caja única - Spinner más grande pero responsive
               <div className="w-full mx-auto px-2 sm:px-4">
                 <SpinnerAnimation
                   isSpinning={true}
@@ -1198,7 +1105,6 @@ export default function BoxComponent({
           </motion.div>
         )}
 
-        {/* Vista de preparación - Spinner de carga antes de mostrar los spinners */}
         {showPreparingSpinner && (
           <motion.div 
             key="preparing-spinner"
@@ -1209,16 +1115,13 @@ export default function BoxComponent({
             className="w-full h-full flex items-center justify-center"
           >
             <div className="flex flex-col items-center justify-center space-y-4 sm:space-y-6 px-4">
-              {/* Spinner principal mejorado */}
               <div className="relative">
                 <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-t-3 border-b-3 border-primary">
                   <div className="absolute inset-0 rounded-full border border-slate-700 opacity-20"></div>
                         </div>
-                {/* Efecto de pulso interno */}
                 <div className="absolute inset-2 rounded-full bg-primary/20 animate-pulse"></div>
                       </div>
                       
-              {/* Texto dinámico basado en el modo */}
               <div className="text-center space-y-2">
                 <h3 className="text-base sm:text-lg font-semibold text-white">
                   {isMultipleMode && numberOfBoxes > 1 
@@ -1232,7 +1135,6 @@ export default function BoxComponent({
                 </p>
                     </div>
 
-              {/* Indicador de progreso opcional para múltiples cajas */}
               {isMultipleMode && numberOfBoxes > 1 && (
                 <div className="w-48 sm:w-64 bg-slate-800/50 rounded-full h-2 overflow-hidden">
                   <div 
@@ -1245,7 +1147,6 @@ export default function BoxComponent({
           </motion.div>
         )}
 
-        {/* Vista inicial */}
         {showInitialView && (
           <motion.div 
             key="initial-view"
@@ -1259,29 +1160,23 @@ export default function BoxComponent({
             }}
             className="w-full h-full flex items-center justify-center"
           >
-            {/* Vista principal de la caja mejorada */}
             <div className="flex flex-col items-center w-full max-w-7xl mx-auto px-4">
               {caja && (
                 <div className="w-full text-center relative z-0">
-                  {/* Efectos de resplandor mejorados detrás de la caja */}
                   <div className="absolute -z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] sm:w-[800px] h-[400px] sm:h-[600px] rounded-full opacity-15 blur-3xl bg-gradient-radial from-primary/40 to-transparent"></div>
                   <div className="absolute -z-10 left-1/3 top-1/3 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[400px] h-[300px] sm:h-[400px] rounded-full opacity-10 blur-2xl bg-gradient-radial from-amber-300/30 to-transparent"></div>
                   
-                  {/* Título estilizado */}
                   <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold font-[Raleway] font-bold italic tracking-widest uppercase mb-8 sm:mb-12 
                                  [text-shadow:_0px_0px_20px_rgba(255,255,255,0.1)] bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                     · {caja.nombre} ·
                   </h1>
 
-                  {/* Solo las cajas seleccionadas en línea horizontal responsive */}
+
                   <div className="flex justify-center items-center gap-1 sm:gap-2 md:gap-6 mb-6 sm:mb-8 px-2 md:px-4 overflow-x-auto">
                     <div className="flex gap-0 min-w-max">
                       <AnimatePresence mode="popLayout">
                         {Array.from({ length: numberOfBoxes }).map((_, index) => {
-                          // Determinar si esta caja es nueva (apareció al incrementar numberOfBoxes)
                           const isNewBox = index >= previousNumberOfBoxes;
-                          
-                          // Calcular tamaños responsive para las cajas iniciales
                           const getInitialBoxSizes = () => {
                             switch(numberOfBoxes) {
                               case 1: return { w: 280, h: 280 };
@@ -1310,7 +1205,7 @@ export default function BoxComponent({
                                 layout: { duration: 0.3, ease: "easeInOut" }
                               }}
                             >
-                              {/* Imagen de la caja */}
+
                               <motion.div 
                                 className="relative group"
                                 transition={{ duration: 0.2 }}
@@ -1335,7 +1230,7 @@ export default function BoxComponent({
                        </div>
                   </div>
 
-                  {/* Selector de multiplicador estilizado - Solo visible en SM+ (640px+) */}
+
                   <div className="mb-6 sm:mb-8 flex flex-col items-center gap-4">
                     <div className="hidden sm:flex items-center gap-0 border-2 rounded-2xl border-primary/20">
                       {[1, 2, 3, 4, 5].map((num) => (
@@ -1366,7 +1261,7 @@ export default function BoxComponent({
                   </div>
                 </div>
 
-                  {/* Botón principal estilizado - Responsive */}
+
                   <div className="flex justify-center px-4">
                 <Button
                       className={`px-6 sm:px-8 md:px-12 py-3 sm:py-4 md:py-5 text-base sm:text-lg md:text-xl font-medium rounded-2xl bg-gradient-to-r from-red-500/20 to-red-600/20
@@ -1404,7 +1299,7 @@ export default function BoxComponent({
                 </Button>
               </div>
 
-                  {/* Timer para caja diaria */}
+    
                   {caja.es_diaria && nextUpdate && (
                     <div className="mt-6 sm:mt-8 text-white/90 bg-gradient-to-r from-slate-800/70 to-slate-900/70 border border-slate-700/70 rounded-xl py-3 px-4 sm:px-6 shadow-lg inline-block backdrop-blur-sm">
                       <p className="flex items-center gap-2 font-medium text-sm sm:text-base">

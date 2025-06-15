@@ -3,7 +3,6 @@ export interface Chroma {
   uuid: string;
   displayName: string;
   displayIcon: string | null;
-  // Puedes agregar más campos si los necesitas
 }
 
 export interface SkinLevel {
@@ -18,11 +17,11 @@ export interface SkinLevel {
 export interface Skin {
   uuid: string;
   displayName: string;
-  displayIcon: string | null; // Cambiado a null porque puede fallar
+  displayIcon: string | null
   contentTierUuid: string | null;
-  themeUuid?: string; // UUID del tema/bundle al que pertenece la skin
-  chromas?: Chroma[]; // Añadimos chromas opcional
-  levels?: SkinLevel[]; // Añadimos el array de niveles
+  themeUuid?: string;
+  chromas?: Chroma[];
+  levels?: SkinLevel[];
 }
 
 interface SkinsResponse {

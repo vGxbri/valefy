@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { RiSearch2Line } from "react-icons/ri";
-import { X, Filter, Trash2, ChevronDown, RefreshCw, XCircle, AlertTriangle } from 'lucide-react';
+import { X, Filter, Trash2, XCircle, AlertTriangle } from 'lucide-react';
 import { 
   Modal, 
   ModalContent, 
@@ -15,7 +15,7 @@ import {
   Button as HerouiButton
 } from "@heroui/react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getWeaponSkins as fetchAllWeaponSkinsFromApi, getBestDisplayIcon, getContentTiers as fetchAllContentTiersFromApi, Skin as ValorantApiSkin, ContentTier as ValorantApiContentTier, getWeaponType, getWeaponSpecificStyles } from "@/lib/valorantApi";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from '@/utils/supabase/client';
@@ -42,19 +42,19 @@ const EmptyInventory = ({ className = "" }: { className?: string }) => (
 );
 
 export interface InventorySkin {
-  id: string; // Supabase row ID for the inventory item
-  skin_id: string; // Valorant API skin UUID (from inventario_usuario.skin_id)
+  id: string;
+  skin_id: string;
   skinName: string;
   bundleName: string;
   skinIcon: string;
   contentTier: {
-    id: string; // Tier ID, debe ser 'id'
+    id: string;
     nombre: string;
     color: string;
   };
   dateAcquired: Date;
   metodoAdquisicion?: string;
-  uniqueCardId?: string; // ID único para cada card en la visualización
+  uniqueCardId?: string;
 }
 
 interface InventoryItemFromDB {
@@ -64,38 +64,36 @@ interface InventoryItemFromDB {
 }
 
 interface InventoryDisplayProps {
-  supabase: any; // Supabase client instance
+  supabase: any;
   userId: string;
 }
 
 export default function InventoryDisplayComponent({ supabase, userId }: InventoryDisplayProps) {
   const [userSkins, setUserSkins] = useState<InventorySkin[]>([]);
-  const [allApiSkinsState, setAllApiSkinsState] = useState<ValorantApiSkin[] | null>(null); // Renamed to avoid conflict if passed as prop
-  const [allApiContentTiersState, setAllApiContentTiersState] = useState<ValorantApiContentTier[] | null>(null); // Renamed
+  const [allApiSkinsState, setAllApiSkinsState] = useState<ValorantApiSkin[] | null>(null);
+  const [allApiContentTiersState, setAllApiContentTiersState] = useState<ValorantApiContentTier[] | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [filterTier, setFilterTier] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState<string>("newest");
 
-  const [showWelcome, setShowWelcome] = useState<boolean>(true); // Assuming welcome message is part of display
+  const [showWelcome, setShowWelcome] = useState<boolean>(true);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isInitialLoadAnimationPending, setIsInitialLoadAnimationPending] = useState(true);
-  const { isOpen: isDeleteModalOpen, onOpen: onDeleteModalOpen, onOpenChange: onDeleteModalOpenChange, onClose: onDeleteModalClose } = useDisclosure(); // Para el modal de eliminación
-  const [isDeletingItems, setIsDeletingItems] = useState(false); // Nuevo estado para controlar la carga durante eliminación
+  const { isOpen: isDeleteModalOpen, onOpen: onDeleteModalOpen, onOpenChange: onDeleteModalOpenChange, onClose: onDeleteModalClose } = useDisclosure();
+  const [isDeletingItems, setIsDeletingItems] = useState(false);
 
   // Resetear la página cuando cambia el término de búsqueda o filtros
   useEffect(() => {
-    // setCurrentPage(1); // Eliminado - ya no hay paginación
   }, [searchTerm, filterTier, sortOption]);
 
   const extractBundleName = (skinName: string): string => {
     const parts = skinName.split(' ');
     if (parts.length > 1 && parts[0].toLowerCase() !== "standard" && parts[0].toLowerCase() !== "estándar") {
-      // Attempt to join parts that form a bundle name, heuristic approach
       let bundleName = parts[0];
-      for (let i = 1; i < parts.length -1; i++) { // stop before the last word (potential weapon name)
-        if (parts[i][0] === parts[i][0].toUpperCase()) { // typically bundle names are proper case
+      for (let i = 1; i < parts.length -1; i++) {
+        if (parts[i][0] === parts[i][0].toUpperCase()) {
           bundleName += ` ${parts[i]}`;
         } else {
           break;
@@ -103,15 +101,14 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
       }
       return bundleName;
     }
-    return ''; // Return empty if no clear bundle or it's standard
+    return '';
   };
 
   const getTierColor = (tierName: string): string => {
     const tier = allApiContentTiersState?.find(t => t.displayName.toLowerCase() === tierName.toLowerCase() || t.uuid.toLowerCase() === tierName.toLowerCase());
     if (tier) {
-      return `#${tier.highlightColor}` || '#FFFFFF'; // Default to white if highlightColor is missing
+      return `#${tier.highlightColor}` || '#FFFFFF';
     }
-    // Fallback colors for common tier names if API data is not yet available or doesn't match
     switch (tierName?.toLowerCase()) {
       case 'select edition': return '#5B9BD5'; // Azul claro
       case 'deluxe edition': return '#58C097'; // Verde
@@ -173,7 +170,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
           bundleName: apiSkin ? extractBundleName(apiSkin.displayName) : "Unknown Bundle",
           skinIcon: skinIcon,
           contentTier: {
-            id: apiTier?.uuid || 'default', // Usar apiTier.uuid
+            id: apiTier?.uuid || 'default',
             nombre: apiTier?.displayName || 'Standard',
             color: (apiTier && apiTier.highlightColor) ? `#${apiTier.highlightColor.substring(0, 6)}` : '#FFFFFF',
           },
@@ -213,7 +210,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
     } finally {
       if (isMounted) setLoading(false);
     }
-  }, [userId, supabase, allApiSkinsState, allApiContentTiersState]); // Quitado isInitialLoadAnimationPending de aquí
+  }, [userId, supabase, allApiSkinsState, allApiContentTiersState]);
 
   useEffect(() => {
     if (userId && supabase) {
@@ -222,13 +219,12 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
   }, [userId, supabase, fetchUserInventory]);
 
   useEffect(() => {
-    // Manejar la lógica de isInitialLoadAnimationPending aquí, después de que los datos se cargan y el estado se actualiza.
     if (!loading && userSkins.length > 0 && isInitialLoadAnimationPending) {
-      const animationTime = (Math.min(userSkins.length, 18) * 50) + 500; // Tiempo estimado para la animación
+      const animationTime = (Math.min(userSkins.length, 18) * 50) + 500;
       const timer = setTimeout(() => {
         setIsInitialLoadAnimationPending(false);
       }, animationTime);
-      return () => clearTimeout(timer); // Limpiar el timer si el componente se desmonta o las dependencias cambian
+      return () => clearTimeout(timer);
     }
   }, [loading, userSkins, isInitialLoadAnimationPending]);
 
@@ -246,7 +242,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
     });
   };
 
-  const handleDeleteSelected = () => { // No necesita ser async ya que solo abre el modal
+  const handleDeleteSelected = () => {
     if (selectedItems.size === 0) return;
     onDeleteModalOpen();
   };
@@ -257,14 +253,12 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
       return;
     }
     
-    setIsDeletingItems(true); // Iniciar estado de carga
+    setIsDeletingItems(true);
 
     try {
-      // Recopilar información de las skins antes de eliminarlas para el log
       const idsToDelete = Array.from(selectedItems);
       const skinsToDelete = userSkins.filter(skin => idsToDelete.includes(skin.id));
       
-      // Preparar datos para el log
       const logData: SkinEliminadaLog = {
         usuario_id: userId,
         skins_eliminadas: skinsToDelete.map(skin => ({
@@ -297,7 +291,6 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
           console.warn('Error al registrar log de skin eliminada:', logResult.error);
         }
         
-        // 🎯 PROCESAR MISIÓN DE ELIMINACIÓN DE SKINS
         try {
           const misionResponse = await fetch('/api/misiones/procesar-actividad', {
             method: 'POST',
@@ -311,7 +304,6 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
           if (!misionResponse.ok) {
             console.warn('Error al procesar misión de eliminación de skins:', await misionResponse.text());
           } else {
-            // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - MISIONES
             window.dispatchEvent(new CustomEvent('misionesActualizadas'));
           }
         } catch (missionError) {
@@ -343,7 +335,7 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
       }
     });
     return Object.entries(stats).map(([tierName, data]) => ({
-      id: tierName, // Assuming tierName is unique enough for an ID
+      id: tierName,
       nombre: tierName,
       count: data.count,
       color: data.color,
@@ -370,7 +362,6 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
           return a.skinName.localeCompare(b.skinName);
         case 'name_desc':
           return b.skinName.localeCompare(a.skinName);
-        // TODO: Add sorting by tier rarity if needed
         default:
           return 0;
       }
@@ -396,7 +387,6 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
   return (
     <div className="px-4 sm:px-6 lg:px-8 pt-16 md:pt-12 pb-12 min-h-screen bg-background text-white">
       
-      {/* Header and Filters */}
       <div className="mb-8 sticky top-0 z-30 bg-background/80 backdrop-blur-md py-4 rounded-b-xl shadow-lg">
         <div className="container mx-auto px-4">
           <div className="flex flex-col gap-4">
@@ -634,7 +624,6 @@ export default function InventoryDisplayComponent({ supabase, userId }: Inventor
         radius="lg"
       >
         <ModalContent>
-          {/* El (onClose) de ModalContent es para el botón X interno si se habilita, pero usamos onDeleteModalClose del hook useDisclosure para el botón Cancelar */}
           <>
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-red-500/50 to-transparent" />
             <ModalHeader className="flex flex-col items-center gap-2 relative z-10">

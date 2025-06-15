@@ -13,7 +13,7 @@ export default function Page() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoadingSession, setIsLoadingSession] = useState<boolean>(true);
 
-  const supabase = createClient(); // Supabase client still needed for InventoryDisplayComponent
+  const supabase = createClient();
 
   useEffect(() => {
     if (nextAuthStatus === "loading") {
@@ -24,7 +24,7 @@ export default function Page() {
       setUserId(null);
     } else if (nextAuthStatus === "authenticated") {
       if (nextAuthSession?.user?.id) {
-        setUserId(nextAuthSession.user.id as string); // Ensure it's string
+        setUserId(nextAuthSession.user.id as string);
       } else {
         setUserId(null);
       }

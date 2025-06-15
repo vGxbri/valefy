@@ -1,4 +1,4 @@
-// app/api/auth/[...nextauth]/auth.ts
+
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import DiscordProvider from "next-auth/providers/discord";
@@ -124,11 +124,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
           usuario = nuevo;
           
-          // 🎯 INICIALIZAR MISIONES PARA USUARIO NUEVO
           try {
             await inicializarMisionesUsuario(usuario.id);
           } catch (missionError) {
-            console.warn("⚠️ Error al inicializar misiones para usuario OAuth:", missionError);
+            console.warn("Error al inicializar misiones para usuario OAuth:", missionError);
           }
         } else {
           // Usuario ya existe, verificar si necesita actualización para OAuth
@@ -149,7 +148,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             usuario = updated || usuario;
           }
           
-          // 🎯 PROCESAR MISIÓN DE LOGIN PARA USUARIO EXISTENTE
+          // Procesar misión de login para usuario existente
           try {
             await procesarMisionLogin(usuario.id);
           } catch (missionError) {
@@ -180,7 +179,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.admin = fullUser.admin;
         }
         
-        // 🎯 PROCESAR MISIÓN DE LOGIN PARA CREDENTIALS
+        // Procesar misión de login para credentials
         if (user.id) {
           try {
             await procesarMisionLogin(user.id);

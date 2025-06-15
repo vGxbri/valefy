@@ -1,4 +1,3 @@
-// lib/boxUtils.ts
 import { SupabaseClient } from "@supabase/supabase-js";
 import { logCajaAbierta, type CajaAbiertaLog } from "./logUtils";
 import { toast } from "sonner";
@@ -36,7 +35,6 @@ export function extraerTipoCaja(nombre: string, esDiaria?: boolean): string {
   return tipoCaja.replace(/\s+/g, "-").replace(/-+/g, "-");
 }
 
-// Tipos comunes
 export type ContentTier = {
   id: string;
   nombre: string;
@@ -53,7 +51,7 @@ export type Skin = {
   uuid: string;
   imagen_url: string;
   content_tier?: ContentTier;
-  isNewSkin?: boolean; // Indica si es una skin nueva para el usuario
+  isNewSkin?: boolean;
 };
 
 export type TierProbabilidad = {
@@ -527,7 +525,6 @@ export async function processBoxOpeningWithLog(
         };
       }
 
-      // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP (después de gastar VP)
       // Solo disparar si estamos en el navegador
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('saldoActualizado'));
@@ -561,9 +558,7 @@ export async function processBoxOpeningWithLog(
         console.warn('Error al registrar log de caja abierta:', logResult.error);
       }
 
-      // 🎯 PROCESAR MISIONES AUTOMÁTICAMENTE
       try {
-        // 1. Misión de apertura de caja individual
         const misionResponse = await fetch('/api/misiones/procesar-actividad', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -576,8 +571,6 @@ export async function processBoxOpeningWithLog(
         if (!misionResponse.ok) {
           console.warn('Error al procesar misión de caja abierta:', await misionResponse.text());
         } else {
-          // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - MISIONES
-          // Solo disparar si estamos en el navegador
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('misionesActualizadas'));
           }
@@ -628,7 +621,6 @@ export async function processMultipleBoxOpeningOptimized(
   try {
     const costoTotal = costoCaja * numberOfBoxes;
 
-    // 💰 VERIFICAR Y DESCONTAR SALDO TOTAL DE UNA VEZ
     if (costoTotal > 0) {
       const { data: usuario, error: saldoError } = await supabase
         .from("usuarios")
@@ -656,7 +648,7 @@ export async function processMultipleBoxOpeningOptimized(
         };
       }
 
-      // Descontar el costo total de una vez
+      // Descontar el costo total
       const { error: updateSaldoError } = await supabase
         .from("usuarios")
         .update({ saldo: saldoActual - costoTotal })
@@ -670,13 +662,13 @@ export async function processMultipleBoxOpeningOptimized(
         };
       }
 
-      // 🎯 DISPARAR EVENTO PARA ACTUALIZAR SIDEBAR - VP
+      // Disparar evento para actualizar sidebar - VP
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('saldoActualizado'));
       }
     }
 
-    // 🎲 GENERAR TODAS LAS SKINS DE UNA VEZ USANDO LA FUNCIÓN OPTIMIZADA
+    // Generar todas las skins de una vez usando la función optimizada
     const selectedSkins = selectMultipleRandomSkins(skins, probabilidades, numberOfBoxes);
     
     if (selectedSkins.length !== numberOfBoxes) {
@@ -687,7 +679,7 @@ export async function processMultipleBoxOpeningOptimized(
       };
     }
 
-    // 🏷️ VERIFICAR CUÁLES SON SKINS NUEVAS ANTES DE INSERTAR
+    // Verificar cuáles son skins nuevas antes de insertar
     const skinUuids = selectedSkins.map(s => s.uuid);
     const { data: existingSkins } = await supabase
       .from("inventario_usuario")
@@ -703,15 +695,15 @@ export async function processMultipleBoxOpeningOptimized(
       isNewSkin: !existingSkinIds.has(skin.uuid)
     }));
 
-    // 📦 PREPARAR DATOS PARA INSERCIÓN MASIVA EN INVENTARIO
+    // Preparar datos para inserción masiva en inventario
     const inventoryInserts = selectedSkins.map((skin, index) => ({
       usuario_id: userId,
-      skin_id: skin.uuid, // USAR EL UUID ORIGINAL, NO EL ID MODIFICADO
+      skin_id: skin.uuid,
       skin_nombre: skin.nombre,
       fecha_obtencion: new Date().toISOString(),
     }));
 
-    // 💾 INSERTAR TODAS LAS SKINS EN EL INVENTARIO DE UNA VEZ
+    // Insertar todas las skins en el inventario de una vez
     const { error: inventoryError } = await supabase
       .from("inventario_usuario")
       .insert(inventoryInserts);
@@ -741,7 +733,7 @@ export async function processMultipleBoxOpeningOptimized(
       };
     }
 
-    // 🚀 DIFERIR OPERACIONES NO CRÍTICAS PARA DESPUÉS
+    // Diferir operaciones no críticas para después
     setTimeout(async () => {
       try {
         // Logging diferido

@@ -29,7 +29,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // 🎯 EJECUTAR LA LÓGICA DE MISIONES PROGRESIVAS
     // Esto creará automáticamente las nuevas misiones que deberían estar disponibles
     await verificarYCrearMisionesProgresivas(userId);
 

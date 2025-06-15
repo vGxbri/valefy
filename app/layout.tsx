@@ -5,7 +5,6 @@ import { SessionProvider } from "next-auth/react";
 
 import { Providers } from "./providers";
 
-// Add this import
 import Loading from "./loading";
 
 import { siteConfig } from "@/config/site";

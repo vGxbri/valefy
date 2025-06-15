@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { RiSearch2Line } from "react-icons/ri";
 
 import BundleModal from "@/components/BundleModal";
@@ -12,12 +12,6 @@ import {
   getBestDisplayIcon,
   filterSkinsByBundleWithIcon,
 } from "@/lib/valorantApi";
-
-interface Theme {
-  uuid: string;
-  displayName: string;
-  displayIcon?: string;
-}
 
 interface Bundle {
   uuid: string;

@@ -7,7 +7,7 @@ interface CustomPaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
-  siblings?: number; // Number of page numbers to show on each side of the current page
+  siblings?: number;
 }
 
 const CustomPagination: React.FC<CustomPaginationProps> = ({
@@ -24,8 +24,8 @@ const CustomPagination: React.FC<CustomPaginationProps> = ({
   };
 
   const getPageNumbers = () => {
-    const totalPageNumbers = siblings * 2 + 3; // siblings + current + first + last + 2*DOTS
-    const totalBlocks = totalPageNumbers + 2; // With DOTS
+    const totalPageNumbers = siblings * 2 + 3;
+    const totalBlocks = totalPageNumbers + 2;
 
     if (totalPages <= totalBlocks) {
       return range(1, totalPages);
@@ -57,7 +57,7 @@ const CustomPagination: React.FC<CustomPaginationProps> = ({
       return [firstPageIndex, DOTS, ...middleRange, DOTS, lastPageIndex];
     }
 
-    return range(1, totalPages); // Should not happen with logic above
+    return range(1, totalPages);
   };
 
   const pageNumbers = getPageNumbers();

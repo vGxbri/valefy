@@ -264,7 +264,6 @@ export default function Page() {
         }
       }
 
-      // 🎯 PROCESAR ACTIVIDAD DE MISIÓN COMPLETADA PARA ACTIVAR MISIONES PROGRESIVAS
       try {
         await fetch('/api/misiones/procesar-actividad', {
           method: 'POST',
@@ -276,7 +275,6 @@ export default function Page() {
         });
       } catch (actividadError) {
         console.warn("Error al procesar actividad de misión completada:", actividadError);
-        // No fallar el proceso principal por esto
       }
 
       toast.success(`¡Recompensa reclamada! +${misionUsuario.mision.recompensa_vp} VP`);
@@ -285,10 +283,8 @@ export default function Page() {
       cargarMisiones();
       cargarEstadisticas();
 
-      // 🎯 EMITIR EVENTO DE MISIONES ACTUALIZADAS
       window.dispatchEvent(new CustomEvent('misionesActualizadas'));
 
-      // 🎯 EMITIR EVENTO DE SALDO ACTUALIZADO PARA SIDEBAR
       incrementarSaldoLocal(misionUsuario.mision.recompensa_vp);
 
     } catch (error) {

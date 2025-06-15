@@ -13,10 +13,7 @@ import {
   ChevronRight,
   Plus,
   Edit,
-  Trash2,
-  Eye,
   Search,
-  RefreshCw,
   Star,
   TrendingUp,
   DollarSign,
@@ -25,20 +22,14 @@ import {
   CheckCircle,
   XCircle,
   Users,
-  Box,
   Layers,
-  Cog,
-  Save,
-  AlertTriangle,
   X,
-  Filter
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { getWeaponSkins, filterSkinsByBundleWithIcon, Skin as ValorantApiSkin } from "@/lib/valorantApi";
 import { formatSkinForApp } from "@/lib/skinUtils";
@@ -283,12 +274,12 @@ export default function AdminPage() {
   // Estado para nueva caja
   const [nuevaCaja, setNuevaCaja] = useState<NuevaCaja>({
     nombre: "",
-    precio: 250,
-    imagen_url: "/free_cage.png",
-    esta_disponible: true,
+    precio: 0,
+    imagen_url: "/default_box.png",
+    esta_disponible: false,
     es_diaria: false,
-    categoria: "premium",
-    categoria_titulo: "PREMIUM"
+    categoria: "default",
+    categoria_titulo: "DEFAULT"
   });
 
   // Estados para tiers y probabilidades
@@ -433,7 +424,6 @@ export default function AdminPage() {
     };
 
     try {
-      // Usar consultas SQL directas para mayor confiabilidad
       const [
         totalCajasResult,
         totalMejorasResult, 
@@ -468,7 +458,6 @@ export default function AdminPage() {
         supabase.from('logs_historial_recompensas').select('*', { count: 'exact', head: true })
       ]);
 
-      // Cálculos más simples
       const totalInventarioItems = totalInventarioResult.count || 0;
       const totalUsuarios = totalUsuariosResult.count || 0;
       const promedioSkinsUsuario = totalUsuarios > 0 ? Math.round((totalInventarioItems / totalUsuarios) * 100) / 100 : 0;
@@ -478,8 +467,8 @@ export default function AdminPage() {
       const tasaExitoMejoras = totalIntentosMejora > 0 ? Math.round(((totalMejorasExitosas) / totalIntentosMejora) * 100 * 100) / 100 : 0;
 
       return {
-        totalSkinsObtenidas: totalCajasResult, // Aproximación: cada caja da al menos 1 skin
-        totalSkinsEliminadas: 0, // Simplificamos por ahora
+        totalSkinsObtenidas: totalCajasResult,
+        totalSkinsEliminadas: 0,
         totalIntentosMejora,
         totalMejorasExitosas,
         totalMisionesCompletadas: totalMisionesResult.count || 0,
@@ -762,8 +751,8 @@ export default function AdminPage() {
                });
              }
            });
-
-                     const porcentajeObtencion = (totalSkins || 0) > 0 ? (totalObtenidas / (totalSkins || 1)) * 100 : 0;
+           
+           const porcentajeObtencion = (totalSkins || 0) > 0 ? (totalObtenidas / (totalSkins || 1)) * 100 : 0;
 
           return {
             tier_id: tier.id,

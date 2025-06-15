@@ -10,14 +10,14 @@ import {
   ArchiveBoxIcon,
   ArrowsRightLeftIcon,
   Cog6ToothIcon,
-} from "@heroicons/react/24/outline"; // Usando iconos outline para un look más limpio
+} from "@heroicons/react/24/outline";
 
 const navigationItems = [
   { name: "Principal", href: "/main", icon: HomeIcon },
   { name: "Catálogo", href: "/main/catalogo", icon: RectangleStackIcon },
   { name: "Inventario", href: "/main/inventario", icon: ArchiveBoxIcon },
   { name: "Intercambios", href: "/main/trade", icon: ArrowsRightLeftIcon },
-  { name: "Ajustes", href: "/main/ajustes", icon: Cog6ToothIcon }, // Añadido Ajustes
+  { name: "Ajustes", href: "/main/ajustes", icon: Cog6ToothIcon },
 ];
 
 export function Navbar() {
@@ -26,13 +26,12 @@ export function Navbar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex h-screen w-20 flex-col items-center border-r border-white/10 bg-background/80 backdrop-blur-md">
       <div className="flex h-20 w-full items-center justify-center border-b border-white/10">
-        {/* Logo pequeño o icono de la app */}
         <Link href="/main">
           <Image
             alt="Valefy Icon"
             className="rounded-lg"
             height={40}
-            src="/logo-valefy-icon.png" // Asumiendo que tienes un icono cuadrado/circular
+            src="/logo-valefy-icon.png"
             width={40}
           />
         </Link>
@@ -53,10 +52,9 @@ export function Navbar() {
                   : "text-white/60 hover:bg-white/10 hover:text-white",
               )}
               href={item.href}
-              title={item.name} // Tooltip para accesibilidad y claridad
+              title={item.name}
             >
               <item.icon className="h-6 w-6" />
-              {/* Indicador activo (opcional, pero mejora UX) */}
               {isActive && (
                 <span className="absolute -right-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary" />
               )}
@@ -64,7 +62,6 @@ export function Navbar() {
           );
         })}
       </nav>
-      {/* Puedes añadir un icono de logout o perfil aquí si lo deseas */}
     </aside>
   );
 }

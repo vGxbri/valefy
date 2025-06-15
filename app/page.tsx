@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react"; // Importar useSession
-import { useRouter } from "next/navigation"; // Importar useRouter
 import {
   Accordion,
   AccordionContainer,
@@ -18,13 +16,11 @@ import AuthModal from "../components/AuthModal";
 
 import { ImageCarousel } from "@/components/landing/ImageCarousel";
 import { Timeline } from "@/components/landing/Timeline";
-import { getWeaponSkins, getRandomSkins, filterSkinsByBundleWithIcon, getBestDisplayIcon, getContentTiers } from "@/lib/valorantApi";
+import { getWeaponSkins, filterSkinsByBundleWithIcon, getBestDisplayIcon, getContentTiers } from "@/lib/valorantApi";
 import { timelineData } from "@/components/landing/ProcessData";
 import Navbar from "@/components/landing/Navbar";
-// Fix: Update the import path for Footer
 import Footer from "@/components/Footer";
 
-// Interfaz para las skins con información del tier
 interface SkinWithTier {
   skinIcon: string;
   skinName: string;
@@ -36,10 +32,7 @@ interface SkinWithTier {
 }
 
 export default function LandingPage() {
-  const { data: session, status } = useSession(); // Obtener estado de la sesión
-  const router = useRouter(); // Obtener el router
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  // Añadir estado para controlar la vista inicial del modal
   const [authModalView, setAuthModalView] = useState<"login" | "register">(
     "register",
   );
@@ -100,7 +93,7 @@ export default function LandingPage() {
 
     // Cargar datos independientemente del estado de autenticación, ya que el middleware maneja la redirección
     loadData();
-  }, []); // Eliminar status y router de las dependencias
+  }, []);
 
   // Función para abrir el modal con una vista específica
   const openAuthModal = (view: "login" | "register") => {
@@ -112,9 +105,7 @@ export default function LandingPage() {
     <section className="bg-background">
       <div className="">
         <Navbar />
-        {/* Contenedor principal con altura fija */}
         <div className="relative overflow-hidden" id="inicio">
-          {/* Contenedor del Aurora con altura y posición explícitas - Solo visible en pantallas XL+ (1280px+) */}
           <div className="absolute inset-0 w-full hidden xl:block" style={{ height: "calc(100vh + 100px)" }}>
             <Aurora
               amplitude={0.8}
@@ -124,24 +115,18 @@ export default function LandingPage() {
             />
           </div>
 
-          {/* Fondo alternativo para dispositivos menores a 1280px */}
           <div className="absolute inset-0 w-full xl:hidden bg-gradient-to-br from-background via-backgroundAlt/30 to-background" style={{ height: "calc(100vh + 100px)" }} />
 
-          {/* Contenedor centrado para el título */}
           <div className="container mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-center relative mt-28 sm:mt-36 md:mt-36 lg:mt-48 xl:mt-48 2xl:mt-56">
-            {/* Título y botón centrados */}
             <div className="flex flex-col items-center justify-center text-center max-w-xs sm:max-w-lg md:max-w-2xl lg:max-w-3xl px-2 sm:px-0">
               <h1 className="mb-4 sm:mb-4 md:mb-4 lg:mb-6 xl:mb-8 sm:space-y-[-0.8rem] md:space-y-[-1rem] lg:space-y-[-1.5rem] xl:space-y-[-1.5rem]">
-                {/* Primera línea */}
                 <div className="tracking-tight font-bold text-[2rem] sm:text-[3rem] md:text-[3.6rem] lg:text-[4.8rem] xl:text-[5.4rem] leading-tight">
                   Tu nuevo{" "}
                   <span className="text-primary text-shadow-lg">mejor</span>
                 </div>
-                {/* Segunda línea */}
                 <div className="tracking-tight font-bold text-[2rem] sm:text-[3rem] md:text-[3.6rem] lg:text-[4.8rem] xl:text-[5.4rem] leading-tight">
                   <span className="text-primary text-shadow-lg">simulador</span> de cajas
                 </div>
-                {/* Tercera línea */}
                 <div className="tracking-tight font-bold text-[2rem] sm:text-[3rem] md:text-[3.6rem] lg:text-[4.8rem] xl:text-[5.4rem] leading-tight">
                   de Valorant
                 </div>
@@ -149,7 +134,6 @@ export default function LandingPage() {
 
               <button
                 className="relative bg-primary text-white font-medium text-sm sm:text-base md:text-[17px] px-3 sm:px-6 py-[0.35em] sm:py-[0.4em] pl-4 sm:pl-6 h-[2.3em] sm:h-[3em] md:h-[2.8em] rounded-[0.8em] sm:rounded-[1em] md:rounded-[0.9em] flex items-center overflow-hidden cursor-pointer shadow-[inset_0_0_1.6em_-0.6em_#0A141D] group w-full max-w-[150px] sm:max-w-none sm:w-auto"
-                // Llamar a openAuthModal con 'register'
                 onClick={() => openAuthModal("register")}
               >
                 <span className="mr-6 sm:mr-10">Unirme ahora</span>
@@ -173,7 +157,6 @@ export default function LandingPage() {
 
           {/* Carruseles con skins aleatorias */}
           <div className="w-full overflow-hidden mt-16 sm:mt-20 md:mt-24 lg:mt-32 xl:mt-40 relative">
-            {/* Separador visual superior */}
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
 
             <div className="mt-4 sm:mt-6 md:mt-8 mb-3 sm:mb-4">
@@ -190,7 +173,6 @@ export default function LandingPage() {
               />
             </div>
 
-            {/* Separador visual inferior */}
             <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-alternative/50 to-transparent" />
           </div>
         </div>
@@ -371,11 +353,9 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Añadimos el Footer */}
         <Footer />
       </div>
 
-      {/* Modal de autenticación - Pasar initialView */}
       <AuthModal
         initialView={authModalView}
         isOpen={isAuthModalOpen}
